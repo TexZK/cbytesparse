@@ -20,7 +20,7 @@ def read(*names, **kwargs):
 
 setup(
     name='cbytesparse',
-    version='0.0.1',
+    version='0.0.2',
     license='BSD 2-Clause License',
     description='Library to handle sparse bytes within a virtual memory space',
     long_description='%s\n%s' % (
@@ -69,7 +69,7 @@ setup(
             'pytest',
         ],
         'scripts': [
-        	'cython',
+            'cython',
         ],
     },
 )
