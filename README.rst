@@ -24,10 +24,6 @@ Overview
     :alt: GitHub Actions Status
     :target: https://github.com/TexZK/cbytesparse
 
-.. |requires| image:: https://requires.io/github/TexZK/cbytesparse/requirements.svg?branch=main
-    :alt: Requirements Status
-    :target: https://requires.io/github/TexZK/cbytesparse/requirements/?branch=main
-
 .. |codecov| image:: https://codecov.io/gh/TexZK/cbytesparse/branch/main/graphs/badge.svg?branch=main
     :alt: Coverage Status
     :target: https://codecov.io/github/TexZK/cbytesparse
@@ -86,28 +82,15 @@ address.
 Python implementation
 =====================
 
-This library provides a pure Python implementation, for maximum compatibility.
-
-Its implementation should be correct and robust, whilst trying to be as fast
-as common sense suggests. This means that the code should be reasonably
-optimized for general use, while still providing features that are less likely
-to be used, yet compatible with the existing Python API (e.g. ``bytearray`` or
-``dict``).
-
-The Python implementation can also exploit the capabilities of its powerful
-``int`` type, so that a virtually infinite addressing space can be used,
-even with negative addresses!
-
-Data chunks are stored as common mutable ``bytearray`` objects, whose size is
-limited by the Python engine (e.g. that of ``size_t``).
-
-More details can be found within ``cbytesparse._py``.
+This library is the Cython complement to the Python implementation provided by
+the ``bytesparse`` Python package.
+Please refer to its own documentation for more details.
 
 
 Cython implementation
 =====================
 
-The library also provides an experimental `Cython` implementation. It tries to
+The library provides an experimental `Cython` implementation. It tries to
 mimic the same algorithms of the Python implementation, while exploiting the
 speedup of compiled `C` code.
 
@@ -132,29 +115,6 @@ If in doubt about using the Cython implementation, just stick with the Python
 one, which is much easier to integrate and debug.
 
 More details can be found within ``cbytesparse._c``.
-
-
-Background
-==========
-
-This library started as a spin-off of ``hexrec.blocks.Memory``.
-That is based on a simple Python implementation using immutable objects (i.e.
-``tuple`` and ``bytes``). While good enough to handle common hexadecimal files,
-it is totally unsuited for dynamic/interactive environments, such as emulators,
-IDEs, data editors, and so on.
-Instead, ``cbytesparse`` should be more flexible and faster, hopefully
-suitable for generic usage.
-
-While developing the Python implementation, why not also jump on the Cython
-bandwagon, which permits even faster algorithms? Moreover, Cython itself is
-an interesting intermediate language, which brings to the speed of C, whilst
-being close enough to Python for the like.
-
-Too bad, one great downside is that debugging Cython-compiled code is quite an
-hassle -- that is why I debugged it in a crude way I cannot even mention, and
-the reason why there must be dozens of bugs hidden around there, despite the
-test suite :-) Moreover, the Cython implementation is still experimental, with
-some features yet to be polished (e.g. reference counting).
 
 
 Documentation
@@ -184,26 +144,16 @@ From source:
 Development
 ===========
 
+To regenerate the Cython files, run the following commands:
+
+.. code-block:: sh
+
+	$ python scripts/cython_build_src.py
+	$ python scripts/cython_build_tests.py
+
+
 To run the all the tests:
 
 .. code-block:: sh
 
     $ tox --skip-missing-interpreters
-
-
-Note, to combine the coverage data from all the tox environments run:
-
-.. list-table::
-    :widths: 10 90
-    :stub-columns: 1
-
-    - - Windows
-      - .. code-block:: sh
-
-            $ set PYTEST_ADDOPTS=--cov-append
-            $ tox
-
-    - - Other
-      - .. code-block:: sh
-
-            $ PYTEST_ADDOPTS=--cov-append tox

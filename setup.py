@@ -66,11 +66,10 @@ setup(
     ],
     extras_require={
         'testing': [
-            'cython',
             'pytest',
         ],
-        'performance': [
-            'cython',
+        'scripts': [
+        	'cython',
         ],
     },
 )
