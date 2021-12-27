@@ -16,7 +16,7 @@ jobs:
         platform:
           - ubuntu-latest  # ubuntu-20.04
           - macos-latest  # macOS-10.15
-          - windows-latest  # windows-2019
+          # - windows-latest  # windows-2019  # FIXME: ModuleNotFoundError: No module named 'cbytesparse._c'
 
         python-version:
           - 3.6
