@@ -1,0 +1,23 @@
+﻿cbytesparse
+===========
+
+.. automodule:: cbytesparse
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

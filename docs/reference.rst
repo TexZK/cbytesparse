@@ -7,5 +7,4 @@ Reference
     :recursive:
 
     cbytesparse
-    cbytesparse._py
     cbytesparse._c

@@ -114,4 +114,4 @@ True
 
 __version__ = '0.0.1'
 
-from ._c import Memory
+from ._c import *
