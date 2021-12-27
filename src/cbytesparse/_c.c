@@ -730,7 +730,6 @@ static CYTHON_INLINE float __PYX_NAN() {
     
 
     typedef struct Rack_ {
-        size_t references;
         size_t allocated;
         size_t start;
         size_t endex;
@@ -1139,7 +1138,7 @@ struct __pyx_obj_11cbytesparse_2_c_BlockView {
 };
 
 
-/* "cbytesparse/_c.pxd":474
+/* "cbytesparse/_c.pxd":476
  * # =====================================================================================================================
  * 
  * cdef class Rover:             # <<<<<<<<<<<<<<

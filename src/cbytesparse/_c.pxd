@@ -358,7 +358,6 @@ cdef class BlockView:
 cdef extern from *:
     r"""
     typedef struct Rack_ {
-        size_t references;
         size_t allocated;
         size_t start;
         size_t endex;
@@ -369,6 +368,9 @@ cdef extern from *:
     """
 
     ctypedef struct Rack_:
+        # Reference counter
+        size_t references
+
         # Allocated list length; always positive
         size_t allocated
 
