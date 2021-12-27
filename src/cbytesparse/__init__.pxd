@@ -1,4 +1,5 @@
 # cython: language_level = 3
+# cython: embedsignature = True
 
 # Copyright (c) 2020-2021, Andrea Zoppi.
 # All rights reserved.

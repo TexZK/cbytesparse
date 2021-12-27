@@ -30,10 +30,10 @@ from typing import Optional
 
 import pytest
 
-from cbytesparse._py import Address
-from cbytesparse._py import BlockList
-from cbytesparse._py import OpenInterval
-from cbytesparse._py import Value
+from cbytesparse import Address
+from cbytesparse import BlockList
+from cbytesparse import OpenInterval
+from cbytesparse import Value
 
 MAX_START: Address = 20
 MAX_SIZE: Address = 24

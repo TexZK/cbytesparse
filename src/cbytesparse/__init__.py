@@ -114,4 +114,4 @@ True
 
 __version__ = '0.0.1'
 
-from ._c import *
+from ._c import *  # noqa: F401, F403

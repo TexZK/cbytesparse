@@ -26,40 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from itertools import count as _count
-from itertools import islice as _islice
-from itertools import repeat as _repeat
-from itertools import zip_longest as _zip_longest
-from typing import Any
-from typing import ByteString
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
-from typing import Type
-from typing import Union
-
-Address = int
-Value = int
-AnyBytes = Union[ByteString, bytes, bytearray, memoryview, Sequence[Value]]
-Data = bytearray
-
-Block = List[Union[Address, Data]]  # typed as Tuple[Address, Data]
-BlockIndex = int
-BlockIterable = Iterable[Block]
-BlockSequence = Sequence[Block]
-BlockList = List[Block]
-MemoryList = List['Memory']
-
-OpenInterval = Tuple[Optional[Address], Optional[Address]]
-ClosedInterval = Tuple[Address, Address]
-
-EllipsisType = Type['Ellipsis']
-
-# =====================================================================================================================
-
 cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_ANY_CONTIGUOUS
