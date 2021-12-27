@@ -131,11 +131,11 @@ From PIP (might not be the latest version found on *github*):
 
     $ pip install cbytesparse
 
-From source:
+From source root directory:
 
 .. code-block:: sh
 
-    $ python setup.py install
+    $ pip install .
 
 
 Development
@@ -145,12 +145,13 @@ To regenerate the Cython files, run the following commands:
 
 .. code-block:: sh
 
-	$ python scripts/cython_build_src.py
-	$ python scripts/cython_build_tests.py
+    $ python scripts/cython_build_src.py
+    $ python scripts/cython_build_tests.py
 
 
 To run the all the tests:
 
 .. code-block:: sh
 
+    $ pip install tox
     $ tox --skip-missing-interpreters

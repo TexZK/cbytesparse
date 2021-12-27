@@ -69,7 +69,7 @@ setup(
             'pytest',
         ],
         'scripts': [
-            'cython',
+            'Cython',
         ],
     },
 )
