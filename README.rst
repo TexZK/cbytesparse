@@ -10,11 +10,12 @@ Overview
     * - docs
       - |docs|
     * - tests
-      - | |gh_actions| |requires|
+      - | |gh_actions|
         | |codecov|
     * - package
-      - | |version| |wheel| |supported-versions| |supported-implementations|
-        | |commits-since|
+      - | |version| |wheel|
+        | |supported-versions|
+        | |supported-implementations|
 
 .. |docs| image:: https://readthedocs.org/projects/cbytesparse/badge/?style=flat
     :target: https://readthedocs.org/projects/cbytesparse
@@ -31,10 +32,6 @@ Overview
 .. |version| image:: https://img.shields.io/pypi/v/cbytesparse.svg
     :alt: PyPI Package latest release
     :target: https://pypi.org/project/cbytesparse/
-
-.. |commits-since| image:: https://img.shields.io/github/commits-since/TexZK/cbytesparse/v0.0.1.svg
-    :alt: Commits since latest release
-    :target: https://github.com/TexZK/cbytesparse/compare/v0.0.1...main
 
 .. |wheel| image:: https://img.shields.io/pypi/wheel/cbytesparse.svg
     :alt: PyPI Wheel
