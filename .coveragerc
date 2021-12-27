@@ -1,0 +1,16 @@
+[paths]
+source =
+   src/cbytesparse
+   */site-packages/cbytesparse
+
+[run]
+branch = true
+source =
+    cbytesparse
+    tests
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*

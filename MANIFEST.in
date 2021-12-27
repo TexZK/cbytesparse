@@ -1,0 +1,24 @@
+graft .github
+graft docs
+graft src
+graft ci
+graft scripts
+graft tests
+graft _static
+graft _templates
+graft pyinstaller
+
+include .bumpversion.cfg
+include .coveragerc
+include .cookiecutterrc
+include .editorconfig
+
+include AUTHORS.rst
+include CHANGELOG.rst
+include CONTRIBUTING.rst
+include LICENSE
+include README.rst
+
+include tox.ini
+
+global-exclude *.py[cod] __pycache__ *.so *.dylib
