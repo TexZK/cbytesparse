@@ -368,9 +368,6 @@ cdef extern from *:
     """
 
     ctypedef struct Rack_:
-        # Reference counter
-        size_t references
-
         # Allocated list length; always positive
         size_t allocated
 
@@ -473,120 +470,299 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2
 
 # =====================================================================================================================
 
+cdef extern from *:
+    r"""
+    typedef struct Rover_ {
+        int forward;  // bint
+        int infinite;  // bint
+        addr_t start;
+        addr_t endex;
+        addr_t address;
+
+        size_t pattern_size;
+        const byte_t* pattern_data;
+        size_t pattern_offset;
+
+        Memory_* memory;
+        size_t block_count;
+        size_t block_index;
+        Block_* block;
+        addr_t block_start;
+        addr_t block_endex;
+        const byte_t* block_ptr;
+    } Rover_;
+
+    #define Rover_HEADING (sizeof(Rover_))
+    """
+
+    ctypedef struct Rover_:
+        bint forward
+        bint infinite
+        addr_t start
+        addr_t endex
+        addr_t address
+
+        size_t pattern_size
+        const byte_t* pattern_data
+        size_t pattern_offset
+
+        Memory_* memory
+        const Rack_* blocks
+        size_t block_count
+        size_t block_index
+        Block_* block
+        addr_t block_start
+        addr_t block_endex
+        const byte_t* block_ptr
+
+    size_t Rover_HEADING
+
+
+cdef Rover_* Rover_Alloc() except NULL
+cdef Rover_* Rover_Free(Rover_* that) except? NULL
+
+cdef Rover_* Rover_Create(
+    const Memory_* memory,
+    addr_t start,
+    addr_t endex,
+    size_t pattern_size,
+    const byte_t* pattern_data,
+    bint forward,
+    bint infinite,
+) except NULL
+
+cdef addr_t Rover_Length(const Rover_* that) nogil
+
+cdef bint Rover_HasNext(const Rover_* that) nogil
+cdef int Rover_Next_(Rover_* that) except -2
+cdef object Rover_Next(Rover_* that)
+
+cdef vint Rover_Dispose(Rover_* that) except -1
+
+cdef bint Rover_Forward(const Rover_* that) nogil
+cdef bint Rover_Infinite(const Rover_* that) nogil
+cdef addr_t Rover_Address(const Rover_* that) nogil
+cdef addr_t Rover_Start(const Rover_* that) nogil
+cdef addr_t Rover_Endex(const Rover_* that) nogil
+
+
+# =====================================================================================================================
+
+cdef extern from *:
+    r"""
+    typedef struct Memory_ {
+        Rack_* blocks;
+        addr_t trim_start;
+        addr_t trim_endex;
+        int trim_start_;  // bint
+        int trim_endex_;  // bint
+    } Memory_;
+
+    #define Memory_HEADING (sizeof(Memory_))
+    """
+
+    ctypedef struct Memory_:
+        # Stored memory blocks
+        Rack_* blocks
+
+        # Trimming start address, if _trim_start_
+        addr_t trim_start
+
+        # Triming exclusive end address, if _trim_endex_
+        addr_t trim_endex
+
+        # Enables trimming start address
+        bint trim_start_
+
+        # Enables timming exclusive end address
+        bint trim_endex_
+
+    size_t Memory_HEADING
+
+
+cdef Memory Memory_AsObject(Memory_* that)
+
+cdef Memory_* Memory_Alloc() except NULL
+cdef Memory_* Memory_Free(Memory_* that) except? NULL
+
+cdef Memory_* Memory_Create(
+    Memory_* memory,
+    const byte_t[:] data,
+    object offset,
+    object blocks,
+    object start,
+    object endex,
+    bint copy,
+    bint validate
+) except NULL
+
+cdef bint Memory_EqSame_(const Memory_* that, const Memory_* other) except -1
+cdef bint Memory_EqRaw_(const Memory_* that, size_t data_size, const byte_t* data_ptr) except -1
+cdef bint Memory_EqView_(const Memory_* that, const byte_t[:] view) except -1
+cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1
+cdef bint Memory_Eq(const Memory_* that, object other) except -1
+
+cdef Memory_* Memory_Add(const Memory_* that, object value) except NULL
+cdef Memory_* Memory_IAdd(Memory_* that, object value) except NULL
+
+cdef Memory_* Memory_Mul(const Memory_* that, addr_t times) except NULL
+cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL
+
+cdef addr_t Memory_Length(const Memory_* that) nogil
+cdef bint Memory_IsEmpty(const Memory_* that) nogil
+
+cdef object Memory_ObjFind(const Memory_* that, object item, object start, object endex)
+cdef object Memory_RevObjFind(const Memory_* that, object item, object start, object endex)
+
+cdef addr_t Memory_FindUnbounded_(const Memory_* that, size_t size, const byte_t* buffer) except? -1
+cdef addr_t Memory_FindBounded_(const Memory_* that, size_t size, const byte_t* buffer,
+                                addr_t start, addr_t endex) except? -1
+cdef object Memory_Find(const Memory_* that, object item, object start, object endex)
+
+cdef addr_t Memory_RevFindUnbounded_(const Memory_* that, size_t size, const byte_t* buffer) except? -1
+cdef addr_t Memory_RevFindBounded_(const Memory_* that, size_t size, const byte_t* buffer,
+                                   addr_t start, addr_t endex) except? -1
+cdef object Memory_RevFind(const Memory_* that, object item, object start, object endex)
+
+cdef object Memory_Index(const Memory_* that, object item, object start, object endex)
+cdef object Memory_RevIndex(const Memory_* that, object item, object start, object endex)
+
+cdef bint Memory_Contains(const Memory_* that, object item) except -1
+
+cdef addr_t Memory_CountUnbounded_(const Memory_* that, size_t size, const byte_t* buffer) except? -1
+cdef addr_t Memory_CountBounded_(const Memory_* that, size_t size, const byte_t* buffer,
+                                 addr_t start, addr_t endex) except? -1
+cdef addr_t Memory_Count(const Memory_* that, object item, object start, object endex) except? -1
+
+cdef object Memory_GetItem(const Memory_* that, object key)
+cdef object Memory_SetItem(Memory_* that, object key, object value)
+cdef vint Memory_DelItem(Memory_* that, object key) except -1
+
+cdef vint Memory_Append_(Memory_* that, byte_t value) except -1
+cdef vint Memory_Append(Memory_* that, object item) except -1
+
+cdef vint Memory_ExtendSame_(Memory_* that, const Memory_* items, addr_t offset) except -1
+cdef vint Memory_ExtendRaw_(Memory_* that, size_t items_size, const byte_t* items_ptr, addr_t offset) except -1
+cdef vint Memory_Extend(Memory_* that, object items, object offset) except -1
+
+cdef int Memory_PopLast_(Memory_* that) except -2
+cdef int Memory_PopAt_(Memory_* that, addr_t address) except -2
+cdef object Memory_Pop(Memory_* that, object address)
+
+cdef BlockView Memory_View(Memory_* that)
+
+cdef Memory_* Memory_Copy(const Memory_* that) except NULL
+
+cdef bint Memory_Contiguous(const Memory_* that) nogil
+
+cdef object Memory_GetTrimStart(const Memory_* that)
+cdef vint Memory_SetTrimStart(Memory_* that, object trim_start) except -1
+
+cdef object Memory_GetTrimEndex(const Memory_* that)
+cdef vint Memory_SetTrimEndex(Memory_* that, object trim_endex) except -1
+
+cdef object Memory_GetTrimSpan(const Memory_* that)
+cdef vint Memory_SetTrimSpan(Memory_* that, object span) except -1
+
+cdef addr_t Memory_Start(const Memory_* that) nogil
+cdef addr_t Memory_Endex(const Memory_* that) nogil
+cdef object Memory_Endin(const Memory_* that)
+
+cdef addr_t Memory_ContentStart(const Memory_* that) nogil
+cdef addr_t Memory_ContentEndex(const Memory_* that) nogil
+cdef object Memory_ContentEndin(const Memory_* that)
+cdef addr_t Memory_ContentSize(const Memory_* that) nogil
+cdef size_t Memory_ContentParts(const Memory_* that) nogil
+
+cdef vint Memory_Validate(const Memory_* that) except -1
+
+cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t endex,
+                                    bint start_, bint endex_) nogil
+cdef (addr_t, addr_t) Memory_Bound(const Memory_* that, object start, object endex) except *
+
+cdef int Memory_Peek_(const Memory_* that, addr_t address) except -2
+
+cdef object Memory_Peek(const Memory_* that, object address)
+
+cdef int Memory_PokeNone_(Memory_* that, addr_t address) except -2
+cdef vint Memory_PokeNone__(Memory_* that, addr_t address) except -1
+cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2
+cdef object Memory_Poke(Memory_* that, object address, object item)
+
+cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
+                               size_t pattern_size, const byte_t* pattern_ptr,
+                               saddr_t step, bint bound) except NULL
+
+cdef Memory Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
+                            size_t pattern_size, const byte_t* pattern_ptr,
+                            saddr_t step, bint bound)
+
+cdef Memory Memory_Extract(const Memory_* that, object start, object endex,
+                           object pattern, object step, bint bound)
+
+cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset, list backups) except -1
+cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset, list backups) except -1
+cdef vint Memory_Shift(Memory_* that, object offset, list backups) except -1
+
+cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backups) except -1
+cdef vint Memory_Reserve(Memory_* that, object address, object size, list backups) except -1
+
+cdef vint Memory_Insert__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
+                          bint shift_after) except -1
+cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_after, bint merge_deletion) except -1
+
+cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list backups) except -1
+cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
+                            list backups) except -1
+cdef vint Memory_Insert(Memory_* that, object address, object data, list backups) except -1
+
+cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
+cdef vint Memory_Delete(Memory_* that, object start, object endex, list backups) except -1
+
+cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
+cdef vint Memory_Clear(Memory_* that, object start, object endex, list backups) except -1
+
+cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size, list backups) except -1
+cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size, list backups) except -1
+
+cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size, list backups) except -1
+cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size, list backups) except -1
+
+cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
+cdef vint Memory_Crop(Memory_* that, object start, object endex, list backups) except -1
+
+cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear, list backups) except -1
+cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
+                           list backups) except -1
+cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, list backups) except -1
+
+cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** pattern,
+                       list backups, addr_t start_) except -1
+cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern, list backups) except -1
+
+cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern, list backups) except -1
+cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern, list backups) except -1
+
+cdef list Memory_AsViews(const Memory_* that)
+
+cdef list Memory_ToBlocks(const Memory_* that)
+
+
+# =====================================================================================================================
+
 cdef class Rover:
     cdef:
-        bint _forward
-        bint _infinite
-        addr_t _start
-        addr_t _endex
-        addr_t _address
-
-        Memory _memory
-        const Rack_* _blocks
-        size_t _block_count
-        size_t _block_index
-        Block_* _block
-        addr_t _block_start
-        addr_t _block_endex
-        const byte_t* _block_ptr
-
-        size_t _pattern_size
-        const byte_t* _pattern_data
-        size_t _pattern_offset
-        const byte_t[:] _pattern_view
-        byte_t _pattern_value
-
-    cdef int next_(self) except -2
-
-    cdef vint dispose_(self) except -1
+        Rover_* _  # C implementation
+        const byte_t[:] pattern_view
+        byte_t pattern_value
 
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class Memory:  # TODO: make ALL as cdef and move to cython Memory_!!!
+cdef class Memory:
     cdef:
-        Rack_* _  # C implementation
+        Memory_* _  # C implementation
         addr_t _trim_start
         addr_t _trim_endex
         bint _trim_start_
         bint _trim_endex_
-
-    # TODO: prototype indentation as per _py.py
-
-    cdef bint __eq__same_(self, Memory other) except -1
-    cdef bint __eq__raw_(self, size_t data_size, const byte_t* data_ptr) except -1
-    cdef bint __eq__view_(self, const byte_t[:] view) except -1
-    cdef bint __eq__iter_(self, iterable) except -1
-
-    cdef saddr_t find_unbounded_(self, size_t size, const byte_t* buffer) except -2
-    cdef saddr_t find_bounded_(self, size_t size, const byte_t* buffer, addr_t start, addr_t endex) except -2
-
-    cdef saddr_t rfind_unbounded_(self, size_t size, const byte_t* buffer) except -2
-    cdef saddr_t rfind_bounded_(self, size_t size, const byte_t* buffer, addr_t start, addr_t endex) except -2
-
-    cdef addr_t count_unbounded_(self, size_t size, const byte_t* buffer) except -1
-    cdef addr_t count_bounded_(self, size_t size, const byte_t* buffer, addr_t start, addr_t endex) except -1
-
-    cdef vint append_(self, byte_t value) except -1
-
-    cdef vint extend_same_(self, Memory items, addr_t offset) except -1
-    cdef vint extend_raw_(self, size_t items_size, const byte_t* items_ptr, addr_t offset) except -1
-
-    cdef int pop_last_(self) except -2
-    cdef int pop_at_(self, addr_t address) except -2
-
-    cdef addr_t start_(self)
-    cdef addr_t endex_(self)
-    cdef (addr_t, addr_t) span_(self)
-
-    cdef addr_t content_start_(self)
-    cdef addr_t content_endex_(self)
-    cdef (addr_t, addr_t) content_span_(self)
-    cdef addr_t content_size_(self)
-    cdef size_t content_parts_(self)
-
-    cdef vint validate_(self) except -1
-
-    cdef (addr_t, addr_t) bound_(self, object start, object endex)
-
-    cdef int peek_(self, addr_t address) except -2
-
-    cdef int poke_none_(self, addr_t address) except -2
-    cdef vint poke_none__(self, addr_t address) except -1
-    cdef int poke_(self, addr_t address, byte_t value) except -2
-
-    cdef Memory extract_(self, addr_t start, addr_t endex,
-                         size_t pattern_size, const byte_t* pattern_ptr,
-                         saddr_t step, bint bound)
-
-    cdef vint shift_left_(self, addr_t offset, list backups) except -1
-    cdef vint shift_right_(self, addr_t offset, list backups) except -1
-
-    cdef vint reserve_(self, addr_t address, addr_t size, list backups) except -1
-
-    cdef BlockView _memview(self)
-
-    cdef Memory copy_(self)
-
-    cdef bint _insert_(self, addr_t address, size_t size, const byte_t* data, bint shift_after) except -1
-
-    cdef bint _erase_(self, addr_t start, addr_t endex, bint shift_after, bint merge_deletion) except -1
-
-    cdef vint insert_same_(self, addr_t address, Memory data, list backups) except -1
-    cdef vint insert_raw_(self, addr_t address, size_t data_size, const byte_t* data_ptr, list backups) except -1
-
-    cdef vint delete_(self, addr_t start, addr_t endex, list backups) except -1
-
-    cdef vint clear_(self, addr_t start, addr_t endex, list backups) except -1
-
-    cdef vint _pretrim_start_(self, addr_t endex_max, addr_t size, list backups) except -1
-    cdef vint _pretrim_endex_(self, addr_t start_min, addr_t size, list backups) except -1
-
-    cdef vint _crop_(self, addr_t start, addr_t endex, list backups) except -1
-
-    cdef vint write_same_(self, addr_t address, Memory data, bint clear, list backups) except -1
-    cdef vint write_raw_(self, addr_t address, size_t data_size, const byte_t* data_ptr, list backups) except -1
-
-    cdef vint fill_(self, addr_t start, addr_t endex, Block_** pattern, list backups, addr_t start_) except -1
-
-    cdef vint flood_(self, addr_t start, addr_t endex, Block_** pattern, list backups) except -1
