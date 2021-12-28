@@ -2943,268 +2943,6 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2:
 
 # =====================================================================================================================
 
-cdef Rover_* Rover_Alloc() except NULL:
-    cdef:
-        Rover_* that = <Rover_*>PyMem_Calloc(Rover_HEADING, 1, True)
-
-    if that == NULL:
-        raise MemoryError()
-    return that
-
-
-cdef Rover_* Rover_Free(Rover_* that) except? NULL:
-    if that:
-        Rover_Dispose(that)
-        PyMem_Free(that)
-    return NULL
-
-
-cdef Rover_* Rover_Create(
-    const Memory_* memory,
-    addr_t start,
-    addr_t endex,
-    size_t pattern_size,
-    const byte_t* pattern_data,
-    bint forward,
-    bint infinite,
-) except NULL:
-    cdef:
-        Block_* block = NULL
-        addr_t offset
-        size_t pattern_offset
-
-    if forward:
-        if endex < start:
-            endex = start
-    else:
-        if start > endex:
-            start = endex
-
-    if (not pattern_data) != (not pattern_size):
-        raise ValueError('non-empty pattern required')
-    pattern_offset = pattern_size - 1  if pattern_size and not forward else 0
-
-    that = Rover_Alloc()
-
-    that.forward = forward
-    that.infinite = infinite
-    that.start = start
-    that.endex = endex
-    that.address = start if forward else endex
-
-    that.pattern_size = pattern_size
-    that.pattern_data = &pattern_data[pattern_offset]
-    that.pattern_offset = pattern_offset
-
-    that.memory = memory
-    that.block_count = Rack_Length(memory.blocks)
-
-    try:
-        if that.block_count:
-            if forward:
-                that.block_index = Rack_IndexStart(memory.blocks, start)
-                if that.block_index < that.block_count:
-                    block = Rack_Get_(memory.blocks, that.block_index)
-                    that.block_start = Block_Start(block)
-                    that.block_endex = Block_Endex(block)
-
-                    offset = start if start >= that.block_start else that.block_start
-                    if offset > that.block_endex:
-                        offset = that.block_endex
-                    offset -= that.block_start
-                    CheckAddrToSizeU(offset)
-
-                    block = Block_Acquire(block)
-                    that.block = block
-                    that.block_ptr = Block_At__(block, <size_t>offset)
-
-            else:
-                that.block_index = Rack_IndexEndex(memory.blocks, endex)
-                if that.block_index:
-                    block = Rack_Get_(memory.blocks, that.block_index - 1)
-                    that.block_start = Block_Start(block)
-                    that.block_endex = Block_Endex(block)
-
-                    offset = endex if endex >= that.block_start else that.block_start
-                    if offset > that.block_endex:
-                        offset = that.block_endex
-                    offset -= that.block_start
-                    CheckAddrToSizeU(offset)
-
-                    block = Block_Acquire(block)
-                    that.block = block
-                    that.block_ptr = Block_At__(block, <size_t>offset)
-    except:
-        that = Rover_Free(that)
-        raise
-
-
-cdef addr_t Rover_Length(const Rover_* that) nogil:
-    return that.endex - that.start
-
-
-cdef bint Rover_HasNext(const Rover_* that) nogil:
-    if that.forward:
-        return that.address >= that.endex
-    else:
-        return that.address <= that.start
-
-
-cdef int Rover_Next_(Rover_* that) except -2:
-    cdef:
-        Block_* block
-        int value = -1
-
-    try:
-        if that.forward:
-            while True:  # loop to move to the next block when necessary
-                if that.address < that.endex:
-                    if that.block_index < that.block_count:
-                        if that.address < that.block_start:
-                            that.address += 1
-                            if that.pattern_size:
-                                value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                            else:
-                                value = -1
-                            break
-
-                        elif that.address < that.block_endex:
-                            that.address += 1
-                            value = that.block_ptr[0]
-                            that.block_ptr += 1
-                            break
-
-                        else:
-                            that.block_index += 1
-                            if that.block_index < that.block_count:
-                                that.block = Block_Release(that.block)
-                                that.block = NULL
-                                block = Rack_Get_(that.memory.blocks, that.block_index)
-                                block = Block_Acquire(block)
-                                that.block = block
-                                that.block_start = Block_Start(block)
-                                that.block_endex = Block_Endex(block)
-                                that.block_ptr = Block_At_(block, 0)
-                            continue
-                    else:
-                        that.address += 1
-                        if that.pattern_size:
-                            value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                        else:
-                            value = -1
-                        break
-
-                elif that.infinite:
-                    if that.pattern_size:
-                        value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                    else:
-                        value = -1
-
-                else:
-                    raise StopIteration()
-        else:
-            while True:  # loop to move to the next block when necessary
-                if that.address > that.start:
-                    if that.block_index:
-                        if that.address > that.block_endex:
-                            that.address -= 1
-                            if that.pattern_size:
-                                value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                            else:
-                                value = -1
-                            break
-
-                        elif that.address > that.block_start:
-                            that.address -= 1
-                            that.block_ptr -= 1
-                            value = that.block_ptr[0]
-                            break
-
-                        else:
-                            that.block_index -= 1
-                            if that.block_index:
-                                that.block = Block_Release(that.block)
-                                that.block = NULL
-                                block = Rack_Get_(that.memory.blocks, that.block_index - 1)
-                                block = Block_Acquire(block)
-                                that.block = block
-                                that.block_start = Block_Start(block)
-                                that.block_endex = Block_Endex(block)
-                                that.block_ptr = Block_At__(block, Block_Length(block))
-                            value = -1
-                            continue
-                    else:
-                        that.address -= 1
-                        if that.pattern_size:
-                            value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                        else:
-                            value = -1
-                        break
-
-                elif that.infinite:
-                    if that.pattern_size:
-                        value = <int><unsigned>that.pattern_data[that.pattern_offset]
-                    else:
-                        value = -1
-
-                else:
-                    raise StopIteration()
-
-        if that.pattern_size:
-            if that.forward:
-                if that.pattern_offset < that.pattern_size - 1:
-                    that.pattern_offset += 1
-                else:
-                    that.pattern_offset = 0
-            else:
-                if that.pattern_offset > 0:
-                    that.pattern_offset -= 1
-                else:
-                    that.pattern_offset = that.pattern_size - 1
-
-        return value
-
-    except:
-        that.block = Block_Release(that.block)  # preempt
-        raise
-
-
-cdef object Rover_Next(Rover_* that):
-    cdef:
-        int value
-
-    value = Rover_Next_(that)
-    return None if value < 0 else value
-
-
-cdef vint Rover_Dispose(Rover_* that) except -1:
-    that.address = that.endex if that.forward else that.start
-    that.block = Block_Release(that.block)
-    that.memory = NULL
-
-
-cdef bint Rover_Forward(const Rover_* that) nogil:
-    return that.forward
-
-
-cdef bint Rover_Infinite(const Rover_* that) nogil:
-    return that.infinite
-
-
-cdef addr_t Rover_Address(const Rover_* that) nogil:
-    return that.address
-
-
-cdef addr_t Rover_Start(const Rover_* that) nogil:
-    return that.start
-
-
-cdef addr_t Rover_Endex(const Rover_* that) nogil:
-    return that.endex
-
-
-# =====================================================================================================================
-
 cdef Memory Memory_AsObject(Memory_* that):
     cdef:
         Memory memory = Memory()
@@ -5401,6 +5139,268 @@ cdef list Memory_ToBlocks(const Memory_* that):
         view = <const byte_t[:size]>Block_At__(block, 0)
         blocks2.append([Block_Start(block), bytearray(view)])
     return blocks2
+
+
+# =====================================================================================================================
+
+cdef Rover_* Rover_Alloc() except NULL:
+    cdef:
+        Rover_* that = <Rover_*>PyMem_Calloc(Rover_HEADING, 1, True)
+
+    if that == NULL:
+        raise MemoryError()
+    return that
+
+
+cdef Rover_* Rover_Free(Rover_* that) except? NULL:
+    if that:
+        Rover_Dispose(that)
+        PyMem_Free(that)
+    return NULL
+
+
+cdef Rover_* Rover_Create(
+    const Memory_* memory,
+    addr_t start,
+    addr_t endex,
+    size_t pattern_size,
+    const byte_t* pattern_data,
+    bint forward,
+    bint infinite,
+) except NULL:
+    cdef:
+        Block_* block = NULL
+        addr_t offset
+        size_t pattern_offset
+
+    if forward:
+        if endex < start:
+            endex = start
+    else:
+        if start > endex:
+            start = endex
+
+    if (not pattern_data) != (not pattern_size):
+        raise ValueError('non-empty pattern required')
+    pattern_offset = pattern_size - 1  if pattern_size and not forward else 0
+
+    that = Rover_Alloc()
+
+    that.forward = forward
+    that.infinite = infinite
+    that.start = start
+    that.endex = endex
+    that.address = start if forward else endex
+
+    that.pattern_size = pattern_size
+    that.pattern_data = &pattern_data[pattern_offset]
+    that.pattern_offset = pattern_offset
+
+    that.memory = memory
+    that.block_count = Rack_Length(memory.blocks)
+
+    try:
+        if that.block_count:
+            if forward:
+                that.block_index = Rack_IndexStart(memory.blocks, start)
+                if that.block_index < that.block_count:
+                    block = Rack_Get_(memory.blocks, that.block_index)
+                    that.block_start = Block_Start(block)
+                    that.block_endex = Block_Endex(block)
+
+                    offset = start if start >= that.block_start else that.block_start
+                    if offset > that.block_endex:
+                        offset = that.block_endex
+                    offset -= that.block_start
+                    CheckAddrToSizeU(offset)
+
+                    block = Block_Acquire(block)
+                    that.block = block
+                    that.block_ptr = Block_At__(block, <size_t>offset)
+
+            else:
+                that.block_index = Rack_IndexEndex(memory.blocks, endex)
+                if that.block_index:
+                    block = Rack_Get_(memory.blocks, that.block_index - 1)
+                    that.block_start = Block_Start(block)
+                    that.block_endex = Block_Endex(block)
+
+                    offset = endex if endex >= that.block_start else that.block_start
+                    if offset > that.block_endex:
+                        offset = that.block_endex
+                    offset -= that.block_start
+                    CheckAddrToSizeU(offset)
+
+                    block = Block_Acquire(block)
+                    that.block = block
+                    that.block_ptr = Block_At__(block, <size_t>offset)
+    except:
+        that = Rover_Free(that)
+        raise
+
+
+cdef addr_t Rover_Length(const Rover_* that) nogil:
+    return that.endex - that.start
+
+
+cdef bint Rover_HasNext(const Rover_* that) nogil:
+    if that.forward:
+        return that.address >= that.endex
+    else:
+        return that.address <= that.start
+
+
+cdef int Rover_Next_(Rover_* that) except -2:
+    cdef:
+        Block_* block
+        int value = -1
+
+    try:
+        if that.forward:
+            while True:  # loop to move to the next block when necessary
+                if that.address < that.endex:
+                    if that.block_index < that.block_count:
+                        if that.address < that.block_start:
+                            that.address += 1
+                            if that.pattern_size:
+                                value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                            else:
+                                value = -1
+                            break
+
+                        elif that.address < that.block_endex:
+                            that.address += 1
+                            value = that.block_ptr[0]
+                            that.block_ptr += 1
+                            break
+
+                        else:
+                            that.block_index += 1
+                            if that.block_index < that.block_count:
+                                that.block = Block_Release(that.block)
+                                that.block = NULL
+                                block = Rack_Get_(that.memory.blocks, that.block_index)
+                                block = Block_Acquire(block)
+                                that.block = block
+                                that.block_start = Block_Start(block)
+                                that.block_endex = Block_Endex(block)
+                                that.block_ptr = Block_At_(block, 0)
+                            continue
+                    else:
+                        that.address += 1
+                        if that.pattern_size:
+                            value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                        else:
+                            value = -1
+                        break
+
+                elif that.infinite:
+                    if that.pattern_size:
+                        value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                    else:
+                        value = -1
+
+                else:
+                    raise StopIteration()
+        else:
+            while True:  # loop to move to the next block when necessary
+                if that.address > that.start:
+                    if that.block_index:
+                        if that.address > that.block_endex:
+                            that.address -= 1
+                            if that.pattern_size:
+                                value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                            else:
+                                value = -1
+                            break
+
+                        elif that.address > that.block_start:
+                            that.address -= 1
+                            that.block_ptr -= 1
+                            value = that.block_ptr[0]
+                            break
+
+                        else:
+                            that.block_index -= 1
+                            if that.block_index:
+                                that.block = Block_Release(that.block)
+                                that.block = NULL
+                                block = Rack_Get_(that.memory.blocks, that.block_index - 1)
+                                block = Block_Acquire(block)
+                                that.block = block
+                                that.block_start = Block_Start(block)
+                                that.block_endex = Block_Endex(block)
+                                that.block_ptr = Block_At__(block, Block_Length(block))
+                            value = -1
+                            continue
+                    else:
+                        that.address -= 1
+                        if that.pattern_size:
+                            value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                        else:
+                            value = -1
+                        break
+
+                elif that.infinite:
+                    if that.pattern_size:
+                        value = <int><unsigned>that.pattern_data[that.pattern_offset]
+                    else:
+                        value = -1
+
+                else:
+                    raise StopIteration()
+
+        if that.pattern_size:
+            if that.forward:
+                if that.pattern_offset < that.pattern_size - 1:
+                    that.pattern_offset += 1
+                else:
+                    that.pattern_offset = 0
+            else:
+                if that.pattern_offset > 0:
+                    that.pattern_offset -= 1
+                else:
+                    that.pattern_offset = that.pattern_size - 1
+
+        return value
+
+    except:
+        that.block = Block_Release(that.block)  # preempt
+        raise
+
+
+cdef object Rover_Next(Rover_* that):
+    cdef:
+        int value
+
+    value = Rover_Next_(that)
+    return None if value < 0 else value
+
+
+cdef vint Rover_Dispose(Rover_* that) except -1:
+    that.address = that.endex if that.forward else that.start
+    that.block = Block_Release(that.block)
+    that.memory = NULL
+
+
+cdef bint Rover_Forward(const Rover_* that) nogil:
+    return that.forward
+
+
+cdef bint Rover_Infinite(const Rover_* that) nogil:
+    return that.infinite
+
+
+cdef addr_t Rover_Address(const Rover_* that) nogil:
+    return that.address
+
+
+cdef addr_t Rover_Start(const Rover_* that) nogil:
+    return that.start
+
+
+cdef addr_t Rover_Endex(const Rover_* that) nogil:
+    return that.endex
 
 
 # =====================================================================================================================

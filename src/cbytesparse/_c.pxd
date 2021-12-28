@@ -472,84 +472,6 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2
 
 cdef extern from *:
     r"""
-    typedef struct Rover_ {
-        int forward;  // bint
-        int infinite;  // bint
-        addr_t start;
-        addr_t endex;
-        addr_t address;
-
-        size_t pattern_size;
-        const byte_t* pattern_data;
-        size_t pattern_offset;
-
-        Memory_* memory;
-        size_t block_count;
-        size_t block_index;
-        Block_* block;
-        addr_t block_start;
-        addr_t block_endex;
-        const byte_t* block_ptr;
-    } Rover_;
-
-    #define Rover_HEADING (sizeof(Rover_))
-    """
-
-    ctypedef struct Rover_:
-        bint forward
-        bint infinite
-        addr_t start
-        addr_t endex
-        addr_t address
-
-        size_t pattern_size
-        const byte_t* pattern_data
-        size_t pattern_offset
-
-        Memory_* memory
-        const Rack_* blocks
-        size_t block_count
-        size_t block_index
-        Block_* block
-        addr_t block_start
-        addr_t block_endex
-        const byte_t* block_ptr
-
-    size_t Rover_HEADING
-
-
-cdef Rover_* Rover_Alloc() except NULL
-cdef Rover_* Rover_Free(Rover_* that) except? NULL
-
-cdef Rover_* Rover_Create(
-    const Memory_* memory,
-    addr_t start,
-    addr_t endex,
-    size_t pattern_size,
-    const byte_t* pattern_data,
-    bint forward,
-    bint infinite,
-) except NULL
-
-cdef addr_t Rover_Length(const Rover_* that) nogil
-
-cdef bint Rover_HasNext(const Rover_* that) nogil
-cdef int Rover_Next_(Rover_* that) except -2
-cdef object Rover_Next(Rover_* that)
-
-cdef vint Rover_Dispose(Rover_* that) except -1
-
-cdef bint Rover_Forward(const Rover_* that) nogil
-cdef bint Rover_Infinite(const Rover_* that) nogil
-cdef addr_t Rover_Address(const Rover_* that) nogil
-cdef addr_t Rover_Start(const Rover_* that) nogil
-cdef addr_t Rover_Endex(const Rover_* that) nogil
-
-
-# =====================================================================================================================
-
-cdef extern from *:
-    r"""
     typedef struct Memory_ {
         Rack_* blocks;
         addr_t trim_start;
@@ -746,6 +668,84 @@ cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern
 cdef list Memory_AsViews(const Memory_* that)
 
 cdef list Memory_ToBlocks(const Memory_* that)
+
+
+# =====================================================================================================================
+
+cdef extern from *:
+    r"""
+    typedef struct Rover_ {
+        int forward;  // bint
+        int infinite;  // bint
+        addr_t start;
+        addr_t endex;
+        addr_t address;
+
+        size_t pattern_size;
+        const byte_t* pattern_data;
+        size_t pattern_offset;
+
+        const Memory_* memory;
+        size_t block_count;
+        size_t block_index;
+        Block_* block;
+        addr_t block_start;
+        addr_t block_endex;
+        const byte_t* block_ptr;
+    } Rover_;
+
+    #define Rover_HEADING (sizeof(Rover_))
+    """
+
+    ctypedef struct Rover_:
+        bint forward
+        bint infinite
+        addr_t start
+        addr_t endex
+        addr_t address
+
+        size_t pattern_size
+        const byte_t* pattern_data
+        size_t pattern_offset
+
+        const Memory_* memory
+        const Rack_* blocks
+        size_t block_count
+        size_t block_index
+        Block_* block
+        addr_t block_start
+        addr_t block_endex
+        const byte_t* block_ptr
+
+    size_t Rover_HEADING
+
+
+cdef Rover_* Rover_Alloc() except NULL
+cdef Rover_* Rover_Free(Rover_* that) except? NULL
+
+cdef Rover_* Rover_Create(
+    const Memory_* memory,
+    addr_t start,
+    addr_t endex,
+    size_t pattern_size,
+    const byte_t* pattern_data,
+    bint forward,
+    bint infinite,
+) except NULL
+
+cdef addr_t Rover_Length(const Rover_* that) nogil
+
+cdef bint Rover_HasNext(const Rover_* that) nogil
+cdef int Rover_Next_(Rover_* that) except -2
+cdef object Rover_Next(Rover_* that)
+
+cdef vint Rover_Dispose(Rover_* that) except -1
+
+cdef bint Rover_Forward(const Rover_* that) nogil
+cdef bint Rover_Infinite(const Rover_* that) nogil
+cdef addr_t Rover_Address(const Rover_* that) nogil
+cdef addr_t Rover_Start(const Rover_* that) nogil
+cdef addr_t Rover_Endex(const Rover_* that) nogil
 
 
 # =====================================================================================================================
