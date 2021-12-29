@@ -1549,6 +1549,7 @@ cdef Block_* Block_WriteSlice(Block_* that, ssize_t start, ssize_t endex,
 cdef Block_* Block_SetSlice_(Block_* that, size_t start, size_t endex,
                              const Block_* src, size_t start2, size_t endex2) except NULL:
     cdef:
+        size_t size    # target size
         size_t size2   # source size
 
     size2 = src.endex - src.start
@@ -6658,7 +6659,7 @@ cdef class Memory:
                 endex = endex_max
 
             if backups is not None:
-                backups.append(self.extract(endex=endex))
+                backups.append(self.extract_(self.start_(), endex, 0, NULL, 1, True))
 
             self._erase_(ADDR_MIN, endex, False, False)  # clear
 
@@ -6705,7 +6706,7 @@ cdef class Memory:
                 start = start_min
 
             if backups is not None:
-                backups.append(self.extract(start=start))
+                backups.append(self.extract_(start, self.endex_(), 0, NULL, 1, True))
 
             self._erase_(start, ADDR_MAX, False, False)  # clear
 
