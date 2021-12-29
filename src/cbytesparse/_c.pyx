@@ -2724,6 +2724,7 @@ cdef Rack_* Rack_WriteSlice(Rack_* that, ssize_t start, ssize_t endex,
 cdef Rack_* Rack_SetSlice_(Rack_* that, size_t start, size_t endex,
                            Rack_* src, size_t start2, size_t endex2) except NULL:
     cdef:
+        size_t size   # target size
         size_t size2  # source size
 
     size2 = src.endex - src.start
@@ -2943,7 +2944,7 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2:
 
 # =====================================================================================================================
 
-cdef Memory Memory_AsObject(Memory_* that):
+cdef object Memory_AsObject(Memory_* that):
     cdef:
         Memory memory = Memory()
         Memory_* memory_ = memory._
@@ -3099,19 +3100,20 @@ cdef bint Memory_EqView_(const Memory_* that, const byte_t[:] view) except -1:
 
 cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1:
     cdef:
+        bint equal = True
         addr_t start = Memory_Start(that)
         addr_t endex = Memory_Endex(that)
         Rover_* rover = Rover_Create(that, start, endex, 0, NULL, True, False)
-        bint equal = True
 
     try:
-        iter_other = iter(iterable)
-        while True:
-            if Rover_Next(rover) != next(iter_other):
-                equal = False
+        for item2 in iterable:
+            if Rover_HasNext(rover):  # avoid exception management
+                item1 = Rover_Next(rover)
+                if item1 != item2:
+                    equal = False
+                    break
+            else:
                 break
-    except StopIteration:
-        pass
     finally:
         Rover_Free(rover)
     return equal
@@ -3122,7 +3124,7 @@ cdef bint Memory_Eq(const Memory_* that, object other) except -1:
         const byte_t[:] view
 
     if isinstance(other, Memory):
-        return Memory_EqSame_(that, <Memory_*>other._)
+        return Memory_EqSame_(that, (<Memory>other)._)
     else:
         try:
             view = other
@@ -4357,7 +4359,7 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
     return memory
 
 
-cdef Memory Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
+cdef object Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
                             size_t pattern_size, const byte_t* pattern_ptr,
                             saddr_t step, bint bound):
     cdef:
@@ -4366,7 +4368,7 @@ cdef Memory Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
     return Memory_AsObject(memory_)
 
 
-cdef Memory Memory_Extract(const Memory_* that, object start, object endex,
+cdef object Memory_Extract(const Memory_* that, object start, object endex,
                            object pattern, object step, bint bound):
     cdef:
         addr_t start_
@@ -4447,7 +4449,6 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backu
     if size and Rack_Length(blocks):
         Memory_PretrimEndex_(that, address, size, backups)
 
-        blocks = that.blocks
         block_index = Rack_IndexStart(blocks, address)
         block_count = Rack_Length(blocks)
 
@@ -4480,7 +4481,7 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backu
 
 
 cdef vint Memory_Reserve(Memory_* that, object address, object size, list backups) except -1:
-    Memory_Reserve(that, <addr_t>address, <addr_t>size, backups)
+    Memory_Reserve_(that, <addr_t>address, <addr_t>size, backups)
 
 
 cdef vint Memory_Insert__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
@@ -4784,6 +4785,7 @@ cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size, lis
             backups.append(Memory_Extract_(that, 0, endex, 0, NULL, 1, True))
 
         Memory_Erase__(that, ADDR_MIN, endex, False, False)  # clear
+
 
 cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size, list backups) except -1:
         cdef:
@@ -5252,7 +5254,7 @@ cdef bint Rover_HasNext(const Rover_* that) nogil:
 
 cdef int Rover_Next_(Rover_* that) except -2:
     cdef:
-        Block_* block
+        Block_* block = NULL
         int value = -1
 
     try:
@@ -5371,10 +5373,9 @@ cdef int Rover_Next_(Rover_* that) except -2:
 
 cdef object Rover_Next(Rover_* that):
     cdef:
-        int value
+        int value = Rover_Next_(that)
 
-    value = Rover_Next_(that)
-    return None if value < 0 else value
+    return None if value < 0 else <object>value
 
 
 cdef vint Rover_Dispose(Rover_* that) except -1:
@@ -5404,145 +5405,6 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil:
 
 
 # =====================================================================================================================
-
-cdef class Rover:
-    r"""Memory iterator.
-
-    Iterates over values stored within a :class:`Memory`.
-
-    Arguments:
-        memory (:class:`Memory`):
-            Memory to iterate.
-
-        start (int):
-            Inclusive start address of the iterated range.
-
-        endex (int):
-            Exclusive end address of the iterated range.
-
-        pattern (bytes):
-            Pattern to fill emptiness.
-
-        forward (bool):
-            Forward iterator.
-
-        infinite (bool):
-            Infinite iterator.
-    """
-
-    def __cinit__(self):
-        self._ = NULL
-
-    def __dealloc__(self):
-        Rover_Dispose(self._)
-
-    def __init__(
-        self,
-        Memory memory not None,
-        addr_t start,
-        addr_t endex,
-        object pattern,
-        bint forward,
-        bint infinite,
-    ):
-        cdef:
-            const byte_t[:] pattern_view
-            size_t pattern_size = 0
-            const byte_t* pattern_data = NULL
-
-        if forward:
-            if endex < start:
-                endex = start
-        else:
-            if start > endex:
-                start = endex
-
-        if pattern is not None:
-            if isinstance(pattern, int):
-                self.pattern_value = <byte_t>pattern
-                pattern_size = 1
-                pattern_data = &self.pattern_value
-            else:
-                try:
-                    pattern_view = pattern
-                except TypeError:
-                    pattern_view = bytes(pattern)
-                with cython.boundscheck(False):
-                    patterb_size = len(pattern_view)
-                    pattern_data = &pattern_view[0]
-                self.pattern_view = pattern_view
-
-        self._ = Rover_Create(memory._, start, endex, pattern_size, pattern_data, forward, infinite)
-
-    def __len__(self):
-        r"""Address range length.
-
-        Returns:
-            int: Address range length.
-        """
-        return Rover_Length(self._)
-
-    def __next__(self):
-        r"""Next iterated value.
-
-        Returns:
-            int: Byte value at the current address; ``None`` within emptiness.
-        """
-        cdef:
-            int value
-
-        value = self.next_()
-        return None if value < 0 else value
-
-    def __iter__(self):
-        r"""Values iterator.
-
-        Yields:
-            int: Byte value at the current address; ``None`` within emptiness.
-        """
-        cdef:
-            Rover_* rover = self._
-
-        while True:
-            yield Rover_Next(rover)
-
-    def dispose(self):
-        r"""Forces object disposal.
-
-        Useful to make sure that any memory blocks are unreferenced before automatic
-        garbage collection.
-
-        Any access to the object after calling this function could raise exceptions.
-        """
-        Rover_Dispose(self._)
-
-    @property
-    def forward(self) -> bool:
-        r"""bool: Forward iterator."""
-        return Rover_Forward(self._)
-
-    @property
-    def infinite(self) -> bool:
-        r"""bool: Infinite iterator."""
-        return Rover_Infinite(self._)
-
-    @property
-    def address(self) -> Address:
-        r"""int: Current address being iterated."""
-        return Rover_Address(self._)
-
-    @property
-    def start(self) -> Address:
-        r"""int: Inclusive start address of the iterated range."""
-        return Rover_Start(self._)
-
-    @property
-    def endex(self) -> Address:
-        r"""int: Exclusive end address of the iterated range."""
-        return Rover_Endex(self._)
-
-
-# ---------------------------------------------------------------------------------------------------------------------
 
 cdef class Memory:
     r"""Virtual memory.
@@ -5783,7 +5645,8 @@ cdef class Memory:
         times: int,
     ) -> 'Memory':
         cdef:
-            Memory_* memory_ = Memory_Mul(self._, times)
+            addr_t times_ = 0 if times < 0 else <addr_t>times
+            Memory_* memory_ = Memory_Mul(self._, times_)
             Memory memory = Memory_AsObject(memory_)
 
         return memory
@@ -5792,8 +5655,10 @@ cdef class Memory:
         self: 'Memory',
         times: int,
     ) -> 'Memory':
+        cdef:
+            addr_t times_ = 0 if times < 0 else <addr_t>times
 
-        Memory_IMul(self._, times)
+        Memory_IMul(self._, times_)
         return self
 
     def __len__(
@@ -6998,6 +6863,108 @@ cdef class Memory:
 
         return Memory_Bound(self._, start, endex)
 
+    def _block_index_at(
+        self: 'Memory',
+        address: Address,
+    ) -> Optional[BlockIndex]:
+        r"""Locates the block enclosing an address.
+
+        Returns the index of the block enclosing the given address.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+        Returns:
+            int: Block index if found, ``None`` otherwise.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   | 0 | 0 | 0 | 0 |   | 1 |   | 2 | 2 | 2 |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_at(i) for i in range(12)]
+            [None, 0, 0, 0, 0, None, 1, None, 2, 2, 2, None]
+        """
+        cdef:
+            ssize_t block_index
+
+        block_index = Rack_IndexAt(self._.blocks, address)
+        return None if block_index < 0 else block_index
+
+    def _block_index_start(
+        self: 'Memory',
+        address: Address,
+    ) -> BlockIndex:
+        r"""Locates the first block inside of an address range.
+
+        Returns the index of the first block whose start address is greater than
+        or equal to `address`.
+
+        Useful to find the initial block index in a ranged search.
+
+        Arguments:
+            address (int):
+                Inclusive start address of the scanned range.
+
+        Returns:
+            int: First block index since `address`.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 3 |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_start(i) for i in range(12)]
+            [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
+        """
+
+        return Rack_IndexStart(self._.blocks, address)
+
+    def _block_index_endex(
+        self: 'Memory',
+        address: Address,
+    ) -> BlockIndex:
+        r"""Locates the first block after an address range.
+
+        Returns the index of the first block whose end address is lesser than or
+        equal to `address`.
+
+        Useful to find the termination block index in a ranged search.
+
+        Arguments:
+            address (int):
+                Exclusive end address of the scanned range.
+
+        Returns:
+            int: First block index after `address`.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 1 | 1 | 1 | 1 | 2 | 2 | 3 | 3 | 3 | 3 |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_endex(i) for i in range(12)]
+            [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]
+        """
+
+        return Rack_IndexEndex(self._.blocks, address)
+
     def peek(
         self: 'Memory',
         address: Address,
@@ -7687,6 +7654,11 @@ cdef class Memory:
         cdef:
             addr_t start_
             addr_t endex_
+            Rover_* rover = NULL
+            byte_t pattern_value
+            const byte_t[:] pattern_view
+            size_t pattern_size = 0
+            const byte_t* pattern_data = NULL
 
         if start is None:
             start_ = Memory_Start(self._)
@@ -7700,7 +7672,28 @@ cdef class Memory:
         else:
             endex_ = <addr_t>endex
 
-        yield from Rover(self, start_, endex_, pattern, True, endex is Ellipsis)
+        if pattern is not None:
+            if isinstance(pattern, int):
+                pattern_value = <byte_t>pattern
+                pattern_size = 1
+                pattern_data = &pattern_value
+            else:
+                try:
+                    pattern_view = pattern
+                except TypeError:
+                    pattern_view = bytes(pattern)
+                with cython.boundscheck(False):
+                    pattern_size = len(pattern_view)
+                    pattern_data = &pattern_view[0]
+
+        rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
+        try:
+            while True:
+                yield Rover_Next(rover)
+        except StopIteration:
+            pass
+        finally:
+            Rover_Free(rover)
 
     def rvalues(
         self: 'Memory',
@@ -7759,6 +7752,11 @@ cdef class Memory:
         cdef:
             addr_t start_
             addr_t endex_
+            Rover_* rover = NULL
+            byte_t pattern_value
+            const byte_t[:] pattern_view
+            size_t pattern_size = 0
+            const byte_t* pattern_data = NULL
 
         if start is None:
             start_ = Memory_Start(self._)
@@ -7772,7 +7770,28 @@ cdef class Memory:
         else:
             endex_ = <addr_t>endex
 
-        yield from Rover(self, start_, endex_, pattern, False, start is Ellipsis)
+        if pattern is not None:
+            if isinstance(pattern, int):
+                pattern_value = <byte_t>pattern
+                pattern_size = 1
+                pattern_data = &pattern_value
+            else:
+                try:
+                    pattern_view = pattern
+                except TypeError:
+                    pattern_view = bytes(pattern)
+                with cython.boundscheck(False):
+                    pattern_size = len(pattern_view)
+                    pattern_data = &pattern_view[0]
+
+        rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, False, start is Ellipsis)
+        try:
+            while True:
+                yield Rover_Next(rover)
+        except StopIteration:
+            pass
+        finally:
+            Rover_Free(rover)
 
     def items(
         self: 'Memory',

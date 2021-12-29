@@ -502,7 +502,7 @@ cdef extern from *:
     size_t Memory_HEADING
 
 
-cdef Memory Memory_AsObject(Memory_* that)
+cdef object Memory_AsObject(Memory_* that)
 
 cdef Memory_* Memory_Alloc() except NULL
 cdef Memory_* Memory_Free(Memory_* that) except? NULL
@@ -615,11 +615,11 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
                                size_t pattern_size, const byte_t* pattern_ptr,
                                saddr_t step, bint bound) except NULL
 
-cdef Memory Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
+cdef object Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
                             size_t pattern_size, const byte_t* pattern_ptr,
                             saddr_t step, bint bound)
 
-cdef Memory Memory_Extract(const Memory_* that, object start, object endex,
+cdef object Memory_Extract(const Memory_* that, object start, object endex,
                            object pattern, object step, bint bound)
 
 cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset, list backups) except -1
@@ -675,47 +675,50 @@ cdef list Memory_ToBlocks(const Memory_* that)
 cdef extern from *:
     r"""
     typedef struct Rover_ {
-        int forward;  // bint
-        int infinite;  // bint
+    	// Sorted by data size
         addr_t start;
         addr_t endex;
         addr_t address;
-
-        size_t pattern_size;
-        const byte_t* pattern_data;
-        size_t pattern_offset;
-
-        const Memory_* memory;
-        size_t block_count;
-        size_t block_index;
-        Block_* block;
         addr_t block_start;
         addr_t block_endex;
+
+        const Memory_* memory;
+        const byte_t* pattern_data;
+        Block_* block;
         const byte_t* block_ptr;
+
+        size_t pattern_size;
+        size_t pattern_offset;
+        size_t block_count;
+        size_t block_index;
+
+        int forward;  // bint
+        int infinite;  // bint
     } Rover_;
 
     #define Rover_HEADING (sizeof(Rover_))
     """
 
     ctypedef struct Rover_:
-        bint forward
-        bint infinite
+    	# Sorted by data size
         addr_t start
         addr_t endex
         addr_t address
-
-        size_t pattern_size
-        const byte_t* pattern_data
-        size_t pattern_offset
-
-        const Memory_* memory
-        const Rack_* blocks
-        size_t block_count
-        size_t block_index
-        Block_* block
         addr_t block_start
         addr_t block_endex
+
+        const Memory_* memory
+        const byte_t* pattern_data
+        Block_* block
         const byte_t* block_ptr
+
+        size_t pattern_size
+        size_t pattern_offset
+        size_t block_count
+        size_t block_index
+
+        bint forward
+        bint infinite
 
     size_t Rover_HEADING
 
@@ -749,15 +752,6 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil
 
 
 # =====================================================================================================================
-
-cdef class Rover:
-    cdef:
-        Rover_* _  # C implementation
-        const byte_t[:] pattern_view
-        byte_t pattern_value
-
-
-# ---------------------------------------------------------------------------------------------------------------------
 
 cdef class Memory:
     cdef:
