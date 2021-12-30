@@ -1549,6 +1549,7 @@ cdef Block_* Block_WriteSlice(Block_* that, ssize_t start, ssize_t endex,
 cdef Block_* Block_SetSlice_(Block_* that, size_t start, size_t endex,
                              const Block_* src, size_t start2, size_t endex2) except NULL:
     cdef:
+        size_t size    # target size
         size_t size2   # source size
 
     size2 = src.endex - src.start

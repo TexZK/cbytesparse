@@ -36,15 +36,15 @@ from cbytesparse._c cimport *
 
 cdef:
     bytes DATA1 = b'Hello, World!'
-    size_t SIZE1 = len(DATA1)
+    size_t SIZE1 = <size_t>len(DATA1)
     tuple RACK1 = ((0x1234, DATA1),)
 
     bytes DATA2 = b'Foo/Bar'
-    size_t SIZE2 = len(DATA2)
+    size_t SIZE2 = <size_t>len(DATA2)
     tuple RACK2 = ((0x4321, DATA2),)
 
     bytes DATA3 = b'#.#.##...##..###..##.#.#.'
-    size_t SIZE3 = len(DATA3)
+    size_t SIZE3 = <size_t>len(DATA3)
     tuple TOKENS3 = (
         b'.#',
         b'#.',
@@ -62,11 +62,11 @@ cdef:
 def test_addr_size_types():
     assert sizeof(size_t) == sizeof(ssize_t)
     assert SSIZE_MAX == +<ssize_t>SIZE_HMAX
-    assert SSIZE_MIN == -<ssize_t>(SIZE_HMAX + 1)
+    assert SSIZE_MIN == -<ssize_t>(SIZE_HMAX) - <ssize_t>1
 
     assert sizeof(addr_t) == sizeof(saddr_t)
     assert SADDR_MAX == +<saddr_t>(ADDR_MAX >> 1)
-    assert SADDR_MIN == -<saddr_t>((ADDR_MAX >> 1) + 1)
+    assert SADDR_MIN == -<saddr_t>(ADDR_MAX >> 1) - <saddr_t>1
 
     assert sizeof(size_t) <= sizeof(addr_t)
     assert sizeof(ssize_t) <= sizeof(saddr_t)
@@ -920,7 +920,7 @@ def test_Block_Find_():
         for token in tokens:
             for start in range(size + 1):
                 for endex in range(size + 1):
-                    ans = Block_Find_(block, start, endex, len(token), token)
+                    ans = Block_Find_(block, start, endex, <size_t>len(token), token)
                     ref = data.find(token, start, endex)
                     assert ans == ref
         block = Block_Free(block)
@@ -964,7 +964,7 @@ def test_Block_Find():
         for token in tokens:
             for start in range(-<ssize_t>(size + 1), <ssize_t>(size + 1)):
                 for endex in range(-<ssize_t>(size + 1), <ssize_t>(size + 1)):
-                    ans = Block_Find(block, start, endex, len(token), token)
+                    ans = Block_Find(block, start, endex, <size_t>len(token), token)
                     ref = data.find(token, start, endex)
                     assert ans == ref
         block = Block_Free(block)
@@ -1038,7 +1038,7 @@ def test_Block_ReverseFind_():
         for token in tokens:
             for start in range(size + 1):
                 for endex in range(size + 1):
-                    ans = Block_ReverseFind_(block, start, endex, len(token), token)
+                    ans = Block_ReverseFind_(block, start, endex, <size_t>len(token), token)
                     ref = data.rfind(token, start, endex)
                     assert ans == ref
         block = Block_Free(block)
@@ -1082,7 +1082,7 @@ def test_Block_ReverseFind():
         for token in tokens:
             for start in range(-<ssize_t>(size + 1), <ssize_t>(size + 1)):
                 for endex in range(-<ssize_t>(size + 1), <ssize_t>(size + 1)):
-                    ans = Block_ReverseFind(block, start, endex, len(token), token)
+                    ans = Block_ReverseFind(block, start, endex, <size_t>len(token), token)
                     ref = data.rfind(token, start, endex)
                     assert ans == ref
         block = Block_Free(block)
@@ -1143,7 +1143,7 @@ def test_Block_Count_():
         block = Block_Create(0x1234, size, data)
         for token in tokens:
             for offset in range(size + 1):
-                assert Block_Count_(block, offset, SIZE_MAX, len(token), token) == data.count(token, offset)
+                assert Block_Count_(block, offset, SIZE_MAX, <size_t>len(token), token) == data.count(token, offset)
         block = Block_Free(block)
 
     finally:
@@ -1178,7 +1178,7 @@ def test_Block_Count():
         block = Block_Create(0x1234, size, data)
         for token in tokens:
             for offset in range(-<ssize_t>(size + 1), <ssize_t>(size + 1)):
-                assert Block_Count(block, offset, SSIZE_MAX, len(token), token) == data.count(token, offset)
+                assert Block_Count(block, offset, SSIZE_MAX, <size_t>len(token), token) == data.count(token, offset)
         block = Block_Free(block)
 
     finally:
@@ -1368,10 +1368,10 @@ def test_Block_Delete_():
                 block = Block_Delete_(block, start, endex - start)
                 assert block != NULL
                 assert block.address == 0x1234
-                assert Block_Length(block) == len(buffer)
+                assert Block_Length(block) == <size_t>len(buffer)
                 assert Block_Start(block) == 0x1234
-                assert Block_Endex(block) == 0x1234 + len(buffer)
-                assert Block_Eq_(block, len(buffer), buffer) is True
+                assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                 block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
@@ -1464,14 +1464,16 @@ def test_Block_Set_():
         size_t size = SIZE1
         size_t offset
         byte_t value
+        byte_t complement
         str match = 'index out of range'
 
     try:
         for offset in range(size):
             block = Block_Create(0x1234, size, data)
             value = Block_Get__(block, offset)
-            assert Block_Set_(block, offset, value ^ 0xFF) == value
-            assert Block_Get__(block, offset) == value ^ 0xFF
+            complement = <byte_t>(value ^ <byte_t>0xFF)
+            assert Block_Set_(block, offset, complement) == value
+            assert Block_Get__(block, offset) == complement
             block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
@@ -1490,14 +1492,16 @@ def test_Block_Set():
         size_t size = SIZE1
         ssize_t offset
         byte_t value
+        byte_t complement
         str match = 'index out of range'
 
     try:
         for offset in range(-<ssize_t>size, <ssize_t>size):
             block = Block_Create(0x1234, size, data)
             value = Block_Get(block, offset)
-            assert Block_Set(block, offset, value ^ 0xFF) == value
-            assert Block_Get(block, offset) == value ^ 0xFF
+            complement = <byte_t>(value ^ <byte_t>0xFF)
+            assert Block_Set(block, offset, complement) == value
+            assert Block_Get(block, offset) == complement
             block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
@@ -2591,7 +2595,7 @@ def test_Block_ReadSlice_():
             for endex in range(start + size):
                 buffer = bytearray(endex - start if start < endex else 0)
                 Block_ReadSlice_(block, start, endex, &num, buffer)
-                assert num == len(data[start:endex])
+                assert num == <size_t>len(data[start:endex])
                 assert buffer[:num] == data[start:endex]
 
         with pytest.raises(OverflowError, match='size overflow'):
@@ -2621,7 +2625,7 @@ def test_Block_ReadSlice():
             for endex in range(-<ssize_t>size, <ssize_t>(start + size)):
                 buffer = bytearray(size)
                 Block_ReadSlice(block, start, endex, &num, buffer)
-                assert num == len(data[start:endex])
+                assert num == <size_t>len(data[start:endex])
                 assert buffer[:num] == data[start:endex]
 
     finally:
@@ -2647,10 +2651,10 @@ def test_Block_GetSlice_():
                 buffer = data[start:endex]
                 assert block2 != NULL
                 assert block2.address == 0x1234 + start
-                assert Block_Length(block2) == len(buffer)
+                assert Block_Length(block2) == <size_t>len(buffer)
                 assert Block_Start(block2) == 0x1234 + start
-                assert Block_Endex(block2) == 0x1234 + start + len(buffer)
-                assert Block_Eq_(block2, len(buffer), buffer) is True
+                assert Block_Endex(block2) == 0x1234 + start + <size_t>len(buffer)
+                assert Block_Eq_(block2, <size_t>len(buffer), buffer) is True
                 block2 = Block_Free(block2)
 
         with pytest.raises(OverflowError, match='size overflow'):
@@ -2685,10 +2689,10 @@ def test_Block_GetSlice():
                 start = start % <ssize_t>size
                 assert block2 != NULL
                 assert block2.address == 0x1234 + <size_t>start
-                assert Block_Length(block2) == len(buffer)
+                assert Block_Length(block2) == <size_t>len(buffer)
                 assert Block_Start(block2) == 0x1234 + <size_t>start
-                assert Block_Endex(block2) == 0x1234 + <size_t>start + len(buffer)
-                assert Block_Eq_(block2, len(buffer), buffer) is True
+                assert Block_Endex(block2) == 0x1234 + <size_t>start + <size_t>len(buffer)
+                assert Block_Eq_(block2, <size_t>len(buffer), buffer) is True
                 block2 = Block_Free(block2)
 
     finally:
@@ -2716,10 +2720,10 @@ def test_Block_WriteSlice_():
                     buffer[start:endex] = data[:num]
                     assert block != NULL
                     assert block.address == 0x1234
-                    assert Block_Length(block) == len(buffer)
+                    assert Block_Length(block) == <size_t>len(buffer)
                     assert Block_Start(block) == 0x1234
-                    assert Block_Endex(block) == 0x1234 + len(buffer)
-                    assert Block_Eq_(block, len(buffer), buffer) is True
+                    assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                    assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                     block = Block_Free(block)
 
         for start in range(size + size):
@@ -2731,10 +2735,10 @@ def test_Block_WriteSlice_():
                     buffer[start:endex] = data[:num]
                     assert block != NULL
                     assert block.address == 0x1234
-                    assert Block_Length(block) == len(buffer)
+                    assert Block_Length(block) == <size_t>len(buffer)
                     assert Block_Start(block) == 0x1234
-                    assert Block_Endex(block) == 0x1234 + len(buffer)
-                    assert Block_Eq_(block, len(buffer), buffer) is True
+                    assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                    assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                     block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
@@ -2771,10 +2775,10 @@ def test_Block_WriteSlice():
                     buffer[start:endex] = data[:num]
                     assert block != NULL
                     assert block.address == 0x1234
-                    assert Block_Length(block) == len(buffer)
+                    assert Block_Length(block) == <size_t>len(buffer)
                     assert Block_Start(block) == 0x1234
-                    assert Block_Endex(block) == 0x1234 + len(buffer)
-                    assert Block_Eq_(block, len(buffer), buffer) is True
+                    assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                    assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                     block = Block_Free(block)
 
         for start in range(-<ssize_t>(size + size), <ssize_t>(size + size)):
@@ -2786,10 +2790,10 @@ def test_Block_WriteSlice():
                     buffer[start:endex] = data[:num]
                     assert block != NULL
                     assert block.address == 0x1234
-                    assert Block_Length(block) == len(buffer)
+                    assert Block_Length(block) == <size_t>len(buffer)
                     assert Block_Start(block) == 0x1234
-                    assert Block_Endex(block) == 0x1234 + len(buffer)
-                    assert Block_Eq_(block, len(buffer), buffer) is True
+                    assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                    assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                     block = Block_Free(block)
 
     finally:
@@ -2825,10 +2829,10 @@ def test_Block_SetSlice_():
                         buffer[start1:endex1] = b''[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         for start1 in range(size1):
@@ -2841,10 +2845,10 @@ def test_Block_SetSlice_():
                         buffer[start1:endex1] = b''[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         block2 = Block_Free(block2)
@@ -2860,10 +2864,10 @@ def test_Block_SetSlice_():
                         buffer[start1:endex1] = data2[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         for start1 in range(size1):
@@ -2876,10 +2880,10 @@ def test_Block_SetSlice_():
                         buffer[start1:endex1] = data2[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         block1 = Block_Free(block1)
@@ -2933,10 +2937,10 @@ def test_Block_SetSlice():
                         buffer[start1:endex1] = b''[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         for start1 in range(-<ssize_t>size1, <ssize_t>size1):
@@ -2949,10 +2953,10 @@ def test_Block_SetSlice():
                         buffer[start1:endex1] = b''[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         block2 = Block_Free(block2)
@@ -2968,10 +2972,10 @@ def test_Block_SetSlice():
                         buffer[start1:endex1] = data2[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
         for start1 in range(-<ssize_t>size1, <ssize_t>size1):
@@ -2984,10 +2988,10 @@ def test_Block_SetSlice():
                         buffer[start1:endex1] = data2[start2:endex2]
                         assert block1 != NULL
                         assert block1.address == 0x1234
-                        assert Block_Length(block1) == len(buffer)
+                        assert Block_Length(block1) == <size_t>len(buffer)
                         assert Block_Start(block1) == 0x1234
-                        assert Block_Endex(block1) == 0x1234 + len(buffer)
-                        assert Block_Eq_(block1, len(buffer), buffer) is True
+                        assert Block_Endex(block1) == 0x1234 + <size_t>len(buffer)
+                        assert Block_Eq_(block1, <size_t>len(buffer), buffer) is True
                         block1 = Block_Free(block1)
 
     finally:
@@ -3013,10 +3017,10 @@ def test_Block_DelSlice_():
                 del buffer[start:endex]
                 assert block != NULL
                 assert block.address == 0x1234
-                assert Block_Length(block) == len(buffer)
+                assert Block_Length(block) == <size_t>len(buffer)
                 assert Block_Start(block) == 0x1234
-                assert Block_Endex(block) == 0x1234 + len(buffer)
-                assert Block_Eq_(block, len(buffer), buffer) is True
+                assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                 block = Block_Free(block)
 
         for start in range(size + size):
@@ -3027,10 +3031,10 @@ def test_Block_DelSlice_():
                 del buffer[start:endex]
                 assert block != NULL
                 assert block.address == 0x1234
-                assert Block_Length(block) == len(buffer)
+                assert Block_Length(block) == <size_t>len(buffer)
                 assert Block_Start(block) == 0x1234
-                assert Block_Endex(block) == 0x1234 + len(buffer)
-                assert Block_Eq_(block, len(buffer), buffer) is True
+                assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                 block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
@@ -3065,10 +3069,10 @@ def test_Block_DelSlice():
                 del buffer[start:endex]
                 assert block != NULL
                 assert block.address == 0x1234
-                assert Block_Length(block) == len(buffer)
+                assert Block_Length(block) == <size_t>len(buffer)
                 assert Block_Start(block) == 0x1234
-                assert Block_Endex(block) == 0x1234 + len(buffer)
-                assert Block_Eq_(block, len(buffer), buffer) is True
+                assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                 block = Block_Free(block)
 
         for start in range(-<ssize_t>(size + size), <ssize_t>(size + size)):
@@ -3079,10 +3083,10 @@ def test_Block_DelSlice():
                 del buffer[start:endex]
                 assert block != NULL
                 assert block.address == 0x1234
-                assert Block_Length(block) == len(buffer)
+                assert Block_Length(block) == <size_t>len(buffer)
                 assert Block_Start(block) == 0x1234
-                assert Block_Endex(block) == 0x1234 + len(buffer)
-                assert Block_Eq_(block, len(buffer), buffer) is True
+                assert Block_Endex(block) == 0x1234 + <size_t>len(buffer)
+                assert Block_Eq_(block, <size_t>len(buffer), buffer) is True
                 block = Block_Free(block)
 
     finally:
@@ -3324,16 +3328,16 @@ def test_BlockView___len__():
     try:
         block = Block_Create(0x1234, 0, NULL)
         view = Block_View(block)
-        assert len(view) == 0
+        assert <size_t>len(view) == 0
         view.dispose()
         block = Block_Free(block)
 
         block = Block_Create(0x1234, size, data)
         view = Block_View(block)
-        assert len(view) == size
+        assert <size_t>len(view) == size
         view.dispose()
         with pytest.raises(RuntimeError, match='null internal data pointer'):
-            len(view)
+            <size_t>len(view)
 
     finally:
         block = Block_Free(block)
@@ -3423,7 +3427,7 @@ cdef Rack_* create_rack(tuple template):
     cdef:
         Rack_* blocks = NULL
         Block_* block = NULL
-        size_t block_count = len(template)
+        size_t block_count = <size_t>len(template)
         size_t block_index
         addr_t start
         bytes data
@@ -3433,7 +3437,7 @@ cdef Rack_* create_rack(tuple template):
 
         for block_index in range(block_count):
             start, data = template[block_index]
-            block = Block_Create(start, len(data), data)
+            block = Block_Create(start, <size_t>len(data), data)
             Rack_Set__(blocks, block_index, block)
             block = NULL
 
@@ -3879,7 +3883,7 @@ def test_Rack_Clear():
 def test_Rack_At_First_Last():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         size_t offset
 
     try:
@@ -3892,7 +3896,7 @@ def test_Rack_At_First_Last():
         assert Rack_Last_(blocks) == blocks.blocks[blocks.endex - 1]
 
         for offset in range(size):
-            assert Rack_At__(blocks, offset) == &blocks.blocks[blocks.start + offset]
+            assert Rack_At__(blocks, offset) == <const Block_**>&blocks.blocks[blocks.start + offset]
             assert Rack_At_(blocks, offset) == &blocks.blocks[blocks.start + offset]
 
     finally:
@@ -3902,7 +3906,7 @@ def test_Rack_At_First_Last():
 def test_Rack_Get_():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         size_t offset
         str match = 'index out of range'
 
@@ -3924,7 +3928,7 @@ def test_Rack_Get_():
 def test_Rack_Get():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         ssize_t offset
         str match = 'index out of range'
 
@@ -3950,7 +3954,7 @@ def test_Rack_Get():
 def test_Rack_Set_():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         size_t offset
         size_t offset2
         Block_* backup = NULL
@@ -3985,7 +3989,7 @@ def test_Rack_Set_():
 def test_Rack_Set():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         ssize_t offset
         size_t offset2
         Block_* backup = NULL
@@ -4022,7 +4026,7 @@ def test_Rack_Set():
 def test_Rack_Pop__():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'pop index out of range'
         Rack_* temp = NULL
         Block_* backup = NULL
@@ -4054,7 +4058,7 @@ def test_Rack_Pop__():
 def test_Rack_Pop_():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'pop index out of range'
         Rack_* temp = NULL
         Block_* backup = NULL
@@ -4116,7 +4120,7 @@ def test_Rack_Pop_():
 def test_Rack_Pop():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'pop index out of range'
         Rack_* temp = NULL
         Block_* backup = NULL
@@ -4217,7 +4221,7 @@ def test_Rack_Pop():
 def test_Rack_PopLeft():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'pop index out of range'
         Rack_* temp = NULL
         Block_* backup = NULL
@@ -4249,7 +4253,7 @@ def test_Rack_PopLeft():
 def test_Rack_Insert_():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'index out of range'
         Rack_* temp = NULL
         Block_* block = NULL
@@ -4315,7 +4319,7 @@ def test_Rack_Insert_():
 def test_Rack_Insert():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'index out of range'
         Rack_* temp = NULL
         Block_* block = NULL
@@ -4444,7 +4448,7 @@ def test_Rack_Insert():
 def test_Rack_Append():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'index out of range'
         Rack_* temp = NULL
         Block_* block = NULL
@@ -4480,7 +4484,7 @@ def test_Rack_Append():
 def test_Rack_AppendLeft():
     cdef:
         Rack_* blocks = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         str match = 'index out of range'
         Rack_* temp = NULL
         Block_* block = NULL
@@ -4517,8 +4521,8 @@ def test_Rack_Extend_():
     cdef:
         Rack_* blocks1 = NULL
         Rack_* blocks2 = NULL
-        size_t size1 = len(TEMPLATE_BLOCKS)
-        size_t size2 = len(HELLO_WORLD_BLOCKS)
+        size_t size1 = <size_t>len(TEMPLATE_BLOCKS)
+        size_t size2 = <size_t>len(HELLO_WORLD_BLOCKS)
         Rack_* temp = NULL
 
     try:
@@ -4572,8 +4576,8 @@ def test_Rack_Extend():
     cdef:
         Rack_* blocks1 = NULL
         Rack_* blocks2 = NULL
-        size_t size1 = len(TEMPLATE_BLOCKS)
-        size_t size2 = len(HELLO_WORLD_BLOCKS)
+        size_t size1 = <size_t>len(TEMPLATE_BLOCKS)
+        size_t size2 = <size_t>len(HELLO_WORLD_BLOCKS)
         Rack_* temp = NULL
 
     try:
@@ -4627,8 +4631,8 @@ def test_Rack_ExtendLeft_():
     cdef:
         Rack_* blocks1 = NULL
         Rack_* blocks2 = NULL
-        size_t size1 = len(TEMPLATE_BLOCKS)
-        size_t size2 = len(HELLO_WORLD_BLOCKS)
+        size_t size1 = <size_t>len(TEMPLATE_BLOCKS)
+        size_t size2 = <size_t>len(HELLO_WORLD_BLOCKS)
         Rack_* temp = NULL
 
     try:
@@ -4682,8 +4686,8 @@ def test_Rack_ExtendLeft():
     cdef:
         Rack_* blocks1 = NULL
         Rack_* blocks2 = NULL
-        size_t size1 = len(TEMPLATE_BLOCKS)
-        size_t size2 = len(HELLO_WORLD_BLOCKS)
+        size_t size1 = <size_t>len(TEMPLATE_BLOCKS)
+        size_t size2 = <size_t>len(HELLO_WORLD_BLOCKS)
         Rack_* temp = NULL
 
     try:
@@ -4767,7 +4771,7 @@ def test_Rack_DelSlice_():
     cdef:
         Rack_* blocks = NULL
         Rack_* temp = NULL
-        size_t size = len(TEMPLATE_BLOCKS)
+        size_t size = <size_t>len(TEMPLATE_BLOCKS)
         size_t start
         size_t endex
         list temp_
@@ -4794,7 +4798,7 @@ def test_Rack_DelSlice_():
                 temp = create_rack(tuple(temp_))
                 assert blocks != NULL
                 assert blocks != temp
-                assert Rack_Length(blocks) == len(temp_)
+                assert Rack_Length(blocks) == <size_t>len(temp_)
                 assert Rack_Eq(blocks, temp) is True
                 temp = Rack_Free(temp)
                 blocks = Rack_Free(blocks)
@@ -4845,7 +4849,7 @@ def test_Rack_DelSlice():
                 temp = create_rack(tuple(temp_))
                 assert blocks != NULL
                 assert blocks != temp
-                assert Rack_Length(blocks) == len(temp_)
+                assert Rack_Length(blocks) == <size_t>len(temp_)
                 assert Rack_Eq(blocks, temp) is True
                 temp = Rack_Free(temp)
                 blocks = Rack_Free(blocks)
