@@ -3100,39 +3100,27 @@ cdef bint Memory_EqView_(const Memory_* that, const byte_t[:] view) except -1:
 
 cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1:
     cdef:
-        object iterator2 = iter(iterable)
-        object sentinel = object()
         addr_t start = Memory_Start(that)
-        addr_t endex = Memory_Endex(that)
+        addr_t endex = Memory_ContentEndex(that)
         Rover_* rover = Rover_Create(that, start, endex, 0, NULL, True, False)
+        bint equal = True
         int item1_
         int item2_
-        bint more1
-        bint more2
-        bint loop = True
-        bint equal = True
 
     try:
-        while loop:
-            if Rover_HasNext(rover):
-                item2 = next(iterator2, sentinel)
-                if item2 is not sentinel:
-                    item1_ = Rover_Next_(rover)
-                    item2_ = -1 if item2 is None else <int><unsigned><byte_t>item2
-                    if item1_ != item2_:
-                        equal = False
-                        break  # skips while-else
-                else:
-                    loop = False
-            else:
-                loop = False
+        for item2 in iterable:
+            item1_ = Rover_Next_(rover) if Rover_HasNext(rover) else -1
+            item2_ = -1 if item2 is None else <int><unsigned><byte_t>item2
+
+            if item1_ != item2_:
+                equal = False
+                break
         else:
-            more1 = Rover_HasNext(rover)
-            more2 = next(iterator2, sentinel) is not sentinel
-            if more1 != more2:
+            if Rover_HasNext(rover):
                 equal = False
     finally:
         Rover_Free(rover)
+
     return equal
 
 
