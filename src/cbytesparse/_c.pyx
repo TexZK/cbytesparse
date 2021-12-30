@@ -3100,20 +3100,37 @@ cdef bint Memory_EqView_(const Memory_* that, const byte_t[:] view) except -1:
 
 cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1:
     cdef:
-        bint equal = True
+        object iterator2 = iter(iterable)
+        object sentinel = object()
         addr_t start = Memory_Start(that)
         addr_t endex = Memory_Endex(that)
         Rover_* rover = Rover_Create(that, start, endex, 0, NULL, True, False)
+        int item1_
+        int item2_
+        bint more1
+        bint more2
+        bint loop = True
+        bint equal = True
 
     try:
-        for item2 in iterable:
-            if Rover_HasNext(rover):  # avoid exception management
-                item1 = Rover_Next(rover)
-                if item1 != item2:
-                    equal = False
-                    break
+        while loop:
+            if Rover_HasNext(rover):
+                item2 = next(iterator2, sentinel)
+                if item2 is not sentinel:
+                    item1_ = Rover_Next_(rover)
+                    item2_ = -1 if item2 is None else <int><unsigned><byte_t>item2
+                    if item1_ != item2_:
+                        equal = False
+                        break  # skips while-else
+                else:
+                    loop = False
             else:
-                break
+                loop = False
+        else:
+            more1 = Rover_HasNext(rover)
+            more2 = next(iterator2, sentinel) is not sentinel
+            if more1 != more2:
+                equal = False
     finally:
         Rover_Free(rover)
     return equal
@@ -5240,6 +5257,8 @@ cdef Rover_* Rover_Create(
         that = Rover_Free(that)
         raise
 
+    return that
+
 
 cdef addr_t Rover_Length(const Rover_* that) nogil:
     return that.endex - that.start
@@ -5247,9 +5266,9 @@ cdef addr_t Rover_Length(const Rover_* that) nogil:
 
 cdef bint Rover_HasNext(const Rover_* that) nogil:
     if that.forward:
-        return that.address >= that.endex
+        return that.address < that.endex
     else:
-        return that.address <= that.start
+        return that.address > that.start
 
 
 cdef int Rover_Next_(Rover_* that) except -2:
@@ -7686,14 +7705,12 @@ cdef class Memory:
                     pattern_size = len(pattern_view)
                     pattern_data = &pattern_view[0]
 
-        rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
         try:
-            while True:
+            rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
+            while Rover_HasNext(rover):
                 yield Rover_Next(rover)
-        except StopIteration:
-            pass
         finally:
-            Rover_Free(rover)
+            rover = Rover_Free(rover)
 
     def rvalues(
         self: 'Memory',
