@@ -69,6 +69,91 @@ STR_MAX_CONTENT_SIZE: Address = 1000
 
 # =====================================================================================================================
 
+def collapse_blocks(
+    blocks: BlockIterable,
+) -> BlockList:
+    r"""Collapses a generic sequence of blocks.
+
+    Given a generic sequence of blocks, writes them in the same order,
+    generating a new sequence of non-contiguous blocks, sorted by address.
+
+    Arguments:
+        blocks (sequence of blocks):
+            Sequence of blocks to collapse.
+
+    Returns:
+        list of blocks: Collapsed block list.
+
+    Examples:
+        +---+---+---+---+---+---+---+---+---+---+
+        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+        +===+===+===+===+===+===+===+===+===+===+
+        |[0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9]|
+        +---+---+---+---+---+---+---+---+---+---+
+        |[A | B | C | D]|   |   |   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |   |   |   |[E | F]|   |   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |[$]|   |   |   |   |   |   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |   |   |   |   |   |   |[x | y | z]|   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |[$ | B | C | E | F | 5 | x | y | z | 9]|
+        +---+---+---+---+---+---+---+---+---+---+
+
+        >>> blocks = [
+        ...     [0, b'0123456789'],
+        ...     [0, b'ABCD'],
+        ...     [3, b'EF'],
+        ...     [0, b'$'],
+        ...     [6, b'xyz'],
+        ... ]
+        >>> collapse_blocks(blocks)
+        [[0, b'$BCEF5xyz9']]
+
+        ~~~
+
+        +---+---+---+---+---+---+---+---+---+---+
+        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+        +===+===+===+===+===+===+===+===+===+===+
+        |[0 | 1 | 2]|   |   |   |   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |   |   |   |   |[A | B]|   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |   |   |   |   |   |   |[x | y | z]|   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |   |[$]|   |   |   |   |   |   |   |   |
+        +---+---+---+---+---+---+---+---+---+---+
+        |[0 | $ | 2]|   |[A | B | x | y | z]|   |
+        +---+---+---+---+---+---+---+---+---+---+
+
+        >>> blocks = [
+        ...     [0, b'012'],
+        ...     [4, b'AB'],
+        ...     [6, b'xyz'],
+        ...     [1, b'$'],
+        ... ]
+        >>> collapse_blocks(blocks)
+        [[0, b'0$2'], [4, b'ABxyz']]
+    """
+
+    cdef:
+        Memory_* memory = Memory_Alloc()
+        list collapsed = None
+
+    try:
+        for block_start, block_data in blocks:
+            Memory_Write(memory, block_start, block_data, True, None)
+
+        collapsed = Memory_ToBlocks(memory)
+    finally:
+        Memory_Free(memory)
+
+    return collapsed
+
+
+# =====================================================================================================================
+
 cdef void* PyMem_Calloc(size_t nelem, size_t elsize, bint zero):
     cdef:
         void* ptr
@@ -4923,6 +5008,9 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
         addr_t trim_start
         addr_t trim_endex
         addr_t offset
+        Rack_* blocks
+        size_t block_count
+        Block_* block
 
     if CannotAddAddrU(address, size):
         size = ADDR_MAX - address
@@ -4951,6 +5039,15 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
         CheckAddrToSizeU(size)
         if backups is not None:
             backups.append(Memory_Extract_(that, start, endex, 0, NULL, 1, True))
+
+        blocks = that.blocks
+        block_count = Rack_Length(blocks)
+        if block_count:
+            block = Rack_Get__(blocks, block_count - 1)
+            if start == Block_Endex(block):
+                block = Block_Extend_(block, <size_t>size, data_ptr)  # might be faster
+                Rack_Set__(blocks, block_count - 1, block)  # update pointer
+                return 0
 
         if size == 1:
             Memory_Poke_(that, start, data_ptr[0])  # might be faster
