@@ -4228,9 +4228,8 @@ cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t en
         if that.trim_endex_:
             if endex > trim_endex:
                 endex = trim_endex
-        if start_:
-            if start > endex:
-                start = endex
+        if start > endex:
+            start = endex
 
     return start, endex
 
@@ -4703,15 +4702,10 @@ cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_a
         block_index = Rack_IndexStart(blocks, start)
 
         # Delete final/inner part of deletion start block
-        for block_index in range(block_index, Rack_Length(blocks)):
+        if block_index < Rack_Length(blocks):
             block = Rack_Get__(blocks, block_index)
-
             block_start = Block_Start(block)
-            if start <= block_start:
-                break  # inner starts here
-
-            block_endex = Block_Endex(block)
-            if start < block_endex:
+            if start > block_start:
                 if shift_after:
                     CheckAddrToSizeU(start - block_start)
                     CheckAddrToSizeU(endex - block_start)
@@ -4727,9 +4721,6 @@ cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_a
                         block = Block_Free(block)  # orphan
                         raise
                 block_index += 1  # skip this from inner part
-                break
-        else:
-            block_index = Rack_Length(blocks)
 
         # Delete initial part of deletion end block
         inner_start = block_index
@@ -5181,7 +5172,7 @@ cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** patt
 
         if backups is not None:
             for gap_start, gap_endex in Memory_AsObject(that).gaps(start, endex):
-                backups.append(Memory(start=gap_start, endex=gap_endex, validate=False))
+                backups.append(Memory(start=gap_start, endex=gap_endex))
 
         size = <size_t>(endex - start)
         pattern[0] = Block_RepeatToSize(pattern[0], size)

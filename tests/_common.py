@@ -370,13 +370,6 @@ class BaseMemorySuite:
         blocks_ref = [[4, b'ABC'], [8, b'xyz']]
         assert blocks_out == blocks_ref
 
-    def test_from_blocks_nocopy(self):
-        Memory = self.Memory
-        blocks = [[1, b'ABC'], [5, b'xyz']]
-        memory = Memory.from_blocks(blocks, copy=False, validate=False)
-        assert memory._blocks == blocks
-        assert all(b1[1] is b2[1] for b1, b2 in zip(memory._blocks, blocks))
-
     def test_from_blocks_collapse(self):
         Memory = self.Memory
         blocks = [[5, b'ABC'], [3, b'xyz']]
