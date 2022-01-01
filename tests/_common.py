@@ -353,6 +353,8 @@ class BaseMemorySuite:
 
         memory = Memory.from_blocks(blocks)
         memory2 = Memory.from_memory(memory, offset=offset)
+        print(memory._blocks)  # XXX DEBUG
+        print(memory2._blocks)  # XXX DEBUG
         for (sm1, _), (sm2, _) in zip(memory._blocks, memory2._blocks):
             assert sm2 == sm1 + offset, (sm2, sm1, offset)
 
@@ -368,14 +370,6 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks, offset=3)
         blocks_out = memory._blocks
         blocks_ref = [[4, b'ABC'], [8, b'xyz']]
-        assert blocks_out == blocks_ref
-
-    def test_from_blocks_collapse(self):
-        Memory = self.Memory
-        blocks = [[5, b'ABC'], [3, b'xyz']]
-        memory = Memory.from_blocks(blocks, collapse=True)
-        blocks_out = memory._blocks
-        blocks_ref = [[3, b'xyzBC']]
         assert blocks_out == blocks_ref
 
     def test___repr__(self):
@@ -1909,14 +1903,6 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks, validate=False)
 
         with pytest.raises(ValueError, match='invalid block interleaving'):
-            memory.validate()
-
-    def test_validate_invalid_block_data_size(self):
-        Memory = self.Memory
-        blocks = [[0, b'ABC'], [5, b''], [10, b'xyz']]
-        memory = Memory.from_blocks(blocks, validate=False)
-
-        with pytest.raises(ValueError, match='invalid block data size'):
             memory.validate()
 
     def test_validate_invalid_block_bounds(self):

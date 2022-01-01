@@ -98,7 +98,8 @@ cdef class BlockView
 cdef class Memory
 
 
-cdef void* PyMem_Calloc(size_t nelem, size_t elsize, bint zero)
+# Not provided by the current Cython (0.29.x)
+cdef void* PyMem_Calloc(size_t nelem, size_t elsize)
 
 
 # =====================================================================================================================
@@ -501,8 +502,10 @@ cdef extern from *:
 
     size_t Memory_HEADING
 
+cdef class Memory
 
-cdef object Memory_AsObject(Memory_* that)
+
+cdef Memory Memory_AsObject(Memory_* that)
 
 cdef Memory_* Memory_Alloc() except NULL
 cdef Memory_* Memory_Free(Memory_* that) except? NULL
@@ -515,7 +518,7 @@ cdef Memory_* Memory_Create(
     object start,
     object endex,
     bint copy,
-    bint validate
+    bint validate,
 ) except NULL
 
 cdef bint Memory_EqSame_(const Memory_* that, const Memory_* other) except -1

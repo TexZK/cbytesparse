@@ -79,13 +79,12 @@ def test_addr_size_types():
 
 def test_calloc():
     cdef:
-        byte_t* chunk
+        byte_t* chunk = NULL
         size_t i
 
-    chunk = <byte_t*>PyMem_Calloc(7, 5, True)
-    assert chunk
-
+    chunk = <byte_t*>PyMem_Calloc(7, 5)
     try:
+        assert chunk
         assert all(chunk[i] == 0 for i in range(7 * 5))
 
     finally:

@@ -154,16 +154,18 @@ def collapse_blocks(
 
 # =====================================================================================================================
 
-cdef void* PyMem_Calloc(size_t nelem, size_t elsize, bint zero):
+# Not provided by the current Cython (0.29.x)
+cdef void* PyMem_Calloc(size_t nelem, size_t elsize):
     cdef:
         void* ptr
-        size_t total = nelem * elsize
+        size_t total
 
     if CannotMulSizeU(nelem, elsize):
         return NULL  # overflow
+    total = nelem * elsize
 
     ptr = PyMem_Malloc(total)
-    if ptr and zero:
+    if ptr:
         memset(ptr, 0, total)
     return ptr
 
@@ -467,6 +469,7 @@ cdef Block_* Block_Alloc(addr_t address, size_t size, bint zero) except NULL:
     cdef:
         Block_* that = NULL
         size_t allocated
+        size_t actual
 
     if size > SIZE_HMAX:
         raise OverflowError('size overflow')
@@ -476,7 +479,11 @@ cdef Block_* Block_Alloc(addr_t address, size_t size, bint zero) except NULL:
     if allocated > SIZE_HMAX:
         raise MemoryError()
 
-    that = <Block_*>PyMem_Calloc(Block_HEADING + (allocated * sizeof(byte_t)), 1, zero)
+    actual = Block_HEADING + (allocated * sizeof(byte_t))
+    if zero:
+        that = <Block_*>PyMem_Calloc(actual, 1)
+    else:
+        that = <Block_*>PyMem_Malloc(actual)
     if that == NULL:
         raise MemoryError()
 
@@ -981,6 +988,7 @@ cdef size_t Block_Count(const Block_* that, ssize_t start, ssize_t endex,
 
 cdef Block_* Block_Reserve_(Block_* that, size_t offset, size_t size, bint zero) except NULL:
     cdef:
+        size_t actual
         size_t used
         size_t margin
         size_t allocated
@@ -1046,7 +1054,11 @@ cdef Block_* Block_Reserve_(Block_* that, size_t offset, size_t size, bint zero)
                     raise MemoryError()
 
                 # Allocate a new chunk, including the header
-                ptr = <Block_*>PyMem_Calloc(Block_HEADING + (allocated * sizeof(byte_t)), 1, zero)
+                actual = Block_HEADING + (allocated * sizeof(byte_t))
+                if zero:
+                    ptr = <Block_*>PyMem_Calloc(actual, 1)
+                else:
+                    ptr = <Block_*>PyMem_Malloc(actual)
                 if ptr == NULL:
                     raise MemoryError()
 
@@ -2024,6 +2036,7 @@ cdef Rack_* Rack_Alloc(size_t size) except NULL:
     cdef:
         Rack_* that = NULL
         size_t allocated
+        size_t actual
 
     if size > SIZE_HMAX:
         raise OverflowError('size overflow')
@@ -2033,7 +2046,8 @@ cdef Rack_* Rack_Alloc(size_t size) except NULL:
     if allocated > SIZE_HMAX:
         raise MemoryError()
 
-    that = <Rack_*>PyMem_Calloc(Rack_HEADING + (allocated * sizeof(Block_*)), 1, True)
+    actual = Rack_HEADING + (allocated * sizeof(Block_*))
+    that = <Rack_*>PyMem_Calloc(actual, 1)
     if that == NULL:
         raise MemoryError()
 
@@ -2065,11 +2079,10 @@ cdef Rack_* Rack_ShallowCopy(const Rack_* other) except NULL:
     try:
         for offset in range(that.endex - that.start):
             that.blocks[start1 + offset] = Block_Acquire(other.blocks[start2 + offset])
-        return that
-
     except:
         that = Rack_Free(that)
         raise
+    return that
 
 
 cdef Rack_* Rack_Copy(const Rack_* other) except NULL:
@@ -2082,11 +2095,10 @@ cdef Rack_* Rack_Copy(const Rack_* other) except NULL:
     try:
         for offset in range(that.endex - that.start):
             that.blocks[start1 + offset] = Block_Copy(other.blocks[start2 + offset])
-        return that
-
     except:
         that = Rack_Free(that)
         raise
+    return that
 
 
 cdef Rack_* Rack_FromObject(object obj, saddr_t offset) except NULL:
@@ -2229,6 +2241,7 @@ cdef bint Rack_Eq(const Rack_* that, const Rack_* other) except -1:
 
 cdef Rack_* Rack_Reserve_(Rack_* that, size_t offset, size_t size) except NULL:
     cdef:
+        size_t actual
         size_t used
         size_t margin
         size_t allocated
@@ -2294,7 +2307,8 @@ cdef Rack_* Rack_Reserve_(Rack_* that, size_t offset, size_t size) except NULL:
                     raise MemoryError()
 
                 # Allocate a new chunk, including the header
-                ptr = <Rack_*>PyMem_Calloc(Rack_HEADING + (allocated * sizeof(Block_*)), 1, True)
+                actual = Rack_HEADING + (allocated * sizeof(Block_*))
+                ptr = <Rack_*>PyMem_Calloc(actual, 1)
                 if ptr == NULL:
                     raise MemoryError()
 
@@ -3030,7 +3044,7 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2:
 
 # =====================================================================================================================
 
-cdef object Memory_AsObject(Memory_* that):
+cdef Memory Memory_AsObject(Memory_* that):
     cdef:
         Memory memory = Memory()
         Memory_* memory_ = memory._
@@ -3049,7 +3063,7 @@ cdef Memory_* Memory_Alloc() except NULL:
         Rack_* blocks = Rack_Alloc(0)
         Memory_* that = NULL
 
-    that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1, True)
+    that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1)
     if that == NULL:
         blocks = Rack_Free(blocks)
         raise MemoryError()
@@ -3078,7 +3092,6 @@ cdef Memory_* Memory_Create(
     object endex,
     bint copy,
     bint validate,
-    bint collapse,
 ) except NULL:
     cdef:
         addr_t start_
@@ -3094,12 +3107,12 @@ cdef Memory_* Memory_Create(
     if (memory != NULL) + (data is not None) + (blocks is not None) > 1:
         raise ValueError('only one of [memory, data, blocks] is allowed')
 
-    that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1, True)
+    that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1)
     if that == NULL:
         raise MemoryError()
 
     try:
-        start_ = 0 if start is None else <addr_t>start
+        start_ = ADDR_MIN if start is None else <addr_t>start
         endex_ = ADDR_MAX if endex is None else <addr_t>endex
         if endex_ < start_:
             endex_ = start_  # clamp negative length
@@ -3107,7 +3120,7 @@ cdef Memory_* Memory_Create(
         if memory != NULL:
             if copy or offset:
                 blocks_ = Rack_Copy(memory.blocks)
-                blocks_ = Rack_Shift(blocks_, offset)
+                blocks_ = Rack_Shift(blocks_, <saddr_t>offset)
             else:
                 blocks_ = Rack_ShallowCopy(memory.blocks)
 
@@ -3130,12 +3143,14 @@ cdef Memory_* Memory_Create(
                     raise
 
         elif blocks:
-            blocks_ = Rack_FromObject(blocks, offset)
+            blocks_ = Rack_FromObject(blocks, <saddr_t>offset)
 
         else:
             blocks_ = Rack_Alloc(0)
 
         that.blocks = blocks_
+        blocks_ = NULL
+
         that.trim_start = start_
         that.trim_endex = endex_
         that.trim_start_ = start is not None
@@ -3148,6 +3163,7 @@ cdef Memory_* Memory_Create(
             Memory_Validate(that)
 
     except:
+        Rack_Free(blocks_)
         that = Memory_Free(that)
         raise
 
@@ -3690,7 +3706,7 @@ cdef object Memory_SetItem(Memory_* that, object key, object value):
 
             if value_size < slice_size:
                 # Shrink: remove excess, overwrite existing
-                if not step or not value_size:
+                if not step:
                     if CannotAddAddrU(start, value_size):
                         del_start = ADDR_MAX
                     else:
@@ -3920,7 +3936,7 @@ cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
         Rack_* blocks = Rack_Copy(that.blocks)
         Memory_* memory = NULL
 
-    memory = <Memory_*>PyMem_Calloc(Memory_HEADING, 1, True)
+    memory = <Memory_*>PyMem_Calloc(Memory_HEADING, 1)
     if memory == NULL:
         blocks = Rack_Free(blocks)
         raise MemoryError()
@@ -4964,7 +4980,7 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
             if backups is not None:
                 backups.append(Memory_Extract_(that, data_start, data_endex, 0, NULL, 1, True))
 
-            Memory_Erase__(that, data_start, data_endex, False, True)  # insert
+            Memory_Erase__(that, data_start, data_endex, False, False)  # clear
 
         else:
             # Clear only overwritten ranges
@@ -4982,13 +4998,13 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
                 if backups is not None:
                     backups.append(Memory_Extract_(that, block_start, block_endex, 0, NULL, 1, True))
 
-                Memory_Erase__(that, block_start, block_endex, False, True)  # insert
+                Memory_Erase__(that, block_start, block_endex, False, False)  # clear
 
         for block_index in range(Rack_Length(blocks)):
             block = Rack_Get__(blocks, block_index)
             block_start = Block_Start(block)
             CheckAddAddrU(block_start, address)
-            Memory_Insert__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)
+            Memory_Insert__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)  # insert
 
         Memory_Crop_(that, that.trim_start, that.trim_endex, None)  # FIXME: prevent after-cropping; trim while writing
 
@@ -5244,7 +5260,7 @@ cdef list Memory_ToBlocks(const Memory_* that):
 
 cdef Rover_* Rover_Alloc() except NULL:
     cdef:
-        Rover_* that = <Rover_*>PyMem_Calloc(Rover_HEADING, 1, True)
+        Rover_* that = <Rover_*>PyMem_Calloc(Rover_HEADING, 1)
 
     if that == NULL:
         raise MemoryError()
@@ -5567,7 +5583,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
     ):
 
-        self._ = Memory_Create(NULL, None, None, None, start, endex, False, False, False)
+        self._ = Memory_Create(NULL, None, None, None, start, endex, False, False)
 
     @classmethod
     def from_blocks(
@@ -5578,7 +5594,6 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-        collapse: bool = False,
     ) -> 'Memory':
         r"""Creates a virtual memory from blocks.
 
@@ -5602,12 +5617,6 @@ cdef class Memory:
 
             validate (bool):
                 Validates the resulting :obj:`Memory` object.
-
-            collapse (bool):
-                Collapses the provided blocks, prior to construction.
-                Useful when source blocks do not satisfy the requirements of
-                the underlying data structure, e.g. blocks are not sorted by
-                address or they have some overlapping or contiguity.
 
         Raises:
             :obj:`ValueError`: Some requirements are not satisfied.
@@ -5635,10 +5644,6 @@ cdef class Memory:
             >>> # NOTE: Record files typically require collapsing!
             >>> import hexrec.records as hr
             >>> blocks = hr.load_blocks('records.hex')
-            >>> memory = Memory.from_blocks(blocks, collapse=True)
-            >>> memory
-                ...
-            >>> # Alternatively:
             >>> memory = Memory.from_blocks(collapse_blocks(blocks))
             >>> memory
                 ...
@@ -5647,7 +5652,7 @@ cdef class Memory:
             Memory memory = Memory()
 
         memory._ = Memory_Free(memory._)
-        memory._ = Memory_Create(NULL, None, offset, blocks, start, endex, copy, validate, collapse)
+        memory._ = Memory_Create(NULL, None, offset, blocks, start, endex, copy, validate)
         return memory
 
     @classmethod
@@ -5709,7 +5714,7 @@ cdef class Memory:
             Memory memory = Memory()
 
         memory._ = Memory_Free(memory._)
-        memory._ = Memory_Create(NULL, data, offset, None, start, endex, copy, validate, False)
+        memory._ = Memory_Create(NULL, data, offset, None, start, endex, copy, validate)
         return memory
 
     @classmethod
@@ -5769,21 +5774,13 @@ cdef class Memory:
             [[7, b'ABC]]
             >>> memory1 == memory2
             False
-
-            ~~~
-
-            >>> memory1 = Memory.from_bytes(b'ABC', 10)
-            >>> memory2 = Memory.from_memory(memory2, copy=False)
-            >>> all((b1[1] is b2[1])  # compare block data
-            ...     for b1, b2 in zip(memory1._blocks, memory2._blocks))
-            True
         """
         cdef:
             Memory memory_ = Memory()
 
         memory_._ = Memory_Free(memory_._)
-        memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate, False)
-        return memory
+        memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate)
+        return memory_
 
     def __repr__(
         self: 'Memory',
