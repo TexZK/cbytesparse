@@ -1,5 +1,6 @@
 # cython: language_level = 3
 # cython: embedsignature = True
+# cython: binding = True
 
 # Copyright (c) 2020-2022, Andrea Zoppi.
 # All rights reserved.
@@ -37,6 +38,7 @@ from cpython.buffer cimport PyBUF_SIMPLE
 from cpython.buffer cimport PyBUF_STRIDES
 from cpython.buffer cimport PyBUF_WRITABLE
 from cpython.bytes cimport PyBytes_FromStringAndSize
+# from cpython.mem cimport PyMem_Calloc  # FIXME: Not yet provided by the current Cython
 from cpython.mem cimport PyMem_Free
 from cpython.mem cimport PyMem_Malloc
 from cpython.mem cimport PyMem_Realloc
@@ -98,8 +100,7 @@ cdef class BlockView
 cdef class Memory
 
 
-# Not provided by the current Cython (0.29.x)
-cdef void* PyMem_Calloc(size_t nelem, size_t elsize)
+cdef void* PyMem_Calloc(size_t nelem, size_t elsize)  # FIXME: Not yet provided by the current Cython
 
 
 # =====================================================================================================================

@@ -10,6 +10,10 @@ from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
 
+ext_macros = []
+if os.environ.get('CYTHON_TRACE_NOGIL') == '1':
+    ext_macros.append(('CYTHON_TRACE_NOGIL', 1))
+
 
 def read(*names, **kwargs):
     return io.open(
@@ -35,7 +39,7 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob('src/*.py')],
-    ext_modules=[Extension('cbytesparse._c', ['src/cbytesparse/_c.c'])],
+    ext_modules=[Extension('cbytesparse._c', ['src/cbytesparse/_c.c'], define_macros=ext_macros)],
     include_dirs=['.'],
     include_package_data=True,
     zip_safe=False,

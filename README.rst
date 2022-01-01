@@ -154,4 +154,4 @@ To run the all the tests:
 .. code-block:: sh
 
     $ pip install tox
-    $ tox --skip-missing-interpreters
+    $ tox

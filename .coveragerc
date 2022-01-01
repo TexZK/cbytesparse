@@ -4,11 +4,7 @@ source =
    */site-packages/cbytesparse
 
 [run]
-branch = true
-source =
-    cbytesparse
-    tests
-parallel = true
+plugins = Cython.Coverage
 
 [report]
 show_missing = true

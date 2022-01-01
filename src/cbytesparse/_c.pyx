@@ -1,5 +1,6 @@
 # cython: language_level = 3
 # cython: embedsignature = True
+# cython: binding = True
 
 # Copyright (c) 2020-2022, Andrea Zoppi.
 # All rights reserved.
@@ -57,7 +58,7 @@ BlockIndex = int
 BlockIterable = Iterable[Block]
 BlockSequence = Sequence[Block]
 BlockList = List[Block]
-MemoryList = List['Memory']
+MemoryList = List[Memory]
 
 OpenInterval = Tuple[Optional[Address], Optional[Address]]
 ClosedInterval = Tuple[Address, Address]
@@ -154,7 +155,7 @@ def collapse_blocks(
 
 # =====================================================================================================================
 
-# Not provided by the current Cython (0.29.x)
+# FIXME: Not yet provided by the current Cython (0.29.x)
 cdef void* PyMem_Calloc(size_t nelem, size_t elsize):
     cdef:
         void* ptr
@@ -1852,14 +1853,14 @@ cdef class BlockView:
     disposed before trying to write to the memory block again.
     """
 
-    def __cinit__(self):
+    def __cinit__(self: BlockView):
         self._block = NULL
 
-    def __dealloc__(self):
+    def __dealloc__(self: BlockView):
         if self._block:
             self._block = Block_Release(self._block)
 
-    def __getbuffer__(self, Py_buffer* buffer, int flags):
+    def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
         cdef:
             int CONTIGUOUS = PyBUF_C_CONTIGUOUS | PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
 
@@ -1882,19 +1883,19 @@ cdef class BlockView:
         buffer.suboffsets = NULL
         buffer.internal = NULL
 
-    def __releasebuffer__(self, Py_buffer* buffer):
+    def __releasebuffer__(self: BlockView, Py_buffer* buffer):
         # if self._block:
         #     self._block = Block_Release(self._block)
         pass
 
     def __repr__(
-        self: 'BlockView',
+        self: BlockView,
     ) -> str:
 
         return repr(str(self))
 
     def __str__(
-        self: 'BlockView',
+        self: BlockView,
     ) -> str:
         cdef:
             const Block_* block = self._block
@@ -1914,7 +1915,7 @@ cdef class BlockView:
             return self.memview.tobytes().decode('ascii')
 
     def __bool__(
-        self: 'BlockView',
+        self: BlockView,
     ) -> bool:
         r"""Has any data.
 
@@ -1926,7 +1927,7 @@ cdef class BlockView:
         return self._start < self._endex
 
     def __bytes__(
-        self: 'BlockView',
+        self: BlockView,
     ) -> bytes:
         r"""Converts into bytes.
 
@@ -1938,7 +1939,7 @@ cdef class BlockView:
 
     @property
     def memview(
-        self: 'BlockView',
+        self: BlockView,
     ) -> memoryview:
         r"""memoryview: Python :class:`memoryview` wrapper."""
 
@@ -1948,7 +1949,7 @@ cdef class BlockView:
         return self._memview
 
     def __len__(
-        self: 'BlockView',
+        self: BlockView,
     ) -> Address:
         r"""int: Slice length."""
 
@@ -1956,14 +1957,14 @@ cdef class BlockView:
         return self._endex - self._start
 
     def __getattr__(
-        self: 'BlockView',
+        self: BlockView,
         attr: str,
     ) -> Any:
 
         return getattr(self.memview, attr)
 
     def __getitem__(
-        self: 'BlockView',
+        self: BlockView,
         item: Any,
     ) -> Any:
 
@@ -1972,7 +1973,7 @@ cdef class BlockView:
 
     @property
     def start(
-        self: 'BlockView',
+        self: BlockView,
     ) -> Address:
         r"""int: Slice inclusive start address."""
 
@@ -1981,7 +1982,7 @@ cdef class BlockView:
 
     @property
     def endex(
-        self: 'BlockView',
+        self: BlockView,
     ) -> Address:
         r"""int: Slice exclusive end address."""
 
@@ -1990,7 +1991,7 @@ cdef class BlockView:
 
     @property
     def endin(
-        self: 'BlockView',
+        self: BlockView,
     ) -> Address:
         r"""int: Slice inclusive end address."""
 
@@ -1998,7 +1999,7 @@ cdef class BlockView:
 
     @property
     def acquired(
-        self: 'BlockView',
+        self: BlockView,
     ) -> bool:
         r"""bool: Underlying block currently acquired."""
 
@@ -2009,14 +2010,14 @@ cdef class BlockView:
             raise RuntimeError('null internal data pointer')
 
     def check(
-        self: 'BlockView',
+        self: BlockView,
     ) -> None:
         r"""Checks for data consistency."""
 
         self.check_()
 
     def dispose(
-        self: 'BlockView',
+        self: BlockView,
     ) -> None:
         r"""Forces object disposal.
 
@@ -5578,7 +5579,7 @@ cdef class Memory:
         self._ = Memory_Free(self._)
 
     def __init__(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ):
@@ -5587,14 +5588,14 @@ cdef class Memory:
 
     @classmethod
     def from_blocks(
-        cls: Type['Memory'],
+        cls: Type[Memory],
         blocks: BlockList,
         offset: Address = 0,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> 'Memory':
+    ) -> Memory:
         r"""Creates a virtual memory from blocks.
 
         Arguments:
@@ -5657,14 +5658,14 @@ cdef class Memory:
 
     @classmethod
     def from_bytes(
-        cls: Type['Memory'],
+        cls: Type[Memory],
         data: AnyBytes,
         offset: Address = 0,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> 'Memory':
+    ) -> Memory:
         r"""Creates a virtual memory from a byte-like chunk.
 
         Arguments:
@@ -5719,14 +5720,14 @@ cdef class Memory:
 
     @classmethod
     def from_memory(
-        cls: Type['Memory'],
-        memory: 'Memory',
+        cls: Type[Memory],
+        memory: Memory,
         offset: Address = 0,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> 'Memory':
+    ) -> Memory:
         r"""Creates a virtual memory from another one.
 
         Arguments:
@@ -5783,7 +5784,7 @@ cdef class Memory:
         return memory_
 
     def __repr__(
-        self: 'Memory',
+        self: Memory,
     ) -> str:
         cdef:
             addr_t start = Memory_Start(self._)
@@ -5792,7 +5793,7 @@ cdef class Memory:
         return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{id(self):X}>'
 
     def __str__(
-        self: 'Memory',
+        self: Memory,
     ) -> str:
         r"""String representation.
 
@@ -5831,7 +5832,7 @@ cdef class Memory:
             return str(Memory_ToBlocks(memory))
 
     def __bool__(
-        self: 'Memory',
+        self: Memory,
     ) -> bool:
         r"""Has any items.
 
@@ -5851,7 +5852,7 @@ cdef class Memory:
         return not Memory_IsEmpty(self._)
 
     def __eq__(
-        self: 'Memory',
+        self: Memory,
         other: Any,
     ) -> bool:
         r"""Equality comparison.
@@ -5894,7 +5895,7 @@ cdef class Memory:
         return Memory_Eq(self._, other)
 
     def __iter__(
-        self: 'Memory',
+        self: Memory,
     ) -> Iterator[Optional[Value]]:
         r"""Iterates over values.
 
@@ -5907,7 +5908,7 @@ cdef class Memory:
         yield from self.values()
 
     def __reversed__(
-        self: 'Memory',
+        self: Memory,
     ) -> Iterator[Optional[Value]]:
         r"""Iterates over values, reversed order.
 
@@ -5921,9 +5922,9 @@ cdef class Memory:
         yield from self.rvalues()
 
     def __add__(
-        self: 'Memory',
-        value: Union[AnyBytes, 'Memory'],
-    ) -> 'Memory':
+        self: Memory,
+        value: Union[AnyBytes, Memory],
+    ) -> Memory:
         cdef:
             Memory_* memory_ = Memory_Add(self._, value)
             Memory memory = Memory_AsObject(memory_)
@@ -5931,17 +5932,17 @@ cdef class Memory:
         return memory
 
     def __iadd__(
-        self: 'Memory',
-        value: Union[AnyBytes, 'Memory'],
-    ) -> 'Memory':
+        self: Memory,
+        value: Union[AnyBytes, Memory],
+    ) -> Memory:
 
         Memory_IAdd(self._, value)
         return self
 
     def __mul__(
-        self: 'Memory',
+        self: Memory,
         times: int,
-    ) -> 'Memory':
+    ) -> Memory:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
             Memory_* memory_ = Memory_Mul(self._, times_)
@@ -5950,9 +5951,9 @@ cdef class Memory:
         return memory
 
     def __imul__(
-        self: 'Memory',
+        self: Memory,
         times: int,
-    ) -> 'Memory':
+    ) -> Memory:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
 
@@ -5960,7 +5961,7 @@ cdef class Memory:
         return self
 
     def __len__(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""Actual length.
 
@@ -5975,7 +5976,7 @@ cdef class Memory:
         return Memory_Length(self._)
 
     def ofind(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6001,7 +6002,7 @@ cdef class Memory:
         return Memory_ObjFind(self._, item, start, endex)
 
     def rofind(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6027,7 +6028,7 @@ cdef class Memory:
         return Memory_RevObjFind(self._, item, start, endex)
 
     def find(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6053,7 +6054,7 @@ cdef class Memory:
         return Memory_Find(self._, item, start, endex)
 
     def rfind(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6079,7 +6080,7 @@ cdef class Memory:
         return Memory_RevFind(self._, item, start, endex)
 
     def index(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6108,7 +6109,7 @@ cdef class Memory:
         return Memory_Index(self._, item, start, endex)
 
     def rindex(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6137,7 +6138,7 @@ cdef class Memory:
         return Memory_RevIndex(self._, item, start, endex)
 
     def __contains__(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
     ) -> bool:
         r"""Checks if some items are contained.
@@ -6168,7 +6169,7 @@ cdef class Memory:
         return Memory_Contains(self._, item)
 
     def count(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -6205,7 +6206,7 @@ cdef class Memory:
         return Memory_Count(self._, item, start, endex)
 
     def __getitem__(
-        self: 'Memory',
+        self: Memory,
         key: Union[Address, slice],
     ) -> Any:
         r"""Gets data.
@@ -6256,7 +6257,7 @@ cdef class Memory:
         return Memory_GetItem(self._, key)
 
     def __setitem__(
-        self: 'Memory',
+        self: Memory,
         key: Union[Address, slice],
         value: Optional[Union[AnyBytes, Value]],
     ) -> None:
@@ -6333,7 +6334,7 @@ cdef class Memory:
         Memory_SetItem(self._, key, value)
 
     def __delitem__(
-        self: 'Memory',
+        self: Memory,
         key: Union[Address, slice],
     ) -> None:
         r"""Deletes data.
@@ -6389,7 +6390,7 @@ cdef class Memory:
         Memory_DelItem(self._, key)
 
     def append(
-        self: 'Memory',
+        self: Memory,
         item: Union[AnyBytes, Value],
     ) -> None:
         r"""Appends a single item.
@@ -6415,8 +6416,8 @@ cdef class Memory:
         return Memory_Append(self._, item)
 
     def extend(
-        self: 'Memory',
-        items: Union[AnyBytes, 'Memory'],
+        self: Memory,
+        items: Union[AnyBytes, Memory],
         offset: Address = 0,
     ) -> None:
         r"""Concatenates items.
@@ -6437,7 +6438,7 @@ cdef class Memory:
         return Memory_Extend(self._, items, offset)
 
     def pop(
-        self: 'Memory',
+        self: Memory,
         address: Optional[Address] = None,
     ) -> Optional[Value]:
         r"""Takes a value away.
@@ -6471,7 +6472,7 @@ cdef class Memory:
         return Memory_Pop(self._, address)
 
     def __bytes__(
-        self: 'Memory',
+        self: Memory,
     ) -> bytes:
         r"""Creates a bytes clone.
 
@@ -6489,7 +6490,7 @@ cdef class Memory:
         return result
 
     def to_bytes(
-        self: 'Memory',
+        self: Memory,
     ) -> bytes:
         r"""Creates a bytes clone.
 
@@ -6507,7 +6508,7 @@ cdef class Memory:
         return result
 
     def to_bytearray(
-        self: 'Memory',
+        self: Memory,
     ) -> bytearray:
         r"""Creates a bytearray clone.
 
@@ -6530,7 +6531,7 @@ cdef class Memory:
         return result
 
     def to_memoryview(
-        self: 'Memory',
+        self: Memory,
     ) -> memoryview:
         r"""Creates a memory view.
 
@@ -6546,8 +6547,8 @@ cdef class Memory:
         return view
 
     def __copy__(
-        self: 'Memory',
-    ) -> 'Memory':
+        self: Memory,
+    ) -> Memory:
         r"""Creates a shallow copy.
 
         Note:
@@ -6563,8 +6564,8 @@ cdef class Memory:
         return memory
 
     def __deepcopy__(
-        self: 'Memory',
-    ) -> 'Memory':
+        self: Memory,
+    ) -> Memory:
         r"""Creates a deep copy.
 
         Returns:
@@ -6578,7 +6579,7 @@ cdef class Memory:
 
     @property
     def contiguous(
-        self: 'Memory',
+        self: Memory,
     ) -> bool:
         r"""bool: Contains contiguous data.
 
@@ -6592,7 +6593,7 @@ cdef class Memory:
 
     @property
     def trim_start(
-        self: 'Memory',
+        self: Memory,
     ) -> Optional[Address]:
         r"""int: Trimming start address.
 
@@ -6604,7 +6605,7 @@ cdef class Memory:
 
     @trim_start.setter
     def trim_start(
-        self: 'Memory',
+        self: Memory,
         trim_start: Address,
     ) -> None:
 
@@ -6612,7 +6613,7 @@ cdef class Memory:
 
     @property
     def trim_endex(
-        self: 'Memory',
+        self: Memory,
     ) -> Optional[Address]:
         r"""int: Trimming exclusive end address.
 
@@ -6624,7 +6625,7 @@ cdef class Memory:
 
     @trim_endex.setter
     def trim_endex(
-        self: 'Memory',
+        self: Memory,
         trim_endex: Address,
     ) -> None:
 
@@ -6632,7 +6633,7 @@ cdef class Memory:
 
     @property
     def trim_span(
-        self: 'Memory',
+        self: Memory,
     ) -> OpenInterval:
         r"""tuple of int: Trimming span addresses.
 
@@ -6643,7 +6644,7 @@ cdef class Memory:
 
     @trim_span.setter
     def trim_span(
-        self: 'Memory',
+        self: Memory,
         span: OpenInterval,
     ) -> None:
 
@@ -6651,7 +6652,7 @@ cdef class Memory:
 
     @property
     def start(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Inclusive start address.
 
@@ -6696,7 +6697,7 @@ cdef class Memory:
 
     @property
     def endex(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Exclusive end address.
 
@@ -6741,7 +6742,7 @@ cdef class Memory:
 
     @property
     def span(
-        self: 'Memory',
+        self: Memory,
     ) -> ClosedInterval:
         r"""tuple of int: Memory address span.
 
@@ -6770,7 +6771,7 @@ cdef class Memory:
 
     @property
     def endin(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Inclusive end address.
 
@@ -6815,7 +6816,7 @@ cdef class Memory:
 
     @property
     def content_start(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Inclusive content start address.
 
@@ -6864,7 +6865,7 @@ cdef class Memory:
 
     @property
     def content_endex(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Exclusive content end address.
 
@@ -6913,7 +6914,7 @@ cdef class Memory:
 
     @property
     def content_span(
-        self: 'Memory',
+        self: Memory,
     ) -> ClosedInterval:
         r"""tuple of int: Memory content address span.
 
@@ -6947,7 +6948,7 @@ cdef class Memory:
 
     @property
     def content_endin(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""int: Inclusive content end address.
 
@@ -6997,7 +6998,7 @@ cdef class Memory:
 
     @property
     def content_size(
-        self: 'Memory',
+        self: Memory,
     ) -> Address:
         r"""Actual content size.
 
@@ -7039,7 +7040,7 @@ cdef class Memory:
 
     @property
     def content_parts(
-        self: 'Memory',
+        self: Memory,
     ) -> int:
         r"""Number of blocks.
 
@@ -7078,7 +7079,7 @@ cdef class Memory:
         return Memory_ContentParts(self._)
 
     def validate(
-        self: 'Memory',
+        self: Memory,
     ) -> None:
         r"""Validates internal structure.
 
@@ -7092,7 +7093,7 @@ cdef class Memory:
         Memory_Validate(self._)
 
     def bound(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address],
         endex: Optional[Address],
     ) -> ClosedInterval:
@@ -7162,7 +7163,7 @@ cdef class Memory:
         return Memory_Bound(self._, start, endex)
 
     def _block_index_at(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> Optional[BlockIndex]:
         r"""Locates the block enclosing an address.
@@ -7196,7 +7197,7 @@ cdef class Memory:
         return None if block_index < 0 else block_index
 
     def _block_index_start(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> BlockIndex:
         r"""Locates the first block inside of an address range.
@@ -7230,7 +7231,7 @@ cdef class Memory:
         return Rack_IndexStart(self._.blocks, address)
 
     def _block_index_endex(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> BlockIndex:
         r"""Locates the first block after an address range.
@@ -7264,7 +7265,7 @@ cdef class Memory:
         return Rack_IndexEndex(self._.blocks, address)
 
     def peek(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> Optional[Value]:
         r"""Gets the item at an address.
@@ -7297,7 +7298,7 @@ cdef class Memory:
         return Memory_Peek(self._, address)
 
     def poke(
-        self: 'Memory',
+        self: Memory,
         address: Address,
         item: Optional[Union[AnyBytes, Value]],
     ) -> Optional[Value]:
@@ -7335,13 +7336,13 @@ cdef class Memory:
         return Memory_Poke(self._, address, item)
 
     def extract(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> 'Memory':
+    ) -> Memory:
         r"""Selects items from a range.
 
         Arguments:
@@ -7399,7 +7400,7 @@ cdef class Memory:
         return Memory_Extract(self._, start, endex, pattern, step, bound)
 
     def shift(
-        self: 'Memory',
+        self: Memory,
         offset: Address,
         backups: Optional[MemoryList] = None,
     ) -> None:
@@ -7451,7 +7452,7 @@ cdef class Memory:
         Memory_Shift(self._, offset, backups)
 
     def reserve(
-        self: 'Memory',
+        self: Memory,
         address: Address,
         size: Address,
         backups: Optional[MemoryList] = None,
@@ -7509,9 +7510,9 @@ cdef class Memory:
         Memory_Reserve(self._, address, size, backups)
 
     def insert(
-        self: 'Memory',
+        self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, 'Memory'],
+        data: Union[AnyBytes, Value, Memory],
         backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Inserts data.
@@ -7553,7 +7554,7 @@ cdef class Memory:
         Memory_Insert(self._, address, data, backups)
 
     def delete(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         backups: Optional[MemoryList] = None,
@@ -7591,7 +7592,7 @@ cdef class Memory:
         Memory_Delete(self._, start, endex, backups)
 
     def clear(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         backups: Optional[MemoryList] = None,
@@ -7629,7 +7630,7 @@ cdef class Memory:
         Memory_Clear(self._, start, endex, backups)
 
     def crop(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         backups: Optional[MemoryList] = None,
@@ -7667,9 +7668,9 @@ cdef class Memory:
         Memory_Crop(self._, start, endex, backups)
 
     def write(
-        self: 'Memory',
+        self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, 'Memory'],
+        data: Union[AnyBytes, Value, Memory],
         clear: bool = False,
         backups: Optional[MemoryList] = None,
     ) -> None:
@@ -7708,7 +7709,7 @@ cdef class Memory:
         Memory_Write(self._, address, data, clear, backups)
 
     def fill(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
@@ -7765,7 +7766,7 @@ cdef class Memory:
         Memory_Fill(self._, start, endex, pattern, backups)
 
     def flood(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
@@ -7822,7 +7823,7 @@ cdef class Memory:
         Memory_Flood(self._, start, endex, pattern, backups)
 
     def keys(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
     ) -> Iterator[Address]:
@@ -7895,7 +7896,7 @@ cdef class Memory:
             start_ += 1
 
     def values(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -7992,7 +7993,7 @@ cdef class Memory:
             rover = Rover_Free(rover)
 
     def rvalues(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Union[Address, EllipsisType]] = None,
         endex: Optional[Address] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -8090,7 +8091,7 @@ cdef class Memory:
             Rover_Free(rover)
 
     def items(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -8148,7 +8149,7 @@ cdef class Memory:
         yield from zip(self.keys(start, endex), self.values(start, endex, pattern))  # TODO: cythonize
 
     def intervals(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[ClosedInterval]:
@@ -8212,7 +8213,7 @@ cdef class Memory:
                     yield slice_start, slice_endex
 
     def gaps(
-        self: 'Memory',
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = False,
@@ -8302,7 +8303,7 @@ cdef class Memory:
             yield None, None
 
     def equal_span(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
         r"""Span of homogeneous data.
@@ -8418,7 +8419,7 @@ cdef class Memory:
                 return None, None, None  # fully open
 
     def block_span(
-        self: 'Memory',
+        self: Memory,
         address: Address,
     ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
         r"""Span of block data.
@@ -8511,7 +8512,7 @@ cdef class Memory:
 
     @property
     def _blocks(
-        self: 'Memory',
+        self: Memory,
     ) -> BlockList:
         r"""list of blocks: A sequence of spaced blocks, sorted by address."""
 
