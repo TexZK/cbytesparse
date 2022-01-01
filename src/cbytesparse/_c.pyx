@@ -1,7 +1,7 @@
 # cython: language_level = 3
 # cython: embedsignature = True
 
-# Copyright (c) 2020-2021, Andrea Zoppi.
+# Copyright (c) 2020-2022, Andrea Zoppi.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -3077,7 +3077,8 @@ cdef Memory_* Memory_Create(
     object start,
     object endex,
     bint copy,
-    bint validate
+    bint validate,
+    bint collapse,
 ) except NULL:
     cdef:
         addr_t start_
@@ -3088,6 +3089,7 @@ cdef Memory_* Memory_Create(
         Block_* block = NULL
         Rack_* blocks_ = NULL
         Memory_* that = NULL
+        bint validate_ = validate
 
     if (memory != NULL) + (data is not None) + (blocks is not None) > 1:
         raise ValueError('only one of [memory, data, blocks] is allowed')
@@ -3139,9 +3141,10 @@ cdef Memory_* Memory_Create(
         that.trim_start_ = start is not None
         that.trim_endex_ = endex is not None
 
-        Memory_Crop_(that, start_, endex_, None)
+        if (that.trim_start_ or that.trim_endex_) and validate_:  # fast check
+            Memory_Crop_(that, start_, endex_, None)
 
-        if validate:
+        if validate_:
             Memory_Validate(that)
 
     except:
@@ -5525,19 +5528,19 @@ cdef class Memory:
     The Cython implementation limits the address range to that of the integral
     type ``uint_fast64_t``.
 
+    Attributes:
+        _blocks (list of blocks):
+            A sequence of spaced blocks, sorted by address.
+
+        _trim_start (int):
+            Memory trimming start address. Any data before this address is
+            automatically discarded; disabled if ``None``.
+
+        _trim_endex (int):
+            Memory trimming exclusive end address. Any data at or after this
+            address is automatically discarded; disabled if ``None``.
+
     Arguments:
-        memory (Memory):
-            An optional :obj:`Memory` to copy data from.
-
-        data (bytes):
-            An optional :obj:`bytes` string to create a single block of data.
-
-        offset (int):
-            Start address of the initial block, built if `data` is given.
-
-        blocks (list of blocks):
-            A sequence of non-overlapping blocks, sorted by address.
-
         start (int):
             Optional memory start address.
             Anything before will be trimmed away.
@@ -5545,12 +5548,6 @@ cdef class Memory:
         endex (int):
             Optional memory exclusive end address.
             Anything at or after it will be trimmed away.
-
-        copy (bool):
-            Forces copy of provided input data.
-
-        validate (bool):
-            Validates the resulting :obj:`Memory` object.
 
     Raises:
         :obj:`ValueError`: More than one of `memory`, `data`, and `blocks`.
@@ -5560,7 +5557,7 @@ cdef class Memory:
         >>> memory._blocks
         []
 
-        >>> memory = Memory(data=b'Hello, World!', offset=5)
+        >>> memory = Memory.from_bytes(b'Hello, World!', offset=5)
         >>> memory._blocks
         [[5, b'Hello, World!']]
     """
@@ -5575,19 +5572,227 @@ cdef class Memory:
 
     def __init__(
         self: 'Memory',
-        memory: Optional['Memory'] = None,
-        data: Optional[AnyBytes] = None,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ):
+
+        self._ = Memory_Create(NULL, None, None, None, start, endex, False, False, False)
+
+    @classmethod
+    def from_blocks(
+        cls: Type['Memory'],
+        blocks: BlockList,
         offset: Address = 0,
-        blocks: Optional[BlockList] = None,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ):
-        cdef:
-            Memory_* memory_ = NULL if memory is None else (<Memory>memory)._
+        collapse: bool = False,
+    ) -> 'Memory':
+        r"""Creates a virtual memory from blocks.
 
-        self._ = Memory_Create(memory_, data, offset, blocks, start, endex, copy, validate)
+        Arguments:
+            blocks (list of blocks):
+                A sequence of non-overlapping blocks, sorted by address.
+
+            offset (int):
+                Some address offset applied to all the blocks.
+
+            start (int):
+                Optional memory start address.
+                Anything before will be trimmed away.
+
+            endex (int):
+                Optional memory exclusive end address.
+                Anything at or after it will be trimmed away.
+
+            copy (bool):
+                Forces copy of provided input data.
+
+            validate (bool):
+                Validates the resulting :obj:`Memory` object.
+
+            collapse (bool):
+                Collapses the provided blocks, prior to construction.
+                Useful when source blocks do not satisfy the requirements of
+                the underlying data structure, e.g. blocks are not sorted by
+                address or they have some overlapping or contiguity.
+
+        Raises:
+            :obj:`ValueError`: Some requirements are not satisfied.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |   |   |   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> blocks = [[1, b'ABC'], [5, b'xyz']]
+            >>> memory = Memory.from_blocks(blocks)
+            >>> memory._blocks
+            [[1, b'ABC'], [5, b'xyz']]
+            >>> memory = Memory.from_blocks(blocks, offset=3)
+            >>> memory._blocks
+            [[4, b'ABC'], [8, b'xyz']]
+
+            ~~~
+
+            >>> # Loads data from an Intel HEX record file
+            >>> # NOTE: Record files typically require collapsing!
+            >>> import hexrec.records as hr
+            >>> blocks = hr.load_blocks('records.hex')
+            >>> memory = Memory.from_blocks(blocks, collapse=True)
+            >>> memory
+                ...
+            >>> # Alternatively:
+            >>> memory = Memory.from_blocks(collapse_blocks(blocks))
+            >>> memory
+                ...
+        """
+        cdef:
+            Memory memory = Memory()
+
+        memory._ = Memory_Free(memory._)
+        memory._ = Memory_Create(NULL, None, offset, blocks, start, endex, copy, validate, collapse)
+        return memory
+
+    @classmethod
+    def from_bytes(
+        cls: Type['Memory'],
+        data: AnyBytes,
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        copy: bool = True,
+        validate: bool = True,
+    ) -> 'Memory':
+        r"""Creates a virtual memory from a byte-like chunk.
+
+        Arguments:
+            data (byte-like data):
+                A byte-like chunk of data (e.g. :obj:`bytes`,
+                :obj:`bytearray`, :obj:`memoryview`).
+
+            offset (int):
+                Start address of the block of data.
+
+            start (int):
+                Optional memory start address.
+                Anything before will be trimmed away.
+
+            endex (int):
+                Optional memory exclusive end address.
+                Anything at or after it will be trimmed away.
+
+            copy (bool):
+                Forces copy of provided input data into the underlying data
+                structure.
+
+            validate (bool):
+                Validates the resulting :obj:`Memory` object.
+
+        Raises:
+            :obj:`ValueError`: Some requirements are not satisfied.
+
+        Examples:
+            >>> memory = Memory.from_bytes(b'')
+            >>> memory._blocks
+            []
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |   |[A | B | C | x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_bytes(b'ABCxyz', 2)
+            >>> memory._blocks
+            [[2, b'ABCxyz']]
+        """
+        cdef:
+            Memory memory = Memory()
+
+        memory._ = Memory_Free(memory._)
+        memory._ = Memory_Create(NULL, data, offset, None, start, endex, copy, validate, False)
+        return memory
+
+    @classmethod
+    def from_memory(
+        cls: Type['Memory'],
+        memory: 'Memory',
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        copy: bool = True,
+        validate: bool = True,
+    ) -> 'Memory':
+        r"""Creates a virtual memory from another one.
+
+        Arguments:
+            memory (Memory):
+                A :obj:`Memory` to copy data from.
+
+            offset (int):
+                Some address offset applied to all the blocks.
+
+            start (int):
+                Optional memory start address.
+                Anything before will be trimmed away.
+
+            endex (int):
+                Optional memory exclusive end address.
+                Anything at or after it will be trimmed away.
+
+            copy (bool):
+                Forces copy of provided input data into the underlying data
+                structure.
+
+            validate (bool):
+                Validates the resulting :obj:`Memory` object.
+
+        Raises:
+            :obj:`ValueError`: Some requirements are not satisfied.
+
+        Examples:
+            >>> memory1 = Memory.from_bytes(b'ABC', 5)
+            >>> memory2 = Memory.from_memory(memory1)
+            >>> memory2._blocks
+            [[5, b'ABC]]
+            >>> memory1 == memory2
+            True
+            >>> memory1 is memory2
+            False
+            >>> memory1._blocks is memory2._blocks
+            False
+
+            ~~~
+
+            >>> memory1 = Memory.from_bytes(b'ABC', 10)
+            >>> memory2 = Memory.from_memory(memory1, -3)
+            >>> memory2._blocks
+            [[7, b'ABC]]
+            >>> memory1 == memory2
+            False
+
+            ~~~
+
+            >>> memory1 = Memory.from_bytes(b'ABC', 10)
+            >>> memory2 = Memory.from_memory(memory2, copy=False)
+            >>> all((b1[1] is b2[1])  # compare block data
+            ...     for b1, b2 in zip(memory1._blocks, memory2._blocks))
+            True
+        """
+        cdef:
+            Memory memory_ = Memory()
+
+        memory_._ = Memory_Free(memory_._)
+        memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate, False)
+        return memory
 
     def __repr__(
         self: 'Memory',
@@ -5619,7 +5824,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [7, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [7, b'xyz']])
             >>> memory._blocks
             'ABCxyz'
         """
@@ -5650,7 +5855,7 @@ cdef class Memory:
             >>> bool(memory)
             False
 
-            >>> memory = Memory(data=b'Hello, World!', offset=5)
+            >>> memory = Memory.from_bytes(b'Hello, World!', offset=5)
             >>> bool(memory)
             True
         """
@@ -5680,7 +5885,7 @@ cdef class Memory:
 
         Examples:
             >>> data = b'Hello, World!'
-            >>> memory = Memory(data=data)
+            >>> memory = Memory.from_bytes(data)
             >>> memory == data
             True
             >>> memory.shift(1)
@@ -5688,7 +5893,7 @@ cdef class Memory:
             False
 
             >>> data = b'Hello, World!'
-            >>> memory = Memory(data=data)
+            >>> memory = Memory.from_bytes(data)
             >>> memory == [[0, data]]
             True
             >>> memory == list(data)
@@ -5963,7 +6168,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[1 | 2 | 3]|   |[x | y | z]|
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'123'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'123'], [9, b'xyz']])
             >>> b'23' in memory
             True
             >>> ord('y') in memory
@@ -6004,7 +6209,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[B | a | t]|   |[t | a | b]|
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'Bat'], [9, b'tab']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'Bat'], [9, b'tab']])
             >>> memory.count(b'a')
             2
         """
@@ -6039,7 +6244,7 @@ cdef class Memory:
             |   | 65| 66| 67| 68|   | 36|   |120|121|122|
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory[9]  # -> ord('y') = 121
             121
             >>> memory[:3]._blocks
@@ -6096,7 +6301,7 @@ cdef class Memory:
             |   |[A | 1 | C]|   |[2 | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory[7:10] = None
             >>> memory._blocks
             [[5, b'AB'], [10, b'yz']]
@@ -6125,7 +6330,7 @@ cdef class Memory:
             |[$]|   |[A | B | 4 | 5 | < | > | 8 | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory[0:4] = b'$'
             >>> memory._blocks
             [[0, b'$'], [2, b'ABC'], [6, b'xyz']]
@@ -6162,7 +6367,7 @@ cdef class Memory:
             |   |[A | B | C | y | z]|   |   |   |   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> del memory[4:9]
             >>> memory._blocks
             [[1, b'ABCyz']]
@@ -6181,7 +6386,7 @@ cdef class Memory:
             |   |[A | D]|   |   |[x]|   |   |   |   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> del memory[9]
             >>> memory._blocks
             [[1, b'ABCD'], [6, b'$'], [8, b'xz']]
@@ -6268,7 +6473,7 @@ cdef class Memory:
             |   |[A | B | D]|   |[$]|   |[x | y]|   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.pop()  # -> ord('z') = 122
             122
             >>> memory.pop(3)  # -> ord('C') = 67
@@ -6482,7 +6687,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.start
             1
 
@@ -6494,7 +6699,7 @@ cdef class Memory:
             |   |[[[|   |   |   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'xyz']], start=1)
+            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
             >>> memory.start
             1
         """
@@ -6527,7 +6732,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.endex
             8
 
@@ -6539,7 +6744,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.endex
             8
         """
@@ -6568,7 +6773,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.span
             (1, 8)
         """
@@ -6601,7 +6806,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.endin
             7
 
@@ -6613,7 +6818,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.endin
             7
         """
@@ -6650,7 +6855,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_start
             1
 
@@ -6662,7 +6867,7 @@ cdef class Memory:
             |   |[[[|   |   |   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'xyz']], start=1)
+            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
             >>> memory.content_start
             5
         """
@@ -6699,7 +6904,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_endex
             8
 
@@ -6711,7 +6916,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.content_endex
             4
         """
@@ -6745,7 +6950,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_span
             (1, 8)
         """
@@ -6783,7 +6988,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_endin
             7
 
@@ -6795,7 +7000,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.content_endin
             3
         """
@@ -6825,7 +7030,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_size
             6
 
@@ -6837,7 +7042,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.content_size
             3
         """
@@ -6865,7 +7070,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.content_parts
             2
 
@@ -6877,7 +7082,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC']], endex=8)
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
             >>> memory.content_parts
             1
         """
@@ -6935,7 +7140,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [5, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.bound(0, 30)
             (1, 8)
             >>> memory.bound(2, 6)
@@ -6953,7 +7158,7 @@ cdef class Memory:
             |   |[[[|   |[A | B | C]|   |   |)))|
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[3, b'ABC']], start=1, endex=8)
+            >>> memory = Memory.from_blocks([[3, b'ABC']], start=1, endex=8)
             >>> memory.bound()
             (1, 8)
             >>> memory.bound(0, 30)
@@ -6992,7 +7197,7 @@ cdef class Memory:
             |   | 0 | 0 | 0 | 0 |   | 1 |   | 2 | 2 | 2 |   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> [memory._block_index_at(i) for i in range(12)]
             [None, 0, 0, 0, 0, None, 1, None, 2, 2, 2, None]
         """
@@ -7029,7 +7234,7 @@ cdef class Memory:
             | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 3 |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> [memory._block_index_start(i) for i in range(12)]
             [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
         """
@@ -7063,7 +7268,7 @@ cdef class Memory:
             | 0 | 1 | 1 | 1 | 1 | 1 | 2 | 2 | 3 | 3 | 3 | 3 |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> [memory._block_index_endex(i) for i in range(12)]
             [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]
         """
@@ -7086,7 +7291,7 @@ cdef class Memory:
             |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.peek(3)  # -> ord('C') = 67
             67
             >>> memory.peek(6)  # -> ord('$') = 36
@@ -7127,12 +7332,12 @@ cdef class Memory:
             |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.poke(3, b'@')  # -> ord('C') = 67
             67
             >>> memory.peek(3)  # -> ord('@') = 64
             64
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.poke(5, '@')
             None
             >>> memory.peek(5)  # -> ord('@') = 64
@@ -7186,7 +7391,7 @@ cdef class Memory:
             |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.extract()._blocks
             [[1, b'ABCD'], [6, b'$'], [8, b'xyz']]
             >>> memory.extract(2, 9)._blocks
@@ -7229,7 +7434,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[x | y | z]|   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.shift(-2)
             >>> memory._blocks
             [[3, b'ABC'], [7, b'xyz']]
@@ -7244,7 +7449,7 @@ cdef class Memory:
             |   |[y | z]|   |   |   |   |   |   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']], start=2)
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=2)
             >>> backups = []
             >>> memory.shift(-7, backups=backups)
             >>> memory._blocks
@@ -7287,7 +7492,7 @@ cdef class Memory:
             |   |[A]|   |   | B | C]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[3, b'ABC'], [7, b'xyz']])
+            >>> memory = Memory.from_blocks([[3, b'ABC'], [7, b'xyz']])
             >>> memory.reserve(4, 2)
             >>> memory._blocks
             [[2, b'A'], [6, b'BC'], [9, b'xyz']]
@@ -7302,7 +7507,7 @@ cdef class Memory:
             |   |   |   |   |   |   |   |   |[A | B]|)))|
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']], endex=12)
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], endex=12)
             >>> backups = []
             >>> memory.reserve(5, 5, backups=backups)
             >>> memory._blocks
@@ -7348,7 +7553,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |[x | y | 1 | z]|   |[$]|
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.insert(10, b'$')
             >>> memory._blocks
             [[1, b'ABC'], [6, b'xyz'], [10, b'$']]
@@ -7389,7 +7594,7 @@ cdef class Memory:
             |   |[A | y | z]|   |   |   |   |   |   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.delete(6, 10)
             >>> memory._blocks
             [[5, b'Ayz']]
@@ -7427,7 +7632,7 @@ cdef class Memory:
             |   |[A]|   |   |   |   |[y | z]|   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.clear(6, 10)
             >>> memory._blocks
             [[5, b'A'], [10, b'yz']]
@@ -7465,7 +7670,7 @@ cdef class Memory:
             |   |   |[B | C]|   |[x]|   |   |   |
             +---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[5, b'ABC'], [9, b'xyz']])
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.crop(6, 10)
             >>> memory._blocks
             [[6, b'BC'], [9, b'x']]
@@ -7506,7 +7711,7 @@ cdef class Memory:
             |   |[A | B | C]|   |[1 | 2 | 3 | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.write(5, b'123')
             >>> memory._blocks
             [[1, b'ABC'], [5, b'123z']]
@@ -7548,7 +7753,7 @@ cdef class Memory:
             |   |[1 | 2 | 3 | 1 | 2 | 3 | 1 | 2]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.fill(pattern=b'123')
             >>> memory._blocks
             [[1, b'12312312']]
@@ -7563,7 +7768,7 @@ cdef class Memory:
             |   |[A | B | 1 | 2 | 3 | 1 | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.fill(3, 7, b'123')
             >>> memory._blocks
             [[1, b'AB1231yz']]
@@ -7605,7 +7810,7 @@ cdef class Memory:
             |   |[A | B | C | 1 | 2 | x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.flood(pattern=b'123')
             >>> memory._blocks
             [[1, b'ABC12xyz']]
@@ -7620,7 +7825,7 @@ cdef class Memory:
             |   |[A | B | C | 2 | 3 | x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.flood(3, 7, b'123')
             >>> memory._blocks
             [[1, b'ABC23xyz']]
@@ -7671,7 +7876,7 @@ cdef class Memory:
             |   |[A | B | C]|   |   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> list(memory.keys())
             [1, 2, 3, 4, 5, 6, 7, 8]
             >>> list(memory.keys(endex=8))
@@ -7748,7 +7953,7 @@ cdef class Memory:
             |   | 65| 66| 67|   |   |120|121|122|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> list(memory.values())
             [65, 66, 67, None, None, 120, 121, 122]
             >>> list(memory.values(3, 8))
@@ -7844,7 +8049,7 @@ cdef class Memory:
             |   | 65| 66| 67|   |   |120|121|122|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> list(memory.values())
             [65, 66, 67, None, None, 120, 121, 122]
             >>> list(memory.values(3, 8))
@@ -7943,7 +8148,7 @@ cdef class Memory:
             |   | 65| 66| 67|   |   |120|121|122|   |
             +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABC'], [6, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> list(memory.items())
             [(1, 65), (2, 66), (3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122)]
             >>> list(memory.items(3, 8))
@@ -7982,7 +8187,7 @@ cdef class Memory:
             |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
             >>> list(memory.intervals())
             [(1, 3), (5, 6), (7, 10)]
             >>> list(memory.intervals(2, 9))
@@ -8053,7 +8258,7 @@ cdef class Memory:
             |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
             >>> list(memory.gaps())
             [(None, 1), (3, 5), (6, 7), (10, None)]
             >>> list(memory.gaps(bound=True))
@@ -8144,7 +8349,7 @@ cdef class Memory:
             | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[0, b'ABBBC'], [7, b'CCD']])
+            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
             >>> memory.equal_span(2)
             (1, 4, 66)
             >>> memory.equal_span(4)
@@ -8260,7 +8465,7 @@ cdef class Memory:
             | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[0, b'ABBBC'], [7, b'CCD']])
+            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
             >>> memory.block_span(2)
             (0, 5, 66)
             >>> memory.block_span(4)

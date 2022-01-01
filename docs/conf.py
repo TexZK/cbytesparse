@@ -21,7 +21,7 @@ if os.getenv('SPELLCHECK'):
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'cbytesparse'
-year = '2021'
+year = '2020-2022'
 author = 'Andrea Zoppi'
 copyright = '{0}, {1}'.format(year, author)
 version = release = '0.0.2'
