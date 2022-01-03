@@ -4,6 +4,10 @@ source =
    */site-packages/cbytesparse
 
 [run]
+branch = true
+source =
+    src
+    tests
 plugins = Cython.Coverage
 
 [report]
