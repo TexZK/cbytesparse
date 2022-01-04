@@ -67,6 +67,10 @@ EllipsisType = Type['Ellipsis']
 
 STR_MAX_CONTENT_SIZE: Address = 1000
 
+# Allocate an empty block, so that an empty view can be returned statically
+cdef:
+    Block_* _empty_block = Block_Acquire(Block_Alloc(0, 0, False))
+
 
 # =====================================================================================================================
 
@@ -1853,29 +1857,38 @@ cdef class BlockView:
     disposed before trying to write to the memory block again.
     """
 
+    cdef vint check_(self: BlockView) except -1:
+        if self._block == NULL:
+            raise RuntimeError('null internal data pointer')
+
+    cdef vint dispose_(self: BlockView) except -1:
+        self._memview = None
+
+        if self._block:
+            self._block = Block_Release(self._block)
+
     def __cinit__(self: BlockView):
         self._block = NULL
 
     def __dealloc__(self: BlockView):
-        if self._block:
-            self._block = Block_Release(self._block)
+        self.dispose_()
 
     def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
         cdef:
             int CONTIGUOUS = PyBUF_C_CONTIGUOUS | PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
 
-        if flags & PyBUF_WRITABLE:
-            raise ValueError('read only access')
+        # if flags & PyBUF_WRITABLE:
+        #     raise ValueError('read only access')
 
         self.check_()
 
-        # self._block = Block_Acquire(self._block)
+        self._block = Block_Acquire(self._block)
 
         buffer.buf = &self._block.data[self._start]
         buffer.obj = self
         buffer.len = self._endex - self._start
         buffer.itemsize = 1
-        buffer.readonly = 1
+        buffer.readonly = not (flags & PyBUF_WRITABLE)
         buffer.ndim = 1
         buffer.format = <char*>'B' if flags & (PyBUF_FORMAT | CONTIGUOUS) else NULL
         buffer.shape = &buffer.len if flags & (PyBUF_ND | CONTIGUOUS) else NULL
@@ -1884,15 +1897,14 @@ cdef class BlockView:
         buffer.internal = NULL
 
     def __releasebuffer__(self: BlockView, Py_buffer* buffer):
-        # if self._block:
-        #     self._block = Block_Release(self._block)
-        pass
+        if self._block:
+            self._block = Block_Release_(self._block)
 
     def __repr__(
         self: BlockView,
     ) -> str:
 
-        return repr(str(self))
+        return repr(self.__str__())
 
     def __str__(
         self: BlockView,
@@ -1910,9 +1922,8 @@ cdef class BlockView:
             CheckAddAddrU(start, size)
             endex = start + size
             return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{<uintptr_t><void*>self:X}>'
-
         else:
-            return self.memview.tobytes().decode('ascii')
+            return self.__bytes__().decode('ascii')
 
     def __bool__(
         self: BlockView,
@@ -1934,18 +1945,40 @@ cdef class BlockView:
         Returns:
             bytes: :class:`bytes` clone of the viewed slice.
         """
+        cdef:
+            byte_t *data
+            size_t size
 
-        return bytes(self.memview)
+        self.check_()
+
+        data = &self._block.data[self._start]
+        size = self._endex - self._start
+        if size > SIZE_HMAX:
+            raise OverflowError()
+
+        return PyBytes_FromStringAndSize(<char*><void*>data, <ssize_t>size)
 
     @property
     def memview(
         self: BlockView,
     ) -> memoryview:
         r"""memoryview: Python :class:`memoryview` wrapper."""
+        cdef:
+            byte_t *data
+            size_t size
+            byte_t[:] view
 
         self.check_()
+
         if self._memview is None:
-            self._memview = memoryview(self)
+            data = &self._block.data[self._start]
+            size = self._endex - self._start
+
+            if size > 0:
+                self._memview = <byte_t[:size]>data
+            else:
+                self._memview = b''
+
         return self._memview
 
     def __len__(
@@ -1977,7 +2010,7 @@ cdef class BlockView:
     ) -> Address:
         r"""int: Slice inclusive start address."""
 
-        self.check()
+        self.check_()
         return self._block.address
 
     @property
@@ -1986,7 +2019,7 @@ cdef class BlockView:
     ) -> Address:
         r"""int: Slice exclusive end address."""
 
-        self.check()
+        self.check_()
         return self._block.address + self._endex - self._start
 
     @property
@@ -2004,10 +2037,6 @@ cdef class BlockView:
         r"""bool: Underlying block currently acquired."""
 
         return self._block != NULL
-
-    cdef bint check_(self) except -1:
-        if self._block == NULL:
-            raise RuntimeError('null internal data pointer')
 
     def check(
         self: BlockView,
@@ -2027,8 +2056,7 @@ cdef class BlockView:
         Any access to the object after calling this function could raise exceptions.
         """
 
-        if self._block:
-            self._block = Block_Release(self._block)
+        self.dispose_()
 
 
 # =====================================================================================================================
@@ -3901,35 +3929,31 @@ cdef object Memory_Pop(Memory_* that, object address):
     return None if value < 0 else value
 
 
-cdef BlockView Memory_View(Memory_* that):
+cdef BlockView Memory_View(const Memory_* that, addr_t start, addr_t endex):
     cdef:
-        Rack_* blocks = that.blocks
-        size_t block_count = Rack_Length(blocks)
-        addr_t start
-        addr_t endex
+        const Rack_* blocks
+        Block_* block
+        ssize_t block_index
+        addr_t block_start
+        addr_t block_endex
 
-    if not block_count:
-        start = that.trim_start
-        endex = that.trim_endex
-        if that.trim_start_ and that.trim_endex_ and start < endex - 1:
-            raise ValueError('non-contiguous data within range')
-        return Block_View(Block_Alloc(start, 0, False))
+    if start < endex:
+        blocks = that.blocks
+        block_index = Rack_IndexAt(blocks, start)
 
-    elif block_count == 1:
-        start = that.trim_start
-        if that.trim_start_:
-            if start != Block_Start(Rack_First__(blocks)):
-                raise ValueError('non-contiguous data within range')
+        if block_index >= 0:
+            block = Rack_Get__(blocks, <size_t>block_index)
+            block_endex = Block_Endex(block)
 
-        endex = that.trim_endex
-        if that.trim_endex_:
-            if endex != Block_Endex(Rack_Last__(blocks)):
-                raise ValueError('non-contiguous data within range')
+            if endex <= block_endex:
+                block_start = Block_Start(block)
+                start -= block_start
+                endex -= block_start
+                return Block_ViewSlice_(block, start, endex)
 
-        return Block_View(Rack_First_(blocks))
-
-    else:
         raise ValueError('non-contiguous data within range')
+    else:
+        return Block_ViewSlice_(_empty_block, 0, 0)
 
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
@@ -6483,68 +6507,15 @@ cdef class Memory:
             :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
         """
         cdef:
-            BlockView view = Memory_View(self._)
+            const Memory_* memory = self._
+            addr_t start = Memory_Start(memory)
+            addr_t endex = Memory_Endex(memory)
+            BlockView view = Memory_View(memory, start, endex)
+            bytes data
 
-        result = bytes(view)
+        data = view.__bytes__()
         view.dispose()
-        return result
-
-    def to_bytes(
-        self: Memory,
-    ) -> bytes:
-        r"""Creates a bytes clone.
-
-        Returns:
-            :obj:`bytes`: Cloned data.
-
-        Raises:
-            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
-        """
-        cdef:
-            BlockView view = Memory_View(self._)
-
-        result = bytes(view)
-        view.dispose()
-        return result
-
-    def to_bytearray(
-        self: Memory,
-    ) -> bytearray:
-        r"""Creates a bytearray clone.
-
-        Arguments:
-            copy (bool):
-                Creates a clone of the underlying :obj:`bytearray` data
-                structure.
-
-        Returns:
-            :obj:`bytearray`: Cloned data.
-
-        Raises:
-            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
-        """
-        cdef:
-            BlockView view = Memory_View(self._)
-
-        result = bytearray(view)
-        view.dispose()
-        return result
-
-    def to_memoryview(
-        self: Memory,
-    ) -> memoryview:
-        r"""Creates a memory view.
-
-        Returns:
-            :obj:`memoryview`: View over data.
-
-        Raises:
-            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
-        """
-        cdef:
-            BlockView view = Memory_View(self._)
-
-        return view
+        return data
 
     def __copy__(
         self: Memory,
@@ -7398,6 +7369,49 @@ cdef class Memory:
         """
 
         return Memory_Extract(self._, start, endex, pattern, step, bound)
+
+    def view(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> BlockView:
+        r"""Creates a view over a range.
+
+        Creates a memory view over the selected address range.
+        Data within the range is required to be contiguous.
+
+        Arguments:
+            start (int):
+                Inclusive start of the viewed range.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end of the viewed range.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`BlockView`: A view of the selected address range.
+
+        Raises:
+            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> bytes(memory.view(2, 5))
+            b'BCD'
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_View(memory, start_, endex_)
 
     def shift(
         self: Memory,

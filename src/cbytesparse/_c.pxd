@@ -352,7 +352,8 @@ cdef class BlockView:
         size_t _endex  # data slice endex
         object _memview  # shadow memoryview
 
-    cdef bint check_(self) except -1
+    cdef vint check_(self) except -1
+    cdef vint dispose_(self) except -1
 
 
 # =====================================================================================================================
@@ -575,7 +576,7 @@ cdef int Memory_PopLast_(Memory_* that) except -2
 cdef int Memory_PopAt_(Memory_* that, addr_t address) except -2
 cdef object Memory_Pop(Memory_* that, object address)
 
-cdef BlockView Memory_View(Memory_* that)
+cdef BlockView Memory_View(const Memory_* that, addr_t start, addr_t endex)
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL
 

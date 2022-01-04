@@ -353,8 +353,6 @@ class BaseMemorySuite:
 
         memory = Memory.from_blocks(blocks)
         memory2 = Memory.from_memory(memory, offset=offset)
-        print(memory._blocks)  # XXX DEBUG
-        print(memory2._blocks)  # XXX DEBUG
         for (sm1, _), (sm2, _) in zip(memory._blocks, memory2._blocks):
             assert sm2 == sm1 + offset, (sm2, sm1, offset)
 
@@ -868,7 +866,7 @@ class BaseMemorySuite:
 
         for start in range(3, 6):
             for endex in range(start, 6):
-                data_out = list(memory[start:endex].to_memoryview())
+                data_out = list(memory[start:endex].view())
                 data_ref = values[start:endex]
                 assert data_out == data_ref, (start, endex, data_out, data_ref)
 
@@ -883,7 +881,7 @@ class BaseMemorySuite:
         for start in range(3, stop):
             for endex in range(start, stop):
                 for step in range(1, 4):
-                    data_out = list(memory[start:endex:step].to_memoryview())
+                    data_out = list(memory[start:endex:step].view())
                     data_ref = values[start:endex:step]
                     assert data_out == data_ref, (start, endex, step, data_out, data_ref)
 
@@ -1399,51 +1397,6 @@ class BaseMemorySuite:
         blocks = [[5, b'xyz']]
         memory = Memory.from_blocks(blocks, copy=False)
         data = memory.__bytes__()
-        assert data == blocks[0][1], (data, blocks[0][1])
-
-    def test_to_bytes(self):
-        Memory = self.Memory
-        memory = Memory()
-        data = memory.to_bytes()
-        assert data == b'', (data,)
-
-        memory = Memory.from_bytes(b'xyz', offset=5)
-        data = memory.to_bytes()
-        assert data == b'xyz', (data,)
-
-        blocks = [[5, b'xyz']]
-        memory = Memory.from_blocks(blocks, copy=False)
-        data = memory.to_bytes()
-        assert data == blocks[0][1], (data, blocks[0][1])
-
-    def test_to_bytearray(self):
-        Memory = self.Memory
-        memory = Memory()
-        data = memory.to_bytearray()
-        assert data == b'', (data,)
-
-        memory = Memory.from_bytes(b'xyz', offset=5)
-        data = memory.to_bytearray()
-        assert data == b'xyz', (data,)
-
-        blocks = [[5, b'xyz']]
-        memory = Memory.from_blocks(blocks, copy=False)
-        data = memory.to_bytearray()
-        assert data == blocks[0][1], (data, blocks[0][1])
-
-    def test_to_memoryview(self):
-        Memory = self.Memory
-        memory = Memory()
-        data = bytes(memory.to_memoryview())
-        assert data == b'', (data,)
-
-        memory = Memory.from_bytes(b'xyz', offset=5)
-        data = bytes(memory.to_memoryview())
-        assert data == b'xyz', (data,)
-
-        blocks = [[5, b'xyz']]
-        memory = Memory.from_blocks(blocks, copy=False)
-        data = bytes(memory.to_memoryview())
         assert data == blocks[0][1], (data, blocks[0][1])
 
     def test___copy___empty(self):
@@ -2265,6 +2218,23 @@ class BaseMemorySuite:
 
                 blocks_ref = values_to_blocks(values[start:(start + size)], start)
                 assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
+
+    def test_view_template(self):
+        Memory = self.Memory
+        match = 'non-contiguous data within range'
+        for start in range(MAX_START):
+            for size in range(MAX_SIZE):
+                blocks = create_template_blocks()
+                values = blocks_to_values(blocks, MAX_SIZE)
+                memory = Memory.from_blocks(blocks)
+                values_ref = values[start:(start + size)]
+
+                if all(x is not None for x in values_ref):
+                    values_out = list(memory.view(start, start + size))
+                    assert values_out == values_ref, (start, size, values_out, values_ref)
+                else:
+                    with pytest.raises(ValueError, match=match):
+                        memory.view(start, start + size)
 
     def test_shift_template(self):
         Memory = self.Memory
