@@ -2361,6 +2361,7 @@ class BaseMemorySuite:
 
     def test_write_simple(self):
         Memory = self.Memory
+        chunk = b'<=>'
         for offset in range(MAX_SIZE - 3):
             blocks = create_template_blocks()
             values = blocks_to_values(blocks, MAX_SIZE)
@@ -2368,10 +2369,11 @@ class BaseMemorySuite:
             memory.trim_start = memory.content_start - 1
             memory.trim_endex = memory.content_endex + 1
 
-            memory.write(offset, b'<=>')
+            memory.write(offset, chunk)
+            memory.validate()
             blocks_out = memory._blocks
 
-            values[offset:(offset + 3)] = b'<=>'
+            values[offset:(offset + 3)] = chunk
             values[:memory.trim_start] = [None] * memory.trim_start
             values[memory.trim_endex:] = [None] * (len(values) - memory.trim_endex)
             blocks_ref = values_to_blocks(values)

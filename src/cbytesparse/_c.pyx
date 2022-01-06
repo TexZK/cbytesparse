@@ -4529,7 +4529,11 @@ cdef object Memory_Extract(const Memory_* that, object start, object endex,
         with cython.boundscheck(False):
             pattern_ptr = &pattern_view[0]
 
-    start_, endex_ = Memory_Bound(that, start, endex)
+    start_ = Memory_Start(that) if start is None else <addr_t>start
+    endex_ = Memory_Endex(that) if endex is None else <addr_t>endex
+    if endex_ < start_:
+        endex_ = start_
+
     return Memory_Extract_(that, start_, endex_, pattern_size, pattern_ptr, step_, bound_)
 
 
@@ -4812,22 +4816,19 @@ cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_a
 
 cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data) except -1:
     cdef:
-        addr_t data_start
-        addr_t data_endex
+        addr_t data_start = Memory_Start(data)
+        addr_t data_endex = Memory_Endex(data)
+        addr_t data_size = data_endex - data_start
 
-    data_start = Memory_Start(data)
-    data_endex = Memory_Endex(data)
-
-    if data_start < data_endex:
-        Memory_Reserve_(that, data_start, data_endex)
-        Memory_WriteSame_(that, data_start, data, False)
+    if data_size:
+        Memory_Reserve_(that, address, data_size)
+        Memory_WriteSame_(that, address, data, True)
 
 
 cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1:
-    Memory_Place__(that, address, data_size, data_ptr, True)
-
     if data_size:
-        Memory_Crop_(that, that.trim_start, that.trim_endex)  # TODO: pre-trimming
+        Memory_Reserve_(that, address, data_size)
+        Memory_WriteRaw_(that, address, data_size, data_ptr)
 
 
 cdef vint Memory_Insert(Memory_* that, object address, object data) except -1:
@@ -4862,10 +4863,9 @@ cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex) except -1:
 
 cdef vint Memory_Delete(Memory_* that, object start, object endex) except -1:
     cdef:
-        addr_t start_
-        addr_t endex_
+        addr_t start_ = Memory_Start(that) if start is None else <addr_t> start
+        addr_t endex_ = Memory_Endex(that) if endex is None else <addr_t> endex
 
-    start_, endex_ = Memory_Bound(that, start, endex)
     Memory_Delete_(that, start_, endex_)
 
 
@@ -4876,10 +4876,9 @@ cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex) except -1:
 
 cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1:
     cdef:
-        addr_t start_
-        addr_t endex_
+        addr_t start_ = Memory_Start(that) if start is None else <addr_t> start
+        addr_t endex_ = Memory_Endex(that) if endex is None else <addr_t> endex
 
-    start_, endex_ = Memory_Bound(that, start, endex)
     Memory_Clear_(that, start_, endex_)
 
 
@@ -4964,47 +4963,86 @@ cdef vint Memory_Crop(Memory_* that, object start, object endex) except -1:
 
 cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear) except -1:
     cdef:
-        addr_t data_start
-        addr_t data_endex
-        addr_t size
+        addr_t start = Memory_Start(data)
+        addr_t endex = Memory_Endex(data)
+        addr_t size = endex - start
+        addr_t offset
+
+        addr_t trim_start
+        addr_t trim_endex
+        bint trim_start_
+        bint trim_endex_
+
         const Rack_* blocks
+        size_t block_count
         size_t block_index
         const Block_* block
         addr_t block_start
         addr_t block_endex
+        size_t block_size
+        size_t block_offset
 
-    data_start = Memory_Start(data)
-    data_endex = Memory_Endex(data)
-    size = data_endex - data_start
+    if not size:
+        return 0
+
     blocks = data.blocks
+    block_count = Rack_Length(blocks)
+    if block_count:
+        CheckAddAddrU(Block_Endex(Rack_Last__(blocks)), address)
 
-    if size:
-        if clear:
-            # Clear anything between source data boundaries
-            Memory_Erase__(that, data_start, data_endex, False)  # clear
+    CheckAddAddrU(endex, address)
+    endex += address
+    trim_start_ = that.trim_start_
+    trim_start = that.trim_start
 
-        else:
-            # Clear only overwritten ranges
-            for block_index in range(Rack_Length(blocks)):
-                block = Rack_Get__(blocks, block_index)
+    if trim_start_ and endex <= trim_start:
+        return 0
 
-                block_start = Block_Start(block)
-                CheckAddAddrU(block_start, address)
-                block_start += address
+    CheckAddAddrU(start, address)
+    start += address
+    trim_endex_ = that.trim_endex_
+    trim_endex = that.trim_endex
 
-                block_endex = Block_Endex(block)
-                CheckAddAddrU(block_endex, address)
-                block_endex += address
+    if trim_endex_ and trim_endex <= start:
+        return 0
 
-                Memory_Erase__(that, block_start, block_endex, False)  # clear
-
-        for block_index in range(Rack_Length(blocks)):
+    if clear:
+        # Clear anything between source data boundaries
+        Memory_Erase__(that, start, endex, False)  # clear
+    else:
+        # Clear only overwritten ranges
+        for block_index in range(block_count):
             block = Rack_Get__(blocks, block_index)
-            block_start = Block_Start(block)
-            CheckAddAddrU(block_start, address)
-            Memory_Place__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)  # insert
+            block_start = Block_Start(block) + address
+            block_endex = Block_Endex(block) + address
+            Memory_Erase__(that, block_start, block_endex, False)  # clear
 
-        Memory_Crop_(that, that.trim_start, that.trim_endex)  # FIXME: prevent after-cropping; trim while writing
+    for block_index in range(block_count):
+        block = Rack_Get__(blocks, block_index)
+
+        block_start = Block_Start(block) + address
+        if trim_start_ and block_endex <= trim_start:
+            continue
+
+        block_endex = Block_Endex(block) + address
+        if trim_endex_ and trim_endex <= block_start:
+            break
+
+        block_size = block_endex - block_start
+        block_offset = 0
+
+        # Trim before memory
+        if trim_start_ and block_start < trim_start:
+            offset = trim_start - block_start
+            block_size -= <size_t>offset
+            block_offset = <size_t>offset
+
+        # Trim after memory
+        if trim_endex_ and trim_endex < block_endex:
+            offset = block_endex - trim_endex
+            block_size -= <size_t>offset
+
+        Memory_Place__(that, block_start, block_size, Block_At__(block, block_offset), False)  # write
 
 
 cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1:
@@ -5012,52 +5050,67 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
         addr_t size = data_size
         addr_t start
         addr_t endex
+        addr_t offset
+
         addr_t trim_start
         addr_t trim_endex
-        addr_t offset
+        bint trim_start_
+        bint trim_endex_
+
         Rack_* blocks
         size_t block_count
         Block_* block
 
-    if CannotAddAddrU(address, size):
-        size = ADDR_MAX - address
+    if not size:
+        return 0
+    elif size == 1:
+        Memory_Poke(that, address, data_ptr[0])  # faster
+        return 0
 
-    if size:
-        start = address
-        endex = start + size
+    CheckAddAddrU(address, size)
+    start = address
+    endex = start + size
 
-        trim_endex = that.trim_endex if that.trim_endex_ else ADDR_MAX
-        if start >= trim_endex:
+    trim_start_ = that.trim_start_
+    trim_start = that.trim_start
+    if trim_start_ and endex <= trim_start:
+        return 0
+
+    trim_endex_ = that.trim_endex_
+    trim_endex = that.trim_endex
+    if trim_endex_ and trim_endex <= start:
+        return 0
+
+    # Trim before memory
+    if trim_start_ and start < trim_start:
+        offset = trim_start - start
+        CheckAddrToSizeU(offset)
+        start += offset
+        size -= <size_t>offset
+        data_ptr += <size_t>offset
+
+    # Trim after memory
+    if trim_endex_ and trim_endex < endex:
+        offset = endex - trim_endex
+        CheckAddrToSizeU(offset)
+        endex -= offset
+        size -= <size_t>offset
+
+    # Check if extending the actual content
+    CheckAddrToSizeU(size)
+    blocks = that.blocks
+    block_count = Rack_Length(blocks)
+    if block_count:
+        block = Rack_Last__(blocks)
+        if start == Block_Endex(block):
+            block = Block_Extend_(block, <size_t>size, data_ptr)  # might be faster
+            Rack_Set__(blocks, block_count - 1, block)  # update pointer
             return 0
-        elif endex > trim_endex:
-            size -= endex - trim_endex
-            endex = start + size
 
-        trim_start = that.trim_start if that.trim_start_ else ADDR_MIN
-        if endex <= trim_start:
-            return 0
-        elif trim_start > start:
-            offset = trim_start - start
-            size -= offset
-            start += offset
-            endex = start + size
-            data_ptr += offset
-
-        CheckAddrToSizeU(size)
-        blocks = that.blocks
-        block_count = Rack_Length(blocks)
-        if block_count:
-            block = Rack_Get__(blocks, block_count - 1)
-            if start == Block_Endex(block):
-                block = Block_Extend_(block, <size_t>size, data_ptr)  # might be faster
-                Rack_Set__(blocks, block_count - 1, block)  # update pointer
-                return 0
-
-        if size == 1:
-            Memory_Poke_(that, start, data_ptr[0])  # might be faster
-        else:
-            Memory_Erase__(that, start, endex, False)  # clear
-            Memory_Place__(that, start, <size_t>size, data_ptr, False)  # write
+    # Standard write method
+    Memory_Erase__(that, start, endex, False)  # clear
+    Memory_Place__(that, start, <size_t>size, data_ptr, False)  # write
+    return 0
 
 
 cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) except -1:

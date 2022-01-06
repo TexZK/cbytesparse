@@ -114,6 +114,7 @@ cdef size_t Upsize(size_t allocated, size_t requested) nogil
 cdef void Reverse(byte_t* buffer, size_t start, size_t endin) nogil
 cdef bint IsSequence(object obj) except -1
 
+
 # =====================================================================================================================
 
 cdef bint CannotAddSizeU(size_t a, size_t b) nogil
