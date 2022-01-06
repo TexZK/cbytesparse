@@ -148,7 +148,7 @@ def collapse_blocks(
 
     try:
         for block_start, block_data in blocks:
-            Memory_Write(memory, block_start, block_data, True, None)
+            Memory_Write(memory, block_start, block_data, True)
 
         collapsed = Memory_ToBlocks(memory)
     finally:
@@ -3186,7 +3186,7 @@ cdef Memory_* Memory_Create(
         that.trim_endex_ = endex is not None
 
         if (that.trim_start_ or that.trim_endex_) and validate_:  # fast check
-            Memory_Crop_(that, start_, endex_, None)
+            Memory_Crop_(that, start_, endex_)
 
         if validate_:
             Memory_Validate(that)
@@ -3303,7 +3303,7 @@ cdef Memory_* Memory_Mul(const Memory_* that, addr_t times) except NULL:
         memory = Memory_Copy(that)
         try:
             for time in range(times - 1):
-                Memory_WriteSame_(memory, offset, that, False, None)
+                Memory_WriteSame_(memory, offset, that, False)
                 offset += size
         except:
             memory = Memory_Free(memory)
@@ -3330,7 +3330,7 @@ cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL:
         memory = Memory_Copy(that)
         try:
             for time in range(times - 1):
-                Memory_WriteSame_(that, offset, memory, False, None)
+                Memory_WriteSame_(that, offset, memory, False)
                 offset += size
         finally:
             memory = Memory_Free(memory)
@@ -3746,22 +3746,22 @@ cdef object Memory_SetItem(Memory_* that, object key, object value):
                         del_endex = del_start + (slice_size - value_size)
                     Memory_Erase__(that, del_start, del_endex, True)  # delete
                     if value_size:
-                        Memory_WriteRaw_(that, start, value_size, Block_At__(value_, 0), None)
+                        Memory_WriteRaw_(that, start, value_size, Block_At__(value_, 0))
                 else:
                     raise ValueError(f'attempt to assign bytes of size {value_size}'
                                      f' to extended slice of size {slice_size}')
             elif slice_size < value_size:
                 # Enlarge: insert excess, overwrite existing
                 if not step:
-                    Memory_InsertRaw_(that, endex, value_size - slice_size, Block_At__(value_, slice_size), None)
-                    Memory_WriteRaw_(that, start, slice_size, Block_At__(value_, 0), None)
+                    Memory_InsertRaw_(that, endex, value_size - slice_size, Block_At__(value_, slice_size))
+                    Memory_WriteRaw_(that, start, slice_size, Block_At__(value_, 0))
                 else:
                     raise ValueError(f'attempt to assign bytes of size {value_size}'
                                      f' to extended slice of size {slice_size}')
             else:
                 # Same size: overwrite existing
                 if not step:
-                    Memory_WriteRaw_(that, start, value_size, Block_At__(value_, 0), None)
+                    Memory_WriteRaw_(that, start, value_size, Block_At__(value_, 0))
                 else:
                     CheckMulAddrU(step, value_size)
                     CheckAddAddrU(start, step * value_size)
@@ -3850,7 +3850,7 @@ cdef vint Memory_ExtendSame_(Memory_* that, const Memory_* items, addr_t offset)
 
     CheckAddAddrU(content_endex, offset)
     offset += content_endex
-    Memory_WriteSame_(that, offset, items, False, None)
+    Memory_WriteSame_(that, offset, items, False)
 
 
 cdef vint Memory_ExtendRaw_(Memory_* that, size_t items_size, const byte_t* items_ptr, addr_t offset) except -1:
@@ -3860,7 +3860,7 @@ cdef vint Memory_ExtendRaw_(Memory_* that, size_t items_size, const byte_t* item
     CheckAddAddrU(content_endex, offset)
     offset += content_endex
     CheckAddAddrU(offset, items_size)
-    Memory_WriteRaw_(that, offset, items_size, items_ptr, None)
+    Memory_WriteRaw_(that, offset, items_size, items_ptr)
 
 
 cdef vint Memory_Extend(Memory_* that, object items, object offset) except -1:
@@ -4024,7 +4024,7 @@ cdef vint Memory_SetTrimStart(Memory_* that, object trim_start) except -1:
 
     that.trim_start = trim_start_
     if that.trim_start_:
-        Memory_Crop_(that, trim_start_, trim_endex_, None)
+        Memory_Crop_(that, trim_start_, trim_endex_)
 
 
 cdef object Memory_GetTrimEndex(const Memory_* that):
@@ -4049,7 +4049,7 @@ cdef vint Memory_SetTrimEndex(Memory_* that, object trim_endex) except -1:
 
     that.trim_endex = trim_endex_
     if that.trim_endex_:
-        Memory_Crop_(that, trim_start_, trim_endex_, None)
+        Memory_Crop_(that, trim_start_, trim_endex_)
 
 
 cdef object Memory_GetTrimSpan(const Memory_* that):
@@ -4080,7 +4080,7 @@ cdef vint Memory_SetTrimSpan(Memory_* that, object span) except -1:
     that.trim_start = trim_start_
     that.trim_endex = trim_endex_
     if that.trim_start_ or that.trim_endex_:
-        Memory_Crop_(that, trim_start_, trim_endex_, None)
+        Memory_Crop_(that, trim_start_, trim_endex_)
 
 
 cdef addr_t Memory_Start(const Memory_* that) nogil:
@@ -4382,7 +4382,7 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
     Memory_Erase__(that, address, address + 1, False)  # clear
     Memory_Place__(that, address, 1, &item, False)  # write
 
-    Memory_Crop_(that, that.trim_start, that.trim_endex, None)
+    Memory_Crop_(that, that.trim_start, that.trim_endex)
     return -1
 
 
@@ -4445,12 +4445,12 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
             raise
 
         # Trim data in excess
-        Memory_Crop_(memory, start, endex, None)
+        Memory_Crop_(memory, start, endex)
 
         if pattern_size and pattern_ptr:
             pattern = Block_Create(0, pattern_size, pattern_ptr)
             try:
-                Memory_Flood_(memory, start, endex, &pattern, None)
+                Memory_Flood_(memory, start, endex, &pattern)
             except:
                 Block_Free(pattern)  # orphan
                 raise
@@ -4533,14 +4533,14 @@ cdef object Memory_Extract(const Memory_* that, object start, object endex,
     return Memory_Extract_(that, start_, endex_, pattern_size, pattern_ptr, step_, bound_)
 
 
-cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset, list backups) except -1:
+cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset) except -1:
     cdef:
         Rack_* blocks = that.blocks
         size_t block_index
         Block_* block
 
     if offset and Rack_Length(blocks):
-        Memory_PretrimStart_(that, ADDR_MAX, offset, backups)
+        Memory_PretrimStart_(that, ADDR_MAX, offset)
         blocks = that.blocks
 
         for block_index in range(Rack_Length(blocks)):
@@ -4548,14 +4548,14 @@ cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset, list backups) except -
             block.address -= offset
 
 
-cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset, list backups) except -1:
+cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset) except -1:
     cdef:
         Rack_* blocks = that.blocks
         size_t block_index
         Block_* block
 
     if offset and Rack_Length(blocks):
-        Memory_PretrimEndex_(that, ADDR_MIN, offset, backups)
+        Memory_PretrimEndex_(that, ADDR_MIN, offset)
         blocks = that.blocks
 
         for block_index in range(Rack_Length(blocks)):
@@ -4563,14 +4563,14 @@ cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset, list backups) except 
             block.address += offset
 
 
-cdef vint Memory_Shift(Memory_* that, object offset, list backups) except -1:
+cdef vint Memory_Shift(Memory_* that, object offset) except -1:
     if offset < 0:
-        return Memory_ShiftLeft_(that, <addr_t>-offset, backups)
+        return Memory_ShiftLeft_(that, <addr_t>-offset)
     else:
-        return Memory_ShiftRight_(that, <addr_t>offset, backups)
+        return Memory_ShiftRight_(that, <addr_t>offset)
 
 
-cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backups) except -1:
+cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size) except -1:
     cdef:
         addr_t offset
         Rack_* blocks = that.blocks
@@ -4581,7 +4581,7 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backu
         Block_* block2
 
     if size and Rack_Length(blocks):
-        Memory_PretrimEndex_(that, address, size, backups)
+        Memory_PretrimEndex_(that, address, size)
 
         block_index = Rack_IndexStart(blocks, address)
         block_count = Rack_Length(blocks)
@@ -4614,8 +4614,8 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backu
                 block.address += size
 
 
-cdef vint Memory_Reserve(Memory_* that, object address, object size, list backups) except -1:
-    Memory_Reserve_(that, <addr_t>address, <addr_t>size, backups)
+cdef vint Memory_Reserve(Memory_* that, object address, object size) except -1:
+    Memory_Reserve_(that, <addr_t>address, <addr_t>size)
 
 
 cdef vint Memory_Place__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
@@ -4810,7 +4810,7 @@ cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_a
             that.blocks = blocks = Rack_DelSlice_(blocks, inner_start, inner_endex)
 
 
-cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list backups) except -1:
+cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data) except -1:
     cdef:
         addr_t data_start
         addr_t data_endex
@@ -4819,19 +4819,18 @@ cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list 
     data_endex = Memory_Endex(data)
 
     if data_start < data_endex:
-        Memory_Reserve_(that, data_start, data_endex, backups)
-        Memory_WriteSame_(that, data_start, data, False, backups)
+        Memory_Reserve_(that, data_start, data_endex)
+        Memory_WriteSame_(that, data_start, data, False)
 
 
-cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
-                            list backups) except -1:
-    Memory_Place__(that, address, data_size, data_ptr, True)  # TODO: backups
+cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1:
+    Memory_Place__(that, address, data_size, data_ptr, True)
 
     if data_size:
-        Memory_Crop_(that, that.trim_start, that.trim_endex, None)  # TODO: pre-trimming
+        Memory_Crop_(that, that.trim_start, that.trim_endex)  # TODO: pre-trimming
 
 
-cdef vint Memory_Insert(Memory_* that, object address, object data, list backups) except -1:
+cdef vint Memory_Insert(Memory_* that, object address, object data) except -1:
     cdef:
         addr_t address_ = <addr_t>address
         const byte_t[:] data_view
@@ -4840,7 +4839,7 @@ cdef vint Memory_Insert(Memory_* that, object address, object data, list backups
         const byte_t* data_ptr
 
     if isinstance(data, Memory):
-        Memory_InsertSame_(that, address_, (<Memory>data)._, backups)
+        Memory_InsertSame_(that, address_, (<Memory>data)._)
 
     else:
         if isinstance(data, int):
@@ -4853,44 +4852,38 @@ cdef vint Memory_Insert(Memory_* that, object address, object data, list backups
             with cython.boundscheck(False):
                 data_ptr = &data_view[0]
 
-        Memory_InsertRaw_(that, address_, data_size, data_ptr, backups)
+        Memory_InsertRaw_(that, address_, data_size, data_ptr)
 
 
-cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex, list backups) except -1:
+cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex) except -1:
     if start < endex:
-        if backups is not None:
-            backups.append(Memory_Extract_(that, start, endex, 0, NULL, 1, True))
-
         Memory_Erase__(that, start, endex, True)  # delete
 
 
-cdef vint Memory_Delete(Memory_* that, object start, object endex, list backups) except -1:
+cdef vint Memory_Delete(Memory_* that, object start, object endex) except -1:
     cdef:
         addr_t start_
         addr_t endex_
 
     start_, endex_ = Memory_Bound(that, start, endex)
-    Memory_Delete_(that, start_, endex_, backups)
+    Memory_Delete_(that, start_, endex_)
 
 
-cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex, list backups) except -1:
+cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex) except -1:
     if start < endex:
-        if backups is not None:
-            backups.append(Memory_Extract_(that, start, endex, 0, NULL, 1, True))
-
         Memory_Erase__(that, start, endex, False)  # clear
 
 
-cdef vint Memory_Clear(Memory_* that, object start, object endex, list backups) except -1:
+cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1:
     cdef:
         addr_t start_
         addr_t endex_
 
     start_, endex_ = Memory_Bound(that, start, endex)
-    Memory_Clear_(that, start_, endex_, backups)
+    Memory_Clear_(that, start_, endex_)
 
 
-cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size, list backups) except -1:
+cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) except -1:
     cdef:
         addr_t trim_start
         addr_t endex
@@ -4905,20 +4898,17 @@ cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size, lis
         if endex > endex_max:
             endex = endex_max
 
-        if backups is not None:
-            backups.append(Memory_Extract_(that, 0, endex, 0, NULL, 1, True))
-
         Memory_Erase__(that, ADDR_MIN, endex, False)  # clear
 
 
-cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size, list backups) except -1:
+cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) except -1:
         cdef:
             addr_t endex_max_ = ADDR_MAX if endex_max is None else <addr_t>endex_max
 
-        Memory_PretrimStart_(that, endex_max_, <addr_t>size, backups)
+        Memory_PretrimStart_(that, endex_max_, <addr_t>size)
 
 
-cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size, list backups) except -1:
+cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) except -1:
     cdef:
         addr_t trim_endex
         addr_t start
@@ -4933,20 +4923,17 @@ cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size, lis
         if start < start_min:
             start = start_min
 
-        if backups is not None:
-            backups.append(Memory_Extract_(that, start, ADDR_MAX, 0, NULL, 1, True))
-
         Memory_Erase__(that, start, ADDR_MAX, False)  # clear
 
 
-cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size, list backups) except -1:
+cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size) except -1:
         cdef:
             addr_t start_min_ = ADDR_MIN if start_min is None else <addr_t>start_min
 
-        Memory_PretrimEndex_(that, start_min_, <addr_t>size, backups)
+        Memory_PretrimEndex_(that, start_min_, <addr_t>size)
 
 
-cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex, list backups) except -1:
+cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1:
     cdef:
         addr_t block_start
         addr_t block_endex
@@ -4956,9 +4943,6 @@ cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex, list backups) 
         block_start = Block_Start(Rack_First_(that.blocks))
 
         if block_start < start:
-            if backups is not None:
-                backups.append(Memory_Extract_(that, block_start, start, 0, NULL, 1, True))
-
             Memory_Erase__(that, block_start, start, False)  # clear
 
     # Trim blocks exceeding after memory end
@@ -4966,22 +4950,19 @@ cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex, list backups) 
         block_endex = Block_Endex(Rack_Last_(that.blocks))
 
         if endex < block_endex:
-            if backups is not None:
-                backups.append(Memory_Extract_(that, endex, block_endex, 0, NULL, 1, True))
-
             Memory_Erase__(that, endex, block_endex, False)  # clear
 
 
-cdef vint Memory_Crop(Memory_* that, object start, object endex, list backups) except -1:
+cdef vint Memory_Crop(Memory_* that, object start, object endex) except -1:
     cdef:
         addr_t start_
         addr_t endex_
 
     start_, endex_ = Memory_Bound(that, start, endex)
-    Memory_Crop_(that, start_, endex_, backups)
+    Memory_Crop_(that, start_, endex_)
 
 
-cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear, list backups) except -1:
+cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear) except -1:
     cdef:
         addr_t data_start
         addr_t data_endex
@@ -5000,9 +4981,6 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
     if size:
         if clear:
             # Clear anything between source data boundaries
-            if backups is not None:
-                backups.append(Memory_Extract_(that, data_start, data_endex, 0, NULL, 1, True))
-
             Memory_Erase__(that, data_start, data_endex, False)  # clear
 
         else:
@@ -5018,9 +4996,6 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
                 CheckAddAddrU(block_endex, address)
                 block_endex += address
 
-                if backups is not None:
-                    backups.append(Memory_Extract_(that, block_start, block_endex, 0, NULL, 1, True))
-
                 Memory_Erase__(that, block_start, block_endex, False)  # clear
 
         for block_index in range(Rack_Length(blocks)):
@@ -5029,11 +5004,10 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
             CheckAddAddrU(block_start, address)
             Memory_Place__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)  # insert
 
-        Memory_Crop_(that, that.trim_start, that.trim_endex, None)  # FIXME: prevent after-cropping; trim while writing
+        Memory_Crop_(that, that.trim_start, that.trim_endex)  # FIXME: prevent after-cropping; trim while writing
 
 
-cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
-                           list backups) except -1:
+cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1:
     cdef:
         addr_t size = data_size
         addr_t start
@@ -5070,9 +5044,6 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
             data_ptr += offset
 
         CheckAddrToSizeU(size)
-        if backups is not None:
-            backups.append(Memory_Extract_(that, start, endex, 0, NULL, 1, True))
-
         blocks = that.blocks
         block_count = Rack_Length(blocks)
         if block_count:
@@ -5089,7 +5060,7 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
             Memory_Place__(that, start, <size_t>size, data_ptr, False)  # write
 
 
-cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, list backups) except -1:
+cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) except -1:
     cdef:
         addr_t address_ = <addr_t>address
         const byte_t[:] data_view
@@ -5098,7 +5069,7 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, l
         const byte_t* data_ptr
 
     if isinstance(data, Memory):
-        Memory_WriteSame_(that, address_, (<Memory>data)._, <bint>clear, backups)
+        Memory_WriteSame_(that, address_, (<Memory>data)._, <bint>clear)
 
     else:
         if isinstance(data, int):
@@ -5111,11 +5082,10 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, l
             with cython.boundscheck(False):
                 data_ptr = &data_view[0]
 
-        Memory_WriteRaw_(that, address_, data_size, data_ptr, backups)
+        Memory_WriteRaw_(that, address_, data_size, data_ptr)
 
 
-cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** pattern,
-                       list backups, addr_t start_) except -1:
+cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** pattern, addr_t start_) except -1:
     cdef:
         size_t offset
         size_t size
@@ -5134,15 +5104,12 @@ cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** patte
         size = <size_t>(endex - start)
         pattern[0] = Block_RepeatToSize(pattern[0], size)
 
-        if backups is not None:
-            backups.append(Memory_Extract_(that, start, endex, 0, NULL, 1, True))
-
         # Standard write method
         Memory_Erase__(that, start, endex, False)  # clear
         Memory_Place__(that, start, size, Block_At__(pattern[0], 0), False)  # write
 
 
-cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern, list backups) except -1:
+cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern) except -1:
         cdef:
             addr_t start__
             addr_t start_
@@ -5154,12 +5121,12 @@ cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern,
             pattern_ = Block_FromObject(0, pattern, False)  # size checked later on
             try:
                 start__ = Memory_Start(that) if start is None else <addr_t>start
-                Memory_Fill_(that, start_, endex_, &pattern_, backups, start__)
+                Memory_Fill_(that, start_, endex_, &pattern_, start__)
             finally:
                 Block_Free(pattern_)  # orphan
 
 
-cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern, list backups) except -1:
+cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern) except -1:
     cdef:
         Rack_* blocks
         const Block_* block
@@ -5209,10 +5176,6 @@ cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** patt
         if not Block_Length(pattern[0]):
             raise ValueError('non-empty pattern required')
 
-        if backups is not None:
-            for gap_start, gap_endex in Memory_AsObject(that).gaps(start, endex):
-                backups.append(Memory(start=gap_start, endex=gap_endex))
-
         size = <size_t>(endex - start)
         pattern[0] = Block_RepeatToSize(pattern[0], size)
         pattern[0].address = start
@@ -5227,7 +5190,7 @@ cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** patt
         that.blocks = blocks = Rack_Insert_(blocks, block_index_start, pattern[0])
 
 
-cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern, list backups) except -1:
+cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern) except -1:
         cdef:
             addr_t start_
             addr_t endex_
@@ -5237,7 +5200,7 @@ cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern
         if start_ < endex_:
             pattern_ = Block_FromObject(0, pattern, False)  # size checked later on
             try:
-                Memory_Flood_(that, start_, endex_, &pattern_, backups)
+                Memory_Flood_(that, start_, endex_, &pattern_)
             except:
                 Block_Free(pattern_)  # orphan
                 raise
@@ -7414,17 +7377,12 @@ cdef class Memory:
     def shift(
         self: Memory,
         offset: Address,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Shifts the items.
 
         Arguments:
             offset (int):
                 Signed amount of address shifting.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items, before trimming.
 
         Examples:
             +---+---+---+---+---+---+---+---+---+---+---+
@@ -7451,23 +7409,17 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=2)
-            >>> backups = []
-            >>> memory.shift(-7, backups=backups)
+            >>> memory.shift(-7)
             >>> memory._blocks
             [[2, b'yz']]
-            >>> len(backups)
-            1
-            >>> backups[0]._blocks
-            [[5, b'ABC'], [9, b'x']]
         """
 
-        Memory_Shift(self._, offset, backups)
+        Memory_Shift(self._, offset)
 
     def reserve(
         self: Memory,
         address: Address,
         size: Address,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Inserts emptiness.
 
@@ -7479,10 +7431,6 @@ cdef class Memory:
 
             size (int):
                 Size of the emptiness to insert.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items, before trimming.
 
         Examples:
             +---+---+---+---+---+---+---+---+---+---+---+
@@ -7509,23 +7457,17 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], endex=12)
-            >>> backups = []
-            >>> memory.reserve(5, 5, backups=backups)
+            >>> memory.reserve(5, 5)
             >>> memory._blocks
             [[10, b'AB']]
-            >>> len(backups)
-            1
-            >>> backups[0]._blocks
-            [[7, b'C'], [9, b'xyz']]
         """
 
-        Memory_Reserve(self._, address, size, backups)
+        Memory_Reserve(self._, address, size)
 
     def insert(
         self: Memory,
         address: Address,
         data: Union[AnyBytes, Value, Memory],
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Inserts data.
 
@@ -7538,10 +7480,6 @@ cdef class Memory:
 
             data (bytes):
                 Data to insert.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items, before trimming.
 
         Example:
             +---+---+---+---+---+---+---+---+---+---+---+---+
@@ -7563,13 +7501,12 @@ cdef class Memory:
             [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
         """
 
-        Memory_Insert(self._, address, data, backups)
+        Memory_Insert(self._, address, data)
 
     def delete(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Deletes an address range.
 
@@ -7581,10 +7518,6 @@ cdef class Memory:
             endex (int):
                 Exclusive end address for deletion.
                 If ``None``, :attr:`endex` is considered.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items.
 
         Example:
             +---+---+---+---+---+---+---+---+---+---+
@@ -7601,13 +7534,12 @@ cdef class Memory:
             [[5, b'Ayz']]
         """
 
-        Memory_Delete(self._, start, endex, backups)
+        Memory_Delete(self._, start, endex)
 
     def clear(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Clears an address range.
 
@@ -7619,10 +7551,6 @@ cdef class Memory:
             endex (int):
                 Exclusive end address for clearing.
                 If ``None``, :attr:`endex` is considered.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the cleared
-                items.
 
         Example:
             +---+---+---+---+---+---+---+---+---+
@@ -7639,13 +7567,12 @@ cdef class Memory:
             [[5, b'A'], [10, b'yz']]
         """
 
-        Memory_Clear(self._, start, endex, backups)
+        Memory_Clear(self._, start, endex)
 
     def crop(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Keeps data within an address range.
 
@@ -7657,10 +7584,6 @@ cdef class Memory:
             endex (int):
                 Exclusive end address for cropping.
                 If ``None``, :attr:`endex` is considered.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the cleared
-                items.
 
         Example:
             +---+---+---+---+---+---+---+---+---+
@@ -7677,14 +7600,13 @@ cdef class Memory:
             [[6, b'BC'], [9, b'x']]
         """
 
-        Memory_Crop(self._, start, endex, backups)
+        Memory_Crop(self._, start, endex)
 
     def write(
         self: Memory,
         address: Address,
         data: Union[AnyBytes, Value, Memory],
         clear: bool = False,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Writes data.
 
@@ -7698,10 +7620,6 @@ cdef class Memory:
             clear (bool):
                 Clears the target range before writing data.
                 Useful only if `data` is a :obj:`Memory` with empty spaces.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items.
 
         Example:
             +---+---+---+---+---+---+---+---+---+---+
@@ -7718,14 +7636,13 @@ cdef class Memory:
             [[1, b'ABC'], [5, b'123z']]
         """
 
-        Memory_Write(self._, address, data, clear, backups)
+        Memory_Write(self._, address, data, clear)
 
     def fill(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Overwrites a range with a pattern.
 
@@ -7740,10 +7657,6 @@ cdef class Memory:
 
             pattern (items):
                 Pattern of items to fill the range.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items, before trimming.
 
         Examples:
             +---+---+---+---+---+---+---+---+---+---+
@@ -7775,14 +7688,13 @@ cdef class Memory:
             [[1, b'AB1231yz']]
         """
 
-        Memory_Fill(self._, start, endex, pattern, backups)
+        Memory_Fill(self._, start, endex, pattern)
 
     def flood(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
-        backups: Optional[MemoryList] = None,
     ) -> None:
         r"""Fills emptiness between non-touching blocks.
 
@@ -7797,10 +7709,6 @@ cdef class Memory:
 
             pattern (items):
                 Pattern of items to fill the range.
-
-            backups (list of :obj:`Memory`):
-                Optional output list holding backup copies of the deleted
-                items, before trimming.
 
         Examples:
             +---+---+---+---+---+---+---+---+---+---+
@@ -7832,7 +7740,7 @@ cdef class Memory:
             [[1, b'ABC23xyz']]
         """
 
-        Memory_Flood(self._, start, endex, pattern, backups)
+        Memory_Flood(self._, start, endex, pattern)
 
     def keys(
         self: Memory,

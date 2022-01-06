@@ -627,48 +627,45 @@ cdef object Memory_Extract_(const Memory_* that, addr_t start, addr_t endex,
 cdef object Memory_Extract(const Memory_* that, object start, object endex,
                            object pattern, object step, bint bound)
 
-cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset, list backups) except -1
-cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset, list backups) except -1
-cdef vint Memory_Shift(Memory_* that, object offset, list backups) except -1
+cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset) except -1
+cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset) except -1
+cdef vint Memory_Shift(Memory_* that, object offset) except -1
 
-cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size, list backups) except -1
-cdef vint Memory_Reserve(Memory_* that, object address, object size, list backups) except -1
+cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size) except -1
+cdef vint Memory_Reserve(Memory_* that, object address, object size) except -1
 
 cdef vint Memory_Place__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
                          bint shift_after) except -1
 cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_after) except -1
 
-cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list backups) except -1
-cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
-                            list backups) except -1
-cdef vint Memory_Insert(Memory_* that, object address, object data, list backups) except -1
+cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data) except -1
+cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1
+cdef vint Memory_Insert(Memory_* that, object address, object data) except -1
 
-cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
-cdef vint Memory_Delete(Memory_* that, object start, object endex, list backups) except -1
+cdef vint Memory_Delete_(Memory_* that, addr_t start, addr_t endex) except -1
+cdef vint Memory_Delete(Memory_* that, object start, object endex) except -1
 
-cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
-cdef vint Memory_Clear(Memory_* that, object start, object endex, list backups) except -1
+cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex) except -1
+cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1
 
-cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size, list backups) except -1
-cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size, list backups) except -1
+cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) except -1
+cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) except -1
 
-cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size, list backups) except -1
-cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size, list backups) except -1
+cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) except -1
+cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size) except -1
 
-cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex, list backups) except -1
-cdef vint Memory_Crop(Memory_* that, object start, object endex, list backups) except -1
+cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1
+cdef vint Memory_Crop(Memory_* that, object start, object endex) except -1
 
-cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear, list backups) except -1
-cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
-                           list backups) except -1
-cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, list backups) except -1
+cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear) except -1
+cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1
+cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) except -1
 
-cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** pattern,
-                       list backups, addr_t start_) except -1
-cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern, list backups) except -1
+cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** pattern, addr_t start_) except -1
+cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern) except -1
 
-cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern, list backups) except -1
-cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern, list backups) except -1
+cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern) except -1
+cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern) except -1
 
 cdef list Memory_AsViews(const Memory_* that)
 

@@ -2248,31 +2248,6 @@ class BaseMemorySuite:
             blocks_out = memory._blocks
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
 
-    def test_shift_backups_template(self):
-        Memory = self.Memory
-        start, endex = 1, MAX_SIZE - 1
-        for offset in range(-start, endex):
-            values = blocks_to_values(create_template_blocks()) + ([None] * MAX_SIZE)
-            if offset < 0:
-                backups_ref = values_to_blocks(values[:(start - offset)])
-                del values[:-offset]
-                values[:start] = [None] * start
-            else:
-                backups_ref = values_to_blocks(values[(endex - offset):], (endex - offset))
-                values[0:0] = [None] * offset
-                del values[endex:]
-            blocks_ref = values_to_blocks(values)
-            backups_ref = [backups_ref] if backups_ref else []
-
-            blocks = create_template_blocks()
-            memory = Memory.from_blocks(blocks, start=start, endex=endex)
-            backups_out = []
-            memory.shift(offset, backups=backups_out)
-            backups_out = [m._blocks for m in backups_out if m._blocks]
-            blocks_out = memory._blocks
-            assert blocks_out == blocks_ref, (offset, blocks_out, blocks_ref)
-            assert backups_out == backups_ref, (offset, backups_out, backups_ref)
-
     def test_reserve_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2286,24 +2261,6 @@ class BaseMemorySuite:
 
                 values[start:start] = [None] * size
                 blocks_ref = values_to_blocks(values)
-                assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
-
-    def test_reserve_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks, endex=MAX_SIZE)
-
-                backups = []
-                memory.reserve(start, size, backups=backups)
-
-                blocks_out = [m._blocks for m in backups if m]
-                values[start:start] = [None] * size
-                blocks_ref = values_to_blocks(values[MAX_SIZE:], MAX_SIZE - size)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
                 assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
 
     def test_insert_single(self):
@@ -2336,25 +2293,6 @@ class BaseMemorySuite:
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, data, blocks_out, blocks_ref)
 
-    def test_insert_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks, endex=MAX_SIZE)
-                data = bytearray(range(ord('a'), ord('a') + size))
-
-                backups = []
-                memory.insert(start, Memory.from_bytes(data), backups=backups)
-
-                offset = MAX_SIZE - size
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = values_to_blocks(values[offset:], offset)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
-                assert blocks_out == blocks_ref, (start, size, data, blocks_out, blocks_ref)
-
     def test_delete_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2370,24 +2308,6 @@ class BaseMemorySuite:
                 del values[start:endex]
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
-
-    def test_delete_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks)
-                endex = start + size
-
-                backups = []
-                memory.delete(start, endex, backups=backups)
-
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = values_to_blocks(values[start:endex], start)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
-                assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
 
     def test_clear_template(self):
         Memory = self.Memory
@@ -2405,24 +2325,6 @@ class BaseMemorySuite:
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
 
-    def test_clear_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks)
-                endex = start + size
-
-                backups = []
-                memory.clear(start, endex, backups=backups)
-
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = values_to_blocks(values[start:endex], start)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
-                assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
-
     def test_crop_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2439,24 +2341,6 @@ class BaseMemorySuite:
                 values[endex:] = [None] * (len(values) - endex)
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
-
-    def test_crop_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks)
-                endex = start + size
-
-                backups = []
-                memory.crop(start, endex, backups=backups)
-
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = [values_to_blocks(values[:start]),
-                              values_to_blocks(values[endex:], endex)]
-                blocks_ref = [b for b in blocks_ref if b]
-                assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
 
     def test_write_single(self):
         Memory = self.Memory
@@ -2509,21 +2393,6 @@ class BaseMemorySuite:
         blocks_ref = [[0, b'012'], [7, b'789']]
         assert blocks_out == blocks_ref
 
-    def test_write_memory_clear_backups(self):
-        Memory = self.Memory
-        memory1 = Memory(start=3, endex=7)
-        memory2 = Memory.from_bytes(b'0123456789')
-        backups = []
-        memory2.write(0, memory1, clear=True, backups=backups)
-        blocks_out = memory2._blocks
-        blocks_ref = [[0, b'012'], [7, b'789']]
-        assert blocks_out == blocks_ref
-        assert len(backups) == 1
-        memory3 = backups[0]
-        blocks_out = memory3._blocks
-        blocks_ref = [[3, b'3456']]
-        assert blocks_out == blocks_ref
-
     def test_write_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2551,8 +2420,7 @@ class BaseMemorySuite:
         values2 = blocks_to_values(blocks2)
         memory2 = Memory.from_blocks(blocks2)
 
-        backups = []
-        memory1.write(0, memory2, clear=False, backups=backups)
+        memory1.write(0, memory2, clear=False)
 
         values_ref = values1[:]
         for block_start, block_data in blocks2:
@@ -2572,8 +2440,7 @@ class BaseMemorySuite:
         values2 = blocks_to_values(blocks2)
         memory2 = Memory.from_blocks(blocks2)
 
-        backups = []
-        memory1.write(0, memory2, clear=True, backups=backups)
+        memory1.write(0, memory2, clear=True)
 
         values_ref = values1[:]
         start, endex = memory2.start, memory2.endex
@@ -2581,29 +2448,6 @@ class BaseMemorySuite:
 
         values_out = blocks_to_values(memory1._blocks)
         assert values_out == values_ref, (values1, values2, values_out, values_ref)
-
-        blocks_out = [m._blocks for m in backups if m._blocks]
-        blocks_ref = values_to_blocks(values1[start:endex], start)
-        blocks_ref = [blocks_ref]
-        assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
-
-    def test_write_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks)
-                data = bytearray(range(ord('a'), ord('a') + size))
-                endex = start + len(data)
-
-                backups = []
-                memory.write(start, data, backups=backups)
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = values_to_blocks(values[start:endex], start)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
-                assert blocks_out == blocks_ref, (start, size, data, blocks_out, blocks_ref)
 
     def test_fill_template(self):
         Memory = self.Memory
@@ -2657,24 +2501,6 @@ class BaseMemorySuite:
             memory.fill(pattern=Memory())
         memory.fill(pattern=0)
 
-    def test_fill_backups_template(self):
-        Memory = self.Memory
-        for start in range(MAX_START):
-            for size in range(MAX_SIZE):
-                blocks = create_template_blocks()
-                values = blocks_to_values(blocks, MAX_SIZE)
-                memory = Memory.from_blocks(blocks)
-                pattern = b'<xyz>'
-                endex = start + size
-
-                backups = []
-                memory.fill(start, endex, pattern, backups=backups)
-                blocks_out = [m._blocks for m in backups if m._blocks]
-                blocks_ref = values_to_blocks(values[start:endex], start)
-                if blocks_ref:
-                    blocks_ref = [blocks_ref]
-                assert blocks_out == blocks_ref, (start, size, pattern, blocks_out, blocks_ref)
-
     def test_flood_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2707,17 +2533,6 @@ class BaseMemorySuite:
         with pytest.raises(ValueError, match=match):
             memory.flood(pattern=Memory())
         memory.flood(pattern=0)
-
-    def test_flood_template_backups(self):
-        Memory = self.Memory
-        blocks = create_template_blocks()
-        values = blocks_to_values(blocks, MAX_SIZE)
-        gaps_ref = values_to_gaps(values, bound=True)
-        memory = Memory.from_blocks(blocks)
-        backups = []
-        memory.flood(backups=backups)
-        gaps_out = [(m.start, m.endex) for m in backups]
-        assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
 
     def test_keys_template(self):
         Memory = self.Memory
