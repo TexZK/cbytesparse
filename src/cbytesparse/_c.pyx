@@ -4287,16 +4287,16 @@ cdef (addr_t, addr_t) Memory_Bound(const Memory_* that, object start, object end
 
 cdef int Memory_Peek_(const Memory_* that, addr_t address) except -2:
     cdef:
-        addr_t address_ = address
+        const Rack_* blocks = that.blocks
         ssize_t block_index
         const Block_* block
 
-    block_index = Rack_IndexAt(that.blocks, address_)
+    block_index = Rack_IndexAt(blocks, address)
     if block_index < 0:
         return -1
     else:
-        block = Rack_Get__(that.blocks, <size_t>block_index)
-        return Block_Get__(block, address_ - Block_Start(block))
+        block = Rack_Get__(blocks, <size_t>block_index)
+        return Block_Get__(block, address - Block_Start(block))
 
 
 cdef object Memory_Peek(const Memory_* that, object address):
@@ -6594,7 +6594,7 @@ cdef class Memory:
 
         if address is None:
             address = self.endex - 1
-        return address, Memory_Peek_(self._, <addr_t>address)
+        return address, Memory_Peek(self._, address)
 
     def pop_restore(
         self: Memory,
@@ -7447,7 +7447,7 @@ cdef class Memory:
             :meth:`poke_restore`
         """
 
-        return address, Memory_Peek_(self._, <addr_t>address)
+        return address, Memory_Peek(self._, address)
 
     def poke_restore(
         self: Memory,
@@ -8067,7 +8067,7 @@ cdef class Memory:
             :meth:`_pretrim_start`
         """
         cdef:
-            addr_t endex_max_ = <addr_t>endex_max
+            addr_t endex_max_
             addr_t size_ = <addr_t>size
             const Memory_* memory = self._
             addr_t endex
@@ -8076,8 +8076,10 @@ cdef class Memory:
             endex = memory.trim_start
             CheckAddAddrU(endex, size)
             endex += size
-            if endex_max is not None and endex > endex_max_:
-                endex = endex_max_
+            if endex_max is not None:
+                endex_max_ = <addr_t>endex_max
+                if endex > endex_max_:
+                    endex = endex_max_
             return Memory_Extract_(memory, Memory_Start(memory), endex, 0, NULL, 1, True)
         else:
             return Memory()
@@ -8127,7 +8129,7 @@ cdef class Memory:
             :meth:`_pretrim_endex`
         """
         cdef:
-            addr_t start_min_ = <addr_t>start_min
+            addr_t start_min_
             addr_t size_ = <addr_t>size
             const Memory_* memory = self._
             addr_t start
@@ -8136,8 +8138,10 @@ cdef class Memory:
             start = memory.trim_endex
             CheckSubAddrU(start, size)
             start -= size
-            if start_min is not None and start < start_min_:
-                start = start_min_
+            if start_min is not None:
+                start_min_ = <addr_t>start_min
+                if start < start_min_:
+                    start = start_min_
             return Memory_Extract_(memory, start, Memory_Endex(memory), 0, NULL, 1, True)
         else:
             return Memory()

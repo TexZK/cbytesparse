@@ -259,6 +259,15 @@ class BaseMemorySuite:
     Memory: Any = None  # replace by subclassing 'Memory'
     ADDR_NEG: bool = True
 
+    def test___init___doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert memory._blocks == []
+
+        memory = Memory.from_bytes(b'Hello, World!', offset=5)
+        assert memory._blocks == [[5, b'Hello, World!']]
+
     def test___init___bounds(self):
         Memory = self.Memory
 
@@ -371,6 +380,34 @@ class BaseMemorySuite:
         blocks_ref = [[4, b'ABC'], [8, b'xyz']]
         assert blocks_out == blocks_ref
 
+    def test_from_bytes_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_bytes(b'')
+        assert memory._blocks == []
+
+        memory = Memory.from_bytes(b'ABCxyz', 2)
+        assert memory._blocks == [[2, b'ABCxyz']]
+
+    def test_from_memory_doctest(self):
+        Memory = self.Memory
+
+        memory1 = Memory.from_bytes(b'ABC', 5)
+        memory2 = Memory.from_memory(memory1)
+        assert memory2._blocks == [[5, b'ABC']]
+        assert (memory1 == memory2) is True
+        assert (memory1 is memory2) is False
+        assert (memory1._blocks is memory2._blocks) is False
+
+        memory1 = Memory.from_bytes(b'ABC', 10)
+        memory2 = Memory.from_memory(memory1, -3)
+        assert memory2._blocks == [[7, b'ABC']]
+        assert (memory1 == memory2) is False
+
+        memory1 = Memory.from_bytes(b'ABC', 10)
+        memory2 = Memory.from_memory(memory1, copy=False)
+        assert all((b1[1] is b2[1]) for b1, b2 in zip(memory1._blocks, memory2._blocks)) is True
+
     def test___repr__(self):
         Memory = self.Memory
         start, endex = 0, 0
@@ -390,6 +427,11 @@ class BaseMemorySuite:
         repr_out = repr(memory)
         repr_ref = f'<Memory[0x{start}:0x{endex}]@0x{id(memory):X}>'
         assert repr_out == repr_ref, (repr_out, repr_ref)
+
+    def test___str___doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABC'], [7, b'xyz']])
+        assert str(memory) == "<[[1, b'ABC'], [7, b'xyz']]>"
 
     def test___str__(self):
         Memory = self.Memory
@@ -415,6 +457,15 @@ class BaseMemorySuite:
         str_ref = repr(memory)
         assert str_out == str_ref, (str_out, str_ref)
 
+    def test___bool___doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert bool(memory) is False
+
+        memory = Memory.from_bytes(b'Hello, World!', 5)
+        assert bool(memory) is True
+
     def test___bool__(self):
         Memory = self.Memory
         assert Memory.from_memory(Memory.from_bytes(b'\0'))
@@ -425,6 +476,21 @@ class BaseMemorySuite:
         assert not Memory.from_memory(Memory())
         assert not Memory.from_bytes(b'')
         assert not Memory.from_blocks([])
+
+    def test___eq___doctest(self):
+        Memory = self.Memory
+
+        data = b'Hello, World!'
+        memory = Memory.from_bytes(data)
+        assert (memory == data) is True
+        memory.shift(1)
+        assert (memory == data) is True
+
+        data = b'Hello, World!'
+        memory = Memory.from_bytes(data)
+        assert (memory == list(data)) is True
+        memory.shift(1)
+        assert (memory == list(data)) is True
 
     def test___eq___empty(self):
         Memory = self.Memory
@@ -490,6 +556,9 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
             assert memory == values, (values,)
 
+    def test___iter___doctest(self):
+        pass  # no doctest
+
     def test___iter___empty_bruteforce(self):
         # self.test_values_empty_bruteforce()
         Memory = self.Memory
@@ -504,6 +573,9 @@ class BaseMemorySuite:
         values = blocks_to_values(blocks)[start:endex]
         memory = Memory.from_blocks(blocks)
         assert all(x == y for x, y in zip(memory, values)), (values,)
+
+    def test___reversed___doctest(self):
+        pass  # no doctest
 
     def test___reversed___empty_bruteforce(self):
         # self.test_rvalues_empty_bruteforce()
@@ -520,6 +592,9 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks)
         assert all(x == y for x, y in zip(reversed(memory), reversed(values))), (values[::-1],)
 
+    def test___add___doctest(self):
+        pass  # no doctest
+
     def test___add___template(self):
         Memory = self.Memory
         blocks1 = create_template_blocks()
@@ -533,12 +608,16 @@ class BaseMemorySuite:
         memory1 = Memory.from_blocks(blocks1)
         memory2 = Memory.from_blocks(blocks2)
         memory3 = memory1 + memory2
+        memory3.validate()
         blocks_out = memory3._blocks
 
         values = blocks_to_values(blocks1)
         values += blocks_to_values(blocks2)
         blocks_ref = values_to_blocks(values)
         assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test___iadd___doctest(self):
+        pass  # no doctest
 
     def test___iadd___template(self):
         Memory = self.Memory
@@ -553,12 +632,16 @@ class BaseMemorySuite:
         memory1 = Memory.from_blocks(blocks1)
         memory2 = Memory.from_blocks(blocks2)
         memory1 += memory2
+        memory1.validate()
         blocks_out = memory1._blocks
 
         values = blocks_to_values(blocks1)
         values += blocks_to_values(blocks2)
         blocks_ref = values_to_blocks(values)
         assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test___mul___doctest(self):
+        pass  # no doctest
 
     def test___mul___template(self):
         Memory = self.Memory
@@ -567,6 +650,7 @@ class BaseMemorySuite:
 
             memory1 = Memory.from_blocks(blocks)
             memory2 = memory1 * times
+            memory2.validate()
             blocks_out = memory2._blocks
 
             values = blocks_to_values(blocks)
@@ -575,6 +659,9 @@ class BaseMemorySuite:
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
 
+    def test___imul___doctest(self):
+        pass  # no doctest
+
     def test___imul___template(self):
         Memory = self.Memory
         for times in range(-1, MAX_TIMES):
@@ -582,6 +669,7 @@ class BaseMemorySuite:
 
             memory = Memory.from_blocks(blocks)
             memory *= times
+            memory.validate()
             blocks_out = memory._blocks
 
             values = blocks_to_values(blocks)
@@ -589,6 +677,9 @@ class BaseMemorySuite:
             values = ([None] * offset) + (values[offset:] * times)
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test___len___doctest(self):
+        pass  # no doctest
 
     def test___len___empty(self):
         Memory = self.Memory
@@ -638,6 +729,9 @@ class BaseMemorySuite:
         assert len(memory) == memory.endex - memory.start, (len(memory), memory.endex, memory.start)
         assert len(memory) == (22 - 2), (len(memory), memory.endex, memory.start)
 
+    def test_ofind_doctest(self):
+        pass  # no doctest
+
     def test_ofind(self):
         Memory = self.Memory
 
@@ -647,6 +741,9 @@ class BaseMemorySuite:
         assert memory.ofind(b'W') == 10
         assert memory.ofind(b'o') == 6
         assert memory.ofind(b'l') == 4
+
+    def test_rofind_doctest(self):
+        pass  # no doctest
 
     def test_rofind(self):
         Memory = self.Memory
@@ -658,6 +755,9 @@ class BaseMemorySuite:
         assert memory.rofind(b'o') == 11
         assert memory.rofind(b'l') == 13
 
+    def test_find_doctest(self):
+        pass  # no doctest
+
     def test_find(self):
         Memory = self.Memory
 
@@ -668,6 +768,9 @@ class BaseMemorySuite:
         assert memory.find(b'o') == 6
         assert memory.find(b'l') == 4
 
+    def test_rfind_doctest(self):
+        pass  # no doctest
+
     def test_rfind(self):
         Memory = self.Memory
 
@@ -677,6 +780,9 @@ class BaseMemorySuite:
         assert memory.rfind(b'W') == 10
         assert memory.rfind(b'o') == 11
         assert memory.rfind(b'l') == 13
+
+    def test_index_doctest(self):
+        pass  # no doctest
 
     def test_index(self):
         Memory = self.Memory
@@ -731,6 +837,9 @@ class BaseMemorySuite:
 
                 index = memory.index(bytes([c]))
                 assert index == expected, (index, expected)
+
+    def test_rindex_doctest(self):
+        pass  # no doctest
 
     def test_rindex(self):
         Memory = self.Memory
@@ -787,6 +896,13 @@ class BaseMemorySuite:
                 index = memory.rindex(bytes([c]))
                 assert index == expected, (index, expected)
 
+    def test___contains___doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'123'], [9, b'xyz']])
+        assert (b'23' in memory) is True
+        assert (ord('y') in memory) is True
+        assert (b'$' in memory) is False
+
     def test___contains___empty_bruteforce(self):
         Memory = self.Memory
         memory = Memory()
@@ -812,6 +928,11 @@ class BaseMemorySuite:
 
             check = bytes([c]) in memory
             assert check == expected, (check, expected)
+
+    def test_count_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'Bat'], [9, b'tab']])
+        assert memory.count(b'a') == 2
 
     def test_count_empty_bruteforce(self):
         Memory = self.Memory
@@ -849,6 +970,20 @@ class BaseMemorySuite:
                     count = memory.count(bytes([c]), start, endex)
                     assert count == expected, (count, expected)
 
+    def test___getitem___doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert memory[9] == 121
+        assert memory[:3]._blocks == [[1, b'AB']]
+        assert memory[3:10]._blocks == [[3, b'CD'], [6, b'$'], [8, b'xy']]
+        assert bytes(memory[3:10:b'.']) == b'CD.$.xy'
+        assert memory[memory.endex] is None
+        assert bytes(memory[3:10:3]) == b'C$y'
+        assert memory[3:10:2]._blocks == [[3, b'C'], [6, b'y']]
+
+        with pytest.raises(ValueError, match='non-contiguous data within range'):
+            bytes(memory[3:10:2])
+
     def test___getitem___single_template(self):
         Memory = self.Memory
         blocks = create_template_blocks()
@@ -867,7 +1002,7 @@ class BaseMemorySuite:
 
         for start in range(3, 6):
             for endex in range(start, 6):
-                data_out = list(memory[start:endex].view())
+                data_out = list(memory[start:endex].values())
                 data_ref = values[start:endex]
                 assert data_out == data_ref, (start, endex, data_out, data_ref)
 
@@ -882,7 +1017,7 @@ class BaseMemorySuite:
         for start in range(3, stop):
             for endex in range(start, stop):
                 for step in range(1, 4):
-                    data_out = list(memory[start:endex:step].view())
+                    data_out = list(memory[start:endex:step].values())
                     data_ref = values[start:endex:step]
                     assert data_out == data_ref, (start, endex, step, data_out, data_ref)
 
@@ -953,6 +1088,28 @@ class BaseMemorySuite:
                 values_ref = values[start:endex]
                 assert values_out == values_ref, (start, size, endex, values_out, values_ref)
 
+    def test___setitem___doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory[7:10] = None
+        assert memory._blocks == [[5, b'AB'], [10, b'yz']]
+        memory[7] = b'C'
+        memory[9] = b'x'
+        assert (memory._blocks == [[5, b'ABC'], [9, b'xyz']]) is True
+        memory[6:12:3] = None
+        assert memory._blocks == [[5, b'A'], [7, b'C'], [10, b'yz']]
+        memory[6:13:3] = b'123'
+        assert memory._blocks == [[5, b'A1C'], [9, b'2yz3']]
+
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory[0:4] = b'$'
+        assert memory._blocks == [[0, b'$'], [2, b'ABC'], [6, b'xyz']]
+        memory[4:7] = b'45678'
+        assert memory._blocks == [[0, b'$'], [2, b'AB45678yz']]
+        memory[6:8] = b'<>'
+        assert memory._blocks == [[0, b'$'], [2, b'AB45<>8yz']]
+
     def test___setitem___single_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -961,6 +1118,7 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
 
             memory[start] = start
+            memory.validate()
             blocks_out = memory._blocks
 
             values[start] = start
@@ -978,6 +1136,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 memory[start:endex] = data
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:endex] = list(data)
@@ -996,6 +1155,7 @@ class BaseMemorySuite:
 
                     memory = Memory.from_blocks(blocks)
                     memory[start:endex] = data
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     values_ref = values[:]
@@ -1017,6 +1177,7 @@ class BaseMemorySuite:
 
                     memory = Memory.from_blocks(blocks)
                     memory[:endex] = data
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     values_ref = values[:]
@@ -1038,6 +1199,7 @@ class BaseMemorySuite:
 
                     memory = Memory.from_blocks(blocks)
                     memory[start:] = data
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     values_ref = values[:]
@@ -1059,6 +1221,7 @@ class BaseMemorySuite:
                     endex = start + target_size
 
                     memory[start:endex] = data
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     values[start:endex] = list(data)
@@ -1077,6 +1240,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 memory[start:endex] = None
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:endex] = [None] * (endex - start)
@@ -1095,6 +1259,7 @@ class BaseMemorySuite:
                     endex = start + size
 
                     memory[start:endex:step] = None
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     values[start:endex:step] = [None] * ((size + step - 1) // step)
@@ -1112,6 +1277,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 memory[start:endex] = start
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:endex] = [start] * (endex - start)
@@ -1129,6 +1295,7 @@ class BaseMemorySuite:
                     endex = start + size
 
                     memory[start:endex:step] = b''
+                    memory.validate()
                     blocks_out = memory._blocks
                     blocks_ref = blocks
 
@@ -1160,14 +1327,31 @@ class BaseMemorySuite:
                             blocks_ref = values_to_blocks(values_ref)
 
                             memory[start:endex:step] = data
+                            memory.validate()
                             blocks_out = memory._blocks
 
                             assert blocks_out == blocks_ref
+
+    def test___delitem___doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        del memory[4:9]
+        assert memory._blocks == [[1, b'ABCyz']]
+
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        del memory[9]
+        assert memory._blocks == [[1, b'ABCD'], [6, b'$'], [8, b'xz']]
+        del memory[3]
+        assert memory._blocks == [[1, b'ABD'], [5, b'$'], [7, b'xz']]
+        del memory[2:10:3]
+        assert memory._blocks == [[1, b'AD'], [5, b'x']]
 
     def test___delitem___empty(self):
         Memory = self.Memory
         memory = Memory()
         del memory[:]
+        memory.validate()
 
     def test___delitem___single_template(self):
         Memory = self.Memory
@@ -1177,6 +1361,7 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
 
             del memory[start]
+            memory.validate()
             blocks_out = memory._blocks
 
             del values[start]
@@ -1192,6 +1377,7 @@ class BaseMemorySuite:
                 memory = Memory.from_blocks(blocks)
 
                 del memory[start::step]
+                memory.validate()
                 blocks_out = memory._blocks
                 assert blocks_out == blocks, (start, step)
 
@@ -1205,6 +1391,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 del memory[start:endex]
+                memory.validate()
                 blocks_out = memory._blocks
 
                 del values[start:endex]
@@ -1223,6 +1410,7 @@ class BaseMemorySuite:
                     endex = start + size
 
                     del memory[start:endex:step]
+                    memory.validate()
                     blocks_out = memory._blocks
 
                     del values[start:endex:step]
@@ -1240,6 +1428,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 del memory[:endex]
+                memory.validate()
                 blocks_out = memory._blocks
 
                 del values[blocks[0][0]:endex]
@@ -1257,6 +1446,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 del memory[start:]
+                memory.validate()
                 blocks_out = memory._blocks
 
                 del values[start:]
@@ -1264,10 +1454,22 @@ class BaseMemorySuite:
 
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
 
+    def test_append_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        memory.append(b'$')
+        assert memory._blocks == [[0, b'$']]
+
+        memory = Memory()
+        memory.append(3)
+        assert memory._blocks == [[0, b'\x03']]
+
     def test_append_empty_int(self):
         Memory = self.Memory
         memory = Memory()
         memory.append(ord('X'))
+        memory.validate()
         values = [ord('X')]
 
         blocks_out = memory._blocks
@@ -1278,6 +1480,7 @@ class BaseMemorySuite:
         Memory = self.Memory
         memory = Memory()
         memory.append(b'X')
+        memory.validate()
         values = [ord('X')]
         blocks_out = memory._blocks
         blocks_ref = values_to_blocks(values)
@@ -1294,15 +1497,34 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(create_template_blocks())
         blocks_ref = create_template_blocks()
         blocks_ref[-1][1].append(ord('X'))
+
+        memory_backup = memory.__deepcopy__()
+        backup = memory.append_backup()
+        assert backup is None
+
         memory.append(ord('X'))
+        memory.validate()
         blocks_out = memory._blocks
         assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+        memory.append_restore()
+        assert memory == memory_backup
+
+    def test_append_backup_doctest(self):
+        pass  # no doctest
+
+    def test_append_restore_doctest(self):
+        pass  # no doctest
+
+    def test_extend_doctest(self):
+        pass  # no doctest
 
     def test_extend_empty(self):
         Memory = self.Memory
         memory = Memory()
         blocks_ref = []
         memory.extend(b'')
+        memory.validate()
         blocks_out = memory._blocks
         assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
 
@@ -1322,6 +1544,7 @@ class BaseMemorySuite:
             data = bytes(range(size))
 
             memory.extend(data)
+            memory.validate()
             blocks_out = memory._blocks
 
             values.extend(data)
@@ -1342,6 +1565,7 @@ class BaseMemorySuite:
         memory1 = Memory.from_blocks(blocks1)
         memory2 = Memory.from_blocks(blocks2)
         memory1.extend(memory2)
+        memory1.validate()
         blocks_out = memory1._blocks
 
         values = blocks_to_values(blocks1)
@@ -1349,6 +1573,42 @@ class BaseMemorySuite:
         blocks_ref = values_to_blocks(values)
 
         assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test_extend_bytes_bounded(self):
+        Memory = self.Memory
+        for size in range(MAX_SIZE):
+            for offset in range(MAX_SIZE):
+                blocks = create_template_blocks()
+                memory = Memory.from_blocks(blocks, endex=MAX_SIZE)
+                values = blocks_to_values(blocks)
+                data = bytes(range(size))
+
+                memory_backup = memory.__deepcopy__()
+                backup_content_endex = memory.extend_backup(offset)
+
+                memory.extend(data, offset)
+                memory.validate()
+                blocks_out = memory._blocks
+                values.extend(None for _ in range(offset))
+                values.extend(data)
+                del values[MAX_SIZE:]
+                blocks_ref = values_to_blocks(values)
+                assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+                memory.extend_restore(backup_content_endex)
+                assert memory == memory_backup
+
+    def test_extend_backup_doctest(self):
+        pass  # no doctest
+
+    def test_extend_restore_doctest(self):
+        pass  # no doctest
+
+    def test_pop_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert memory.pop() == 122
+        assert memory.pop(3) == 67
 
     def test_pop_empty(self):
         Memory = self.Memory
@@ -1363,6 +1623,7 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks)
 
         value_out = memory.pop()
+        memory.validate()
         value_ref = values.pop()
         assert value_out == value_ref, (value_out, value_ref)
 
@@ -1377,13 +1638,32 @@ class BaseMemorySuite:
             values = blocks_to_values(blocks, MAX_SIZE)
             memory = Memory.from_blocks(blocks)
 
+            memory_backup = memory.__deepcopy__()
+            backup_address, backup_value = memory.pop_backup(start)
+            assert backup_address == start
+            assert backup_value == values[start]
+
             value_out = memory.pop(start)
+            memory.validate()
             value_ref = values.pop(start)
             assert value_out == value_ref, (value_out, value_ref)
 
             blocks_out = memory._blocks
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref, (start, blocks_out, blocks_ref)
+
+            memory.pop_restore(backup_address, backup_value)
+            memory.validate()
+            assert memory == memory_backup
+
+    def test_pop_backup_doctest(self):
+        pass  # no doctest
+
+    def test_pop_restore_doctest(self):
+        pass  # no doctest
+
+    def test___bytes___doctest(self):
+        pass  # no doctest
 
     def test___bytes__(self):
         Memory = self.Memory
@@ -1399,6 +1679,29 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks, copy=False)
         data = memory.__bytes__()
         assert data == blocks[0][1], (data, blocks[0][1])
+
+    def test___bytes___invalid(self):
+        Memory = self.Memory
+        match = r'non-contiguous data within range'
+
+        memory = Memory(start=1, endex=9)
+        with pytest.raises(ValueError, match=match):
+            bytes(memory)
+
+        memory = Memory.from_bytes(b'xyz', offset=5, start=1)
+        with pytest.raises(ValueError, match=match):
+            bytes(memory)
+
+        memory = Memory.from_bytes(b'xyz', offset=5, endex=9)
+        with pytest.raises(ValueError, match=match):
+            bytes(memory)
+
+        memory = Memory.from_blocks(create_template_blocks())
+        with pytest.raises(ValueError, match=match):
+            bytes(memory)
+
+    def test___copy___doctest(self):
+        pass  # no doctest
 
     def test___copy___empty(self):
         Memory = self.Memory
@@ -1420,6 +1723,9 @@ class BaseMemorySuite:
         assert memory1.content_span == memory2.content_span, (memory1.content_span, memory2.content_span)
         checks = [b1[1] == b2[1] for b1, b2 in zip(memory1._blocks, memory2._blocks)]
         assert all(checks), (checks,)
+
+    def test___deepcopy___doctest(self):
+        pass  # no doctest
 
     def test___deepcopy___empty(self):
         Memory = self.Memory
@@ -1445,6 +1751,9 @@ class BaseMemorySuite:
         assert all(checks), (checks,)
         blocks1, blocks2 = memory1._blocks, memory2._blocks
         assert blocks1 == blocks2, (blocks1, blocks2)
+
+    def test_contiguous_doctest(self):
+        pass  # no doctest
 
     def test_contiguous(self):
         Memory = self.Memory
@@ -1483,6 +1792,12 @@ class BaseMemorySuite:
         memory.trim_start = 0
         assert not memory.contiguous
 
+    def test_trim_start_doctest(self):
+        pass  # no doctest
+
+    def test_trim_endex_doctest(self):
+        pass  # no doctest
+
     def test_trim_start_bytes(self):
         Memory = self.Memory
         data = bytes(range(8))
@@ -1490,11 +1805,13 @@ class BaseMemorySuite:
 
         for offset in range(8):
             memory.trim_start = offset
+            memory.validate()
             assert memory.content_start == offset, (memory.content_start, offset)
             assert memory.content_endex == 8, (memory.content_endex,)
 
         for offset in reversed(range(8)):
             memory.trim_start = offset
+            memory.validate()
             assert memory.content_start == 7, (memory.content_start,)
             assert memory.content_endex == 8, (memory.content_endex,)
 
@@ -1504,25 +1821,32 @@ class BaseMemorySuite:
 
         for offset in range(8):
             memory.trim_start = offset
+            memory.validate()
             assert memory.content_start == offset, (memory.content_start, offset)
             assert memory.content_endex == offset, (memory.content_endex, offset)
 
         for offset in reversed(range(8)):
             memory.trim_start = offset
+            memory.validate()
             assert memory.content_start == offset, (memory.content_start, offset)
             assert memory.content_endex == offset, (memory.content_endex, offset)
 
         memory.trim_endex = None
+        memory.validate()
         assert memory.trim_endex is None, (memory.trim_endex,)
         memory.trim_start = 9
+        memory.validate()
         assert memory.trim_start == 9, (memory.trim_start,)
         assert memory.trim_endex is None, (memory.trim_endex,)
 
         memory.trim_start = 1
+        memory.validate()
         memory.trim_endex = 5
+        memory.validate()
         assert memory.trim_start == 1, (memory.trim_start,)
         assert memory.trim_endex == 5, (memory.trim_endex,)
         memory.trim_start = 9
+        memory.validate()
         assert memory.trim_start == 9, (memory.trim_start,)
         assert memory.trim_endex == 9, (memory.trim_endex,)
 
@@ -1533,39 +1857,49 @@ class BaseMemorySuite:
 
         for offset in range(8, 0, -1):
             memory.trim_endex = offset
+            memory.validate()
             assert memory.content_start == 0, (memory.content_start,)
             assert memory.content_endex == offset, (memory.content_endex, offset)
 
         for offset in range(1, 8):
             memory.trim_endex = offset
+            memory.validate()
             assert memory.content_start == 0, (memory.content_start,)
             assert memory.content_endex == 1, (memory.content_endex,)
 
         memory.trim_endex = 0
+        memory.validate()
         assert memory.content_start == 0, (memory.content_start,)
         assert memory.content_endex == 0, (memory.content_endex,)
 
         for offset in range(8, 0, -1):
             memory.trim_endex = offset
+            memory.validate()
             assert memory.content_start == 0, (memory.content_start,)
             assert memory.content_endex == 0, (memory.content_endex,)
 
         for offset in range(1, 8):
             memory.trim_endex = offset
+            memory.validate()
             assert memory.content_start == 0, (memory.content_start,)
             assert memory.content_endex == 0, (memory.content_endex,)
 
         memory.trim_start = None
+        memory.validate()
         assert memory.trim_start is None, (memory.trim_start,)
         memory.trim_endex = 9
+        memory.validate()
         assert memory.trim_start is None, (memory.trim_start,)
         assert memory.trim_endex == 9, (memory.trim_endex,)
 
         memory.trim_start = 5
+        memory.validate()
         memory.trim_endex = 9
+        memory.validate()
         assert memory.trim_start == 5, (memory.trim_start,)
         assert memory.trim_endex == 9, (memory.trim_endex,)
         memory.trim_endex = 1
+        memory.validate()
         assert memory.trim_start == 1, (memory.trim_start,)
         assert memory.trim_endex == 1, (memory.trim_endex,)
 
@@ -1577,6 +1911,7 @@ class BaseMemorySuite:
 
         for offset in range(1, MAX_SIZE):
             memory.trim_start = offset
+            memory.validate()
             blocks_out = memory._blocks
             values[offset - 1] = None
             blocks_ref = values_to_blocks(values)
@@ -1585,6 +1920,7 @@ class BaseMemorySuite:
         blocks_ref = values_to_blocks(values)
         for offset in reversed(range(MAX_SIZE)):
             memory.trim_start = offset
+            memory.validate()
             blocks_out = memory._blocks
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
 
@@ -1596,6 +1932,7 @@ class BaseMemorySuite:
 
         for offset in reversed(range(MAX_SIZE)):
             memory.trim_endex = offset
+            memory.validate()
             blocks_out = memory._blocks
             values[offset] = None
             blocks_ref = values_to_blocks(values)
@@ -1604,17 +1941,34 @@ class BaseMemorySuite:
         blocks_ref = values_to_blocks(values)
         for offset in range(MAX_SIZE):
             memory.trim_endex = offset
+            memory.validate()
             blocks_out = memory._blocks
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test_trim_span_doctest(self):
+        pass  # no doctest
 
     def test_trim_span(self):
         Memory = self.Memory
         memory = Memory()
         assert memory.trim_span == (None, None), (memory.trim_span,)
         memory.trim_span = (1, 9)
+        memory.validate()
         assert memory.trim_span == (1, 9), (memory.trim_span,)
         memory.trim_span = (5, 5)
+        memory.validate()
         assert memory.trim_span == (5, 5), (memory.trim_span,)
+
+    def test_start_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().start == 0
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.start == 1
+
+        memory = Memory.from_blocks([[5, b'xyz']], start=1)
+        assert memory.start == 1
 
     def test_start_empty(self):
         Memory = self.Memory
@@ -1636,6 +1990,17 @@ class BaseMemorySuite:
         assert memory.content_start == blocks[0][0], (memory.content_start, blocks[0][0])
         assert memory.trim_start is None, (memory.trim_start,)
 
+    def test_endex_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().endex == 0
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.endex == 8
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.endex == 8
+
     def test_endex_empty(self):
         Memory = self.Memory
         memory = Memory()
@@ -1652,6 +2017,15 @@ class BaseMemorySuite:
         assert memory.endex == block_endex, (memory.endex, block_endex)
         assert memory.content_endex == block_endex, (memory.content_endex, block_endex)
         assert memory.trim_endex is None, (memory.trim_endex,)
+
+    def test_span_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().span == (0, 0)
+        assert Memory(start=1, endex=8).span == (1, 8)
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.span == (1, 8)
 
     def test_span(self):
         Memory = self.Memory
@@ -1675,6 +2049,17 @@ class BaseMemorySuite:
 
         memory.trim_span = (None, None)
         assert memory.span == (5, 8), (memory.span,)
+
+    def test_endin_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().endin == -1
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.endin == 7
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.endin == 7
 
     def test_endin_empty(self):
         Memory = self.Memory
@@ -1711,6 +2096,19 @@ class BaseMemorySuite:
         assert memory.endin == endex - 1
         assert memory.content_endin == block_endin
 
+    def test_content_start_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_start == 0
+        assert Memory(start=1).content_start == 1
+        assert Memory(start=1, endex=8).content_start == 1
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_start == 1
+
+        memory = Memory.from_blocks([[5, b'xyz']], start=1)
+        assert memory.content_start == 5
+
     def test_content_start(self):
         Memory = self.Memory
         memory = Memory()
@@ -1731,6 +2129,19 @@ class BaseMemorySuite:
         memory.trim_start = 0
         assert memory.content_start > memory.start, (memory.content_start, memory.start)
         assert memory.content_start == blocks[0][0], (memory.content_start, blocks[0][0])
+
+    def test_content_endex_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_endex == 0
+        assert Memory(endex=8).content_endex == 0
+        assert Memory(start=1, endex=8).content_endex == 1
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_endex == 8
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.content_endex == 4
 
     def test_content_endex(self):
         Memory = self.Memory
@@ -1753,6 +2164,17 @@ class BaseMemorySuite:
         memory.trim_endex = MAX_SIZE
         assert memory.content_endex < memory.endex, (memory.content_endex, memory.endex)
         assert memory.content_endex == endex, (memory.content_endex, endex)
+
+    def test_content_span_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_span == (0, 0)
+        assert Memory(start=1).content_span == (1, 1)
+        assert Memory(endex=8).content_span == (0, 0)
+        assert Memory(start=1, endex=8).content_span == (1, 1)
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_span == (1, 8)
 
     def test_content_span(self):
         Memory = self.Memory
@@ -1782,6 +2204,19 @@ class BaseMemorySuite:
         memory.trim_span = (None, None)
         assert memory.content_span == (start, endex), (memory.content_span, start, endex)
 
+    def test_content_endin_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_endin == -1
+        assert Memory(endex=8).content_endin == -1
+        assert Memory(start=1, endex=8).content_endin == 0
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_endin == 7
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.content_endin == 3
+
     def test_content_endin(self):
         Memory = self.Memory
         memory = Memory()
@@ -1804,6 +2239,18 @@ class BaseMemorySuite:
         assert memory.content_endin < memory.endin
         assert memory.content_endin == endin
 
+    def test_content_size_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_size == 0
+        assert Memory(start=1, endex=8).content_size == 0
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_size == 6
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.content_size == 3
+
     def test_content_size(self):
         Memory = self.Memory
         memory = Memory()
@@ -1816,6 +2263,17 @@ class BaseMemorySuite:
 
         memory.trim_span = (1, 9)
         assert memory.content_size == 3, (memory.content_size,)
+
+    def test_content_parts_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().content_parts == 0
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.content_parts == 2
+
+        memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+        assert memory.content_parts == 1
 
     def test_content_parts(self):
         Memory = self.Memory
@@ -1830,6 +2288,9 @@ class BaseMemorySuite:
         blocks = create_template_blocks()
         memory = Memory.from_blocks(blocks)
         assert memory.content_parts == len(blocks), (memory.content_parts, len(blocks))
+
+    def test_validate_doctest(self):
+        pass  # no doctest
 
     def test_validate_empty(self):
         Memory = self.Memory
@@ -1879,6 +2340,25 @@ class BaseMemorySuite:
 
         with pytest.raises(ValueError, match='invalid block bounds'):
             memory.validate()
+
+    def test_bound_doctest(self):
+        Memory = self.Memory
+
+        assert Memory().bound(None, None) == (0, 0)
+        assert Memory().bound(None, 100) == (0, 100)
+
+        memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+        assert memory.bound(0, 30) == (0, 30)
+        assert memory.bound(2, 6) == (2, 6)
+        assert memory.bound(None, 6) == (1, 6)
+        assert memory.bound(2, None) == (2, 8)
+
+        memory = Memory.from_blocks([[3, b'ABC']], start=1, endex=8)
+        assert memory.bound(None, None) == (1, 8)
+        assert memory.bound(0, 30) == (1, 8)
+        assert memory.bound(2, 6) == (2, 6)
+        assert memory.bound(2, None) == (2, 8)
+        assert memory.bound(None, 6) == (1, 6)
 
     def test_bound_none(self):
         Memory = self.Memory
@@ -2040,6 +2520,13 @@ class BaseMemorySuite:
         bound = memory.bound(0, None)
         assert bound == (0, 44), bound
 
+    def test__block_index_at_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        blocks_index_out = [memory._block_index_at(i) for i in range(12)]
+        blocks_index_ref = [None, 0, 0, 0, 0, None, 1, None, 2, 2, 2, None]
+        assert blocks_index_out == blocks_index_ref
+
     def test__block_index_at_template(self):
         Memory = self.Memory
         blocks = create_template_blocks()
@@ -2060,6 +2547,13 @@ class BaseMemorySuite:
         blocks_index_ref = [None] * MAX_SIZE
         assert blocks_index_out == blocks_index_ref, (blocks_index_out, blocks_index_ref)
 
+    def test__block_index_start_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        blocks_index_out = [memory._block_index_start(i) for i in range(12)]
+        blocks_index_ref = [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
+        assert blocks_index_out == blocks_index_ref
+
     def test__block_index_start(self):
         Memory = self.Memory
         blocks = create_template_blocks()
@@ -2074,6 +2568,13 @@ class BaseMemorySuite:
 
         blocks_index_out = [memory._block_index_start(address) for address in range(MAX_SIZE)]
         assert blocks_index_out == blocks_index_ref, (blocks_index_out, blocks_index_ref)
+
+    def test__block_index_endex_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        blocks_index_out = [memory._block_index_endex(i) for i in range(12)]
+        blocks_index_ref = [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]
+        assert blocks_index_out == blocks_index_ref
 
     def test__block_index_endex(self):
         Memory = self.Memory
@@ -2090,6 +2591,16 @@ class BaseMemorySuite:
         blocks_index_out = [memory._block_index_endex(address) for address in range(MAX_SIZE)]
         assert blocks_index_out == blocks_index_ref, (blocks_index_out, blocks_index_ref)
 
+    def test_peek_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert memory.peek(3) == 67
+        assert memory.peek(6) == 36
+        assert memory.peek(10) == 122
+        assert memory.peek(0) is None
+        assert memory.peek(7) is None
+        assert memory.peek(11) is None
+
     def test_peek_template(self):
         Memory = self.Memory
         blocks = create_template_blocks()
@@ -2100,6 +2611,17 @@ class BaseMemorySuite:
             value = memory.peek(address)
             assert value == values[address], (address, value, values[address])
 
+    def test_poke_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        memory.poke(3, b'@')
+        assert memory.peek(3) == 64
+
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        memory.poke(5, b'@')
+        assert memory.peek(5) == 64
+
     def test_poke_value_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2107,13 +2629,23 @@ class BaseMemorySuite:
             values = blocks_to_values(blocks, MAX_SIZE)
             memory = Memory.from_blocks(blocks)
 
+            memory_backup = memory.__deepcopy__()
+            backup_address, backup_value = memory.poke_backup(start)
+            assert backup_address == start
+            assert backup_value == values[start]
+
             memory.poke(start, start)
+            memory.validate()
             blocks_out = memory._blocks
 
             values[start] = start
             blocks_ref = values_to_blocks(values)
 
             assert blocks_out == blocks_ref, (start, blocks_out, blocks_ref)
+
+            memory.poke_restore(backup_address, backup_value)
+            memory.validate()
+            assert memory == memory_backup
 
     def test_poke_single_template(self):
         Memory = self.Memory
@@ -2123,6 +2655,7 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
 
             memory.poke(start, bytes([start]))
+            memory.validate()
             blocks_out = memory._blocks
 
             values[start] = start
@@ -2149,12 +2682,30 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
 
             memory.poke(start, None)
+            memory.validate()
             blocks_out = memory._blocks
 
             values[start] = None
             blocks_ref = values_to_blocks(values)
 
             assert blocks_out == blocks_ref, (start, blocks_out, blocks_ref)
+
+    def test_poke_backup_doctest(self):
+        pass  # no doctest
+
+    def test_poke_restore_doctest(self):
+        pass  # no doctest
+
+    def test_extract_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert memory.extract()._blocks == [[1, b'ABCD'], [6, b'$'], [8, b'xyz']]
+        assert memory.extract(2, 9)._blocks == [[2, b'BCD'], [6, b'$'], [8, b'x']]
+        assert memory.extract(start=2)._blocks == [[2, b'BCD'], [6, b'$'], [8, b'xyz']]
+        assert memory.extract(endex=9)._blocks == [[1, b'ABCD'], [6, b'$'], [8, b'x']]
+        assert memory.extract(5, 8).span == (5, 8)
+        assert memory.extract(pattern=b'.')._blocks == [[1, b'ABCD.$.xyz']]
+        assert memory.extract(pattern=b'.', step=3)._blocks == [[1, b'AD.z']]
 
     def test_extract_template(self):
         Memory = self.Memory
@@ -2220,6 +2771,18 @@ class BaseMemorySuite:
                 blocks_ref = values_to_blocks(values[start:(start + size)], start)
                 assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
 
+    def test_view_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert bytes(memory.view(2, 5)) == b'BCD'
+        assert bytes(memory.view(9, 10)) == b'y'
+        match = 'non-contiguous data within range'
+
+        with pytest.raises(ValueError, match=match):
+            memory.view()
+        with pytest.raises(ValueError, match=match):
+            memory.view(0, 6)
+
     def test_view_template(self):
         Memory = self.Memory
         match = 'non-contiguous data within range'
@@ -2237,17 +2800,77 @@ class BaseMemorySuite:
                     with pytest.raises(ValueError, match=match):
                         memory.view(start, start + size)
 
+    def test_shift_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory.shift(-2)
+        assert memory._blocks == [[3, b'ABC'], [7, b'xyz']]
+
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=3)
+        memory.shift(-7)
+        assert memory._blocks == [[3, b'yz']], memory._blocks
+
     def test_shift_template(self):
         Memory = self.Memory
         for offset in range(-MAX_SIZE if self.ADDR_NEG else 0, MAX_SIZE):
+            memory = Memory.from_blocks(create_template_blocks())
             blocks_ref = create_template_blocks()
             for block in blocks_ref:
                 block[0] += offset
 
-            memory = Memory.from_blocks(create_template_blocks())
             memory.shift(offset)
+            memory.validate()
             blocks_out = memory._blocks
             assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+    def test_shift_bounded_template(self):
+        Memory = self.Memory
+        for offset in range(-MAX_SIZE if self.ADDR_NEG else 0, MAX_SIZE):
+            blocks = create_template_blocks()
+            memory = Memory.from_blocks(blocks, 0, 1, MAX_SIZE - 1)
+            values = blocks_to_values(blocks, MAX_SIZE)
+
+            memory_backup = memory.__deepcopy__()
+            backup_offset, backup = memory.shift_backup(offset)
+            assert backup_offset == offset
+
+            memory.shift(offset)
+            memory.validate()
+            blocks_out = memory._blocks
+
+            if offset < 0:
+                values_ref = values[-offset:]
+                values_ref += [None] * (MAX_SIZE + offset)
+                values_ref[0] = None
+            else:
+                values_ref = values[:(MAX_SIZE - offset)]
+                values_ref[0:0] = [None] * offset
+                values_ref[-1] = None
+            blocks_ref = values_to_blocks(values_ref)
+
+            assert blocks_out == blocks_ref, (blocks_out, blocks_ref)
+
+            memory.shift_restore(backup_offset, backup)
+            memory.validate()
+            assert memory == memory_backup
+
+    def test_shift_backup_doctest(self):
+        pass  # no doctest
+
+    def test_shift_restore_doctest(self):
+        pass  # no doctest
+
+    def test_reserve_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[3, b'ABC'], [7, b'xyz']])
+        memory.reserve(4, 2)
+        assert memory._blocks == [[3, b'A'], [6, b'BC'], [9, b'xyz']]
+
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], endex=12)
+        memory.reserve(5, 5)
+        assert memory._blocks == [[10, b'AB']]
 
     def test_reserve_template(self):
         Memory = self.Memory
@@ -2258,11 +2881,52 @@ class BaseMemorySuite:
                 memory = Memory.from_blocks(blocks)
 
                 memory.reserve(start, size)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:start] = [None] * size
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
+
+    def test_reserve_bounded_template(self):
+        Memory = self.Memory
+        for start in range(MAX_START):
+            for size in range(MAX_SIZE):
+                blocks = create_template_blocks()
+                values = blocks_to_values(blocks, MAX_SIZE)
+                memory = Memory.from_blocks(blocks, 0, 1, MAX_SIZE - 1)
+
+                memory_backup = memory.__deepcopy__()
+                backup_address, backup = memory.reserve_backup(start, size)
+                assert backup_address == start
+
+                memory.reserve(start, size)
+                memory.validate()
+                blocks_out = memory._blocks
+
+                values[start:start] = [None] * size
+                values[0] = None
+                del values[MAX_SIZE - 1:]
+                blocks_ref = values_to_blocks(values)
+                assert blocks_out == blocks_ref, (start, size, blocks_out, blocks_ref)
+
+                memory.reserve_restore(backup_address, backup)
+                memory.validate()
+                assert memory == memory_backup
+
+    def test_reserve_backup_doctest(self):
+        pass  # no doctest
+
+    def test_reserve_restore_doctest(self):
+        pass  # no doctest
+
+    def test_insert_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.insert(10, b'$')
+        assert memory._blocks == [[1, b'ABC'], [6, b'xyz'], [10, b'$']]
+        memory.insert(8, b'1')
+        assert memory._blocks == [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
 
     def test_insert_single(self):
         Memory = self.Memory
@@ -2272,6 +2936,7 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
 
             memory.insert(start, start)
+            memory.validate()
             blocks_out = memory._blocks
 
             values[start:start] = [start]
@@ -2288,11 +2953,51 @@ class BaseMemorySuite:
                 data = bytes(range(ord('a'), ord('a') + size))
 
                 memory.insert(start, data)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:start] = data
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, data, blocks_out, blocks_ref)
+
+    def test_insert_bounded_template(self):
+        Memory = self.Memory
+        for start in range(MAX_START):
+            for size in range(MAX_SIZE):
+                blocks = create_template_blocks()
+                values = blocks_to_values(blocks, MAX_SIZE)
+                memory = Memory.from_blocks(blocks, 0, 1, MAX_SIZE - 1)
+                data = bytes(range(ord('a'), ord('a') + size))
+
+                memory_backup = memory.__deepcopy__()
+                backup_address, backup = memory.insert_backup(start, data)
+                assert backup_address == start
+
+                memory.insert(start, data)
+                memory.validate()
+                blocks_out = memory._blocks
+
+                values[start:start] = data
+                values[0] = None
+                del values[MAX_SIZE - 1:]
+                blocks_ref = values_to_blocks(values)
+                assert blocks_out == blocks_ref, (start, size, data, blocks_out, blocks_ref)
+
+                memory.insert_restore(backup_address, backup)
+                memory.validate()
+                assert memory == memory_backup
+
+    def test_insert_backup_doctest(self):
+        pass  # no doctest
+
+    def test_insert_restore_doctest(self):
+        pass  # no doctest
+
+    def test_delete_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory.delete(6, 10)
+        assert memory._blocks == [[5, b'Ayz']]
 
     def test_delete_template(self):
         Memory = self.Memory
@@ -2304,11 +3009,24 @@ class BaseMemorySuite:
                 endex = start + size
 
                 memory.delete(start, endex)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 del values[start:endex]
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
+
+    def test_delete_backup_doctest(self):
+        pass  # no doctest
+
+    def test_delete_restore_doctest(self):
+        pass  # no doctest
+
+    def test_clear_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory.clear(6, 10)
+        assert memory._blocks == [[5, b'A'], [10, b'yz']]
 
     def test_clear_template(self):
         Memory = self.Memory
@@ -2319,12 +3037,34 @@ class BaseMemorySuite:
                 memory = Memory.from_blocks(blocks)
                 endex = start + size
 
+                memory_backup = memory.__deepcopy__()
+                backup = memory.clear_backup(start, endex)
+                assert backup.span == (start, endex)
+                assert backup == memory_backup.extract(start, endex)
+
                 memory.clear(start, endex)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:endex] = [None] * (endex - start)
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
+
+                memory.clear_restore(backup)
+                memory.validate()
+                assert memory == memory_backup
+
+    def test_clear_backup_doctest(self):
+        pass  # no doctest
+
+    def test_clear_restore_doctest(self):
+        pass  # no doctest
+
+    def test_crop_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+        memory.crop(6, 10)
+        assert memory._blocks == [[6, b'BC'], [9, b'x']]
 
     def test_crop_template(self):
         Memory = self.Memory
@@ -2335,13 +3075,38 @@ class BaseMemorySuite:
                 memory = Memory.from_blocks(blocks)
                 endex = start + size
 
+                memory_backup = memory.__deepcopy__()
+                backup_start, backup_endex = memory.crop_backup(start, endex)
+                if backup_start is not None:
+                    assert backup_start.endex == start
+                    assert backup_start == memory_backup.extract(None, start)
+                if backup_endex is not None:
+                    assert backup_endex.start == endex
+                    assert backup_endex == memory_backup.extract(endex, None)
+
                 memory.crop(start, endex)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[:start] = [None] * start
                 values[endex:] = [None] * (len(values) - endex)
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, endex, blocks_out, blocks_ref)
+
+                memory.crop_restore(backup_start, backup_endex)
+                assert memory == memory_backup
+
+    def test_crop_backup_doctest(self):
+        pass  # no doctest
+
+    def test_crop_restore_doctest(self):
+        pass  # no doctest
+
+    def test_write_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.write(5, b'123')
+        assert memory._blocks == [[1, b'ABC'], [5, b'123z']]
 
     def test_write_single(self):
         Memory = self.Memory
@@ -2353,6 +3118,7 @@ class BaseMemorySuite:
             memory.trim_endex = memory.content_endex + 1
 
             memory.write(offset, offset)
+            memory.validate()
             blocks_out = memory._blocks
 
             if memory.trim_start <= offset < memory.trim_endex:
@@ -2370,6 +3136,11 @@ class BaseMemorySuite:
             memory.trim_start = memory.content_start - 1
             memory.trim_endex = memory.content_endex + 1
 
+            memory_backup = memory.__deepcopy__()
+            backup = memory.write_backup(offset, chunk)
+            assert backup.span == (offset, offset + len(chunk)), (backup.span, offset)
+            assert backup == memory_backup.extract(offset, offset + len(chunk))
+
             memory.write(offset, chunk)
             memory.validate()
             blocks_out = memory._blocks
@@ -2380,11 +3151,16 @@ class BaseMemorySuite:
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref, (offset, blocks_out, blocks_ref)
 
+            memory.write_restore(backup)
+            memory.validate()
+            assert memory == memory_backup
+
     def test_write_memory_empty(self):
         Memory = self.Memory
         memory1 = Memory()
         memory2 = Memory()
         memory2.write(0, memory1)
+        memory2.validate()
         assert not memory2
 
     def test_write_memory_clear(self):
@@ -2392,6 +3168,7 @@ class BaseMemorySuite:
         memory1 = Memory(start=3, endex=7)
         memory2 = Memory.from_bytes(b'0123456789')
         memory2.write(0, memory1, clear=True)
+        memory2.validate()
         blocks_out = memory2._blocks
         blocks_ref = [[0, b'012'], [7, b'789']]
         assert blocks_out == blocks_ref
@@ -2407,6 +3184,7 @@ class BaseMemorySuite:
                 endex = start + len(data)
 
                 memory.write(start, data)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 values[start:endex] = data
@@ -2424,6 +3202,7 @@ class BaseMemorySuite:
         memory2 = Memory.from_blocks(blocks2)
 
         memory1.write(0, memory2, clear=False)
+        memory1.validate()
 
         values_ref = values1[:]
         for block_start, block_data in blocks2:
@@ -2444,6 +3223,7 @@ class BaseMemorySuite:
         memory2 = Memory.from_blocks(blocks2)
 
         memory1.write(0, memory2, clear=True)
+        memory1.validate()
 
         values_ref = values1[:]
         start, endex = memory2.start, memory2.endex
@@ -2452,17 +3232,40 @@ class BaseMemorySuite:
         values_out = blocks_to_values(memory1._blocks)
         assert values_out == values_ref, (values1, values2, values_out, values_ref)
 
+    def test_write_backup_doctest(self):
+        pass  # no doctest
+
+    def test_write_restore_doctest(self):
+        pass  # no doctest
+
+    def test_fill_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.fill(pattern=b'123')
+        assert memory._blocks == [[1, b'12312312']]
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.fill(3, 7, b'123')
+        assert memory._blocks == [[1, b'AB1231yz']]
+
     def test_fill_template(self):
         Memory = self.Memory
+        pattern = b'<xyz>'
         for start in range(MAX_START):
             for size in range(MAX_SIZE):
                 blocks = create_template_blocks()
                 values = blocks_to_values(blocks, MAX_SIZE)
                 memory = Memory.from_blocks(blocks)
-                pattern = b'<xyz>'
                 endex = start + size
 
+                memory_backup = memory.__deepcopy__()
+                backup = memory.fill_backup(start, endex)
+                assert backup.span == (start, endex)
+                assert backup == memory_backup.extract(start, endex)
+
                 memory.fill(start, endex, pattern)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 tiled = pattern * ((size + len(pattern)) // len(pattern))
@@ -2470,6 +3273,10 @@ class BaseMemorySuite:
                 values[start:endex] = tiled
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, pattern, blocks_out, blocks_ref)
+
+                memory.fill_restore(backup)
+                memory.validate()
+                assert memory == memory_backup
 
     def test_fill_bounded_template(self):
         Memory = self.Memory
@@ -2482,6 +3289,7 @@ class BaseMemorySuite:
                 endex = start + size
 
                 memory.fill(start, endex, pattern)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 tiled = pattern * ((size + len(pattern)) // len(pattern))
@@ -2503,6 +3311,24 @@ class BaseMemorySuite:
         with pytest.raises(ValueError, match=match):
             memory.fill(pattern=Memory())
         memory.fill(pattern=0)
+        memory.validate()
+
+    def test_fill_backup_doctest(self):
+        pass  # no doctest
+
+    def test_fill_restore_doctest(self):
+        pass  # no doctest
+
+    def test_flood_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.flood(pattern=b'123')
+        assert memory._blocks == [[1, b'ABC12xyz']]
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        memory.flood(3, 7, b'123')
+        assert memory._blocks == [[1, b'ABC23xyz']]
 
     def test_flood_template(self):
         Memory = self.Memory
@@ -2514,7 +3340,12 @@ class BaseMemorySuite:
                 pattern = b'<xyz>'
                 endex = start + size
 
+                memory_backup = memory.__deepcopy__()
+                backup = memory.flood_backup(start, endex)
+                assert backup == list(memory_backup.gaps(start, endex))
+
                 memory.flood(start, endex, pattern)
+                memory.validate()
                 blocks_out = memory._blocks
 
                 tiled = pattern * ((size + len(pattern)) // len(pattern))
@@ -2524,6 +3355,10 @@ class BaseMemorySuite:
                         values[start + index] = tiled[index]
                 blocks_ref = values_to_blocks(values)
                 assert blocks_out == blocks_ref, (start, size, pattern, blocks_out, blocks_ref)
+
+                memory.flood_restore(backup)
+                memory.validate()
+                assert memory == memory_backup
 
     def test_flood_invalid_template(self):
         Memory = self.Memory
@@ -2536,6 +3371,28 @@ class BaseMemorySuite:
         with pytest.raises(ValueError, match=match):
             memory.flood(pattern=Memory())
         memory.flood(pattern=0)
+        memory.validate()
+
+    def test_flood_backup_doctest(self):
+        pass  # no doctest
+
+    def test_flood_restore_doctest(self):
+        pass  # no doctest
+
+    def test_keys_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert list(memory.keys()) == []
+        assert list(memory.keys(endex=8)) == [0, 1, 2, 3, 4, 5, 6, 7]
+        assert list(memory.keys(3, 8)) == [3, 4, 5, 6, 7]
+        assert list(islice(memory.keys(3, ...), 7)) == [3, 4, 5, 6, 7, 8, 9]
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        assert list(memory.keys()) == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert list(memory.keys(endex=8)) == [1, 2, 3, 4, 5, 6, 7]
+        assert list(memory.keys(3, 8)) == [3, 4, 5, 6, 7]
+        assert list(islice(memory.keys(3, ...), 7)) == [3, 4, 5, 6, 7, 8, 9]
 
     def test_keys_template(self):
         Memory = self.Memory
@@ -2546,6 +3403,19 @@ class BaseMemorySuite:
                 keys_out = list(islice(memory.keys(start, ...), size))
                 keys_ref = list(range(start, endex))
                 assert keys_out == keys_ref, (start, size, keys_out, keys_ref)
+
+    def test_values_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert list(memory.values(endex=8)) == [None, None, None, None, None, None, None, None]
+        assert list(memory.values(3, 8)) == [None, None, None, None, None]
+        assert list(islice(memory.values(3, ...), 7)) == [None, None, None, None, None, None, None]
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        assert list(memory.values()) == [65, 66, 67, None, None, 120, 121, 122]
+        assert list(memory.values(3, 8)) == [67, None, None, 120, 121]
+        assert list(islice(memory.values(3, ...), 7)) == [67, None, None, 120, 121, 122, None]
 
     def test_values_empty_bruteforce(self):
         Memory = self.Memory
@@ -2617,6 +3487,19 @@ class BaseMemorySuite:
             list(islice(memory.values(pattern=Memory()), MAX_SIZE))
         list(islice(memory.values(pattern=0), MAX_SIZE))
 
+    def test_rvalues_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert list(memory.values(endex=8)) == [None, None, None, None, None, None, None, None]
+        assert list(memory.values(3, 8)) == [None, None, None, None, None]
+        assert list(islice(memory.values(3, ...), 7)) == [None, None, None, None, None, None, None]
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        assert list(memory.values()) == [65, 66, 67, None, None, 120, 121, 122]
+        assert list(memory.values(3, 8)) == [67, None, None, 120, 121]
+        assert list(islice(memory.values(3, ...), 7)) == [67, None, None, 120, 121, 122, None]
+
     def test_rvalues_empty_bruteforce(self):
         Memory = self.Memory
         for size in range(MAX_SIZE):
@@ -2649,6 +3532,32 @@ class BaseMemorySuite:
                     rvalues_ref = list(islice(values, start, endex))[::-1]
                 assert rvalues_out == rvalues_ref, (endex, size, rvalues_out, rvalues_ref)
 
+    def test_items_doctest(self):
+        Memory = self.Memory
+
+        from itertools import islice
+        memory = Memory()
+        values_out = list(memory.items(endex=8))
+        values_ref = [(0, None), (1, None), (2, None), (3, None), (4, None), (5, None), (6, None), (7, None)]
+        assert values_out == values_ref
+        values_out = list(memory.items(3, 8))
+        values_ref = [(3, None), (4, None), (5, None), (6, None), (7, None)]
+        assert values_out == values_ref
+        values_out = list(islice(memory.items(3, ...), 7))
+        values_ref = [(3, None), (4, None), (5, None), (6, None), (7, None), (8, None), (9, None)]
+        assert values_out == values_ref
+
+        memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+        values_out = list(memory.items())
+        values_ref = [(1, 65), (2, 66), (3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122)]
+        assert values_out == values_ref
+        values_out = list(memory.items(3, 8))
+        values_ref = [(3, 67), (4, None), (5, None), (6, 120), (7, 121)]
+        assert values_out == values_ref
+        values_out = list(islice(memory.items(3, ...), 7))
+        values_ref = [(3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122), (9, None)]
+        assert values_out == values_ref
+
     def test_items_template(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2663,6 +3572,13 @@ class BaseMemorySuite:
                 keys_ref = list(range(start, start + size))
                 items_ref = list(zip(keys_ref, values_ref))
                 assert items_out == items_ref, (start, size, items_out, items_ref)
+
+    def test_intervals_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+        assert list(memory.intervals()) == [(1, 3), (5, 6), (7, 10)]
+        assert list(memory.intervals(2, 9)) == [(2, 3), (5, 6), (7, 9)]
+        assert list(memory.intervals(3, 5)) == []
 
     def test_intervals(self):
         Memory = self.Memory
@@ -2693,6 +3609,14 @@ class BaseMemorySuite:
         intervals_out = list(memory.intervals())
         assert intervals_out == intervals_ref, (intervals_out, intervals_ref)
 
+    def test_gaps_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+        assert list(memory.gaps()) == [(None, 1), (3, 5), (6, 7), (10, None)]
+        assert list(memory.gaps(0, 11)) == [(0, 1), (3, 5), (6, 7), (10, 11)]
+        assert list(memory.gaps(*memory.span)) == [(3, 5), (6, 7)]
+        assert list(memory.gaps(2, 6)) == [(3, 5)]
+
     def test_gaps(self):
         Memory = self.Memory
         for start in range(MAX_START):
@@ -2701,10 +3625,9 @@ class BaseMemorySuite:
                 values = blocks_to_values(blocks, MAX_SIZE)
                 memory = Memory.from_blocks(blocks)
 
-                for bound in (False, True):
-                    gaps_ref = values_to_gaps(values, start, endex, bound)
-                    gaps_out = list(memory.gaps(start, endex, bound))
-                    assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
+                gaps_ref = values_to_gaps(values, start, endex)
+                gaps_out = list(memory.gaps(start, endex))
+                assert gaps_out == gaps_ref, (start, endex, gaps_out, gaps_ref)
 
     def test_gaps_unbounded(self):
         Memory = self.Memory
@@ -2712,10 +3635,9 @@ class BaseMemorySuite:
         values = blocks_to_values(blocks, MAX_SIZE)
         memory = Memory.from_blocks(blocks)
 
-        for bound in (False, True):
-            gaps_ref = values_to_gaps(values, bound=bound)
-            gaps_out = list(memory.gaps(bound=bound))
-            assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
+        gaps_ref = values_to_gaps(values)
+        gaps_out = list(memory.gaps())
+        assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
 
     def test_gaps_empty(self):
         Memory = self.Memory
@@ -2723,10 +3645,21 @@ class BaseMemorySuite:
         values = blocks_to_values(blocks, MAX_SIZE)
         memory = Memory.from_blocks(blocks)
 
-        for bound in (False, True):
-            gaps_ref = values_to_gaps(values, bound=bound)
-            gaps_out = list(memory.gaps(bound=bound))
-            assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
+        gaps_ref = values_to_gaps(values)
+        gaps_out = list(memory.gaps())
+        assert gaps_out == gaps_ref, (gaps_out, gaps_ref)
+
+    def test_equal_span_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert memory.equal_span(0) == (None, None, None)
+
+        memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
+        assert memory.equal_span(2) == (1, 4, 66)
+        assert memory.equal_span(4) == (4, 5, 67)
+        assert memory.equal_span(5) == (5, 7, None)
+        assert memory.equal_span(10) == (10, None, None)
 
     def test_equal_span_template(self):
         Memory = self.Memory
@@ -2757,6 +3690,18 @@ class BaseMemorySuite:
 
             assert value is None, (value,)
             assert (start, endex) == span, (start, endex, span)
+
+    def test_block_span_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory()
+        assert memory.block_span(0) == (None, None, None)
+
+        memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
+        assert memory.block_span(2) == (0, 5, 66)
+        assert memory.block_span(4) == (0, 5, 67)
+        assert memory.block_span(5) == (5, 7, None)
+        assert memory.block_span(10) == (10, None, None)
 
     def test_block_span(self):
         Memory = self.Memory
