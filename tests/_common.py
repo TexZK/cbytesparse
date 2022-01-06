@@ -30,6 +30,7 @@ from typing import Optional
 
 import pytest
 
+from cbytesparse import STR_MAX_CONTENT_SIZE
 from cbytesparse import Address
 from cbytesparse import BlockList
 from cbytesparse import OpenInterval
@@ -394,21 +395,21 @@ class BaseMemorySuite:
         Memory = self.Memory
         memory = Memory()
         str_out = str(memory)
-        str_ref = str([])
+        str_ref = '<[]>'
         assert str_out == str_ref, (str_out, str_ref)
 
         memory = Memory(start=3, endex=9)
         str_out = str(memory)
-        str_ref = str([])
+        str_ref = '<3, [], 9>'
         assert str_out == str_ref, (str_out, str_ref)
 
         data = b'abc'
         memory = Memory.from_bytes(data, offset=3)
         str_out = str(memory)
-        str_ref = str([[3, bytearray(data)]])
+        str_ref = "<[[3, b'abc']]>"
         assert str_out == str_ref, (str_out, str_ref)
 
-        data = b'abc' * 1000
+        data = b'abc' * STR_MAX_CONTENT_SIZE
         memory = Memory.from_bytes(data, offset=3)
         str_out = str(memory)
         str_ref = repr(memory)

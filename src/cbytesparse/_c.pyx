@@ -3984,7 +3984,7 @@ cdef bint Memory_Contiguous(const Memory_* that) nogil:
     if not block_count:
         start = that.trim_start
         endex = that.trim_endex
-        if that.trim_start_ and that.trim_endex_ and start < endex - 1:
+        if that.trim_start_ and that.trim_endex_ and start < endex:
             return False
         return True
 
@@ -4407,6 +4407,9 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
         saddr_t skip
         Rover_* rover = NULL
 
+    if endex < start:
+        endex = start
+
     if step == 1:
         if start < endex and block_count:
             block_index_start = Rack_IndexStart(blocks1, start)
@@ -4516,8 +4519,6 @@ cdef object Memory_Extract(const Memory_* that, object start, object endex,
 
     start_ = Memory_Start(that) if start is None else <addr_t>start
     endex_ = Memory_Endex(that) if endex is None else <addr_t>endex
-    if endex_ < start_:
-        endex_ = start_
 
     return Memory_Extract_(that, start_, endex_, pattern_size, pattern_ptr, step_, bound_)
 
@@ -5809,11 +5810,8 @@ cdef class Memory:
     def __repr__(
         self: Memory,
     ) -> str:
-        cdef:
-            addr_t start = Memory_Start(self._)
-            addr_t endex = Memory_Endex(self._)
 
-        return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{id(self):X}>'
+        return f'<{type(self).__name__}[0x{self.start:X}:0x{self.endex:X}]@0x{id(self):X}>'
 
     def __str__(
         self: Memory,
@@ -5841,18 +5839,31 @@ cdef class Memory:
             'ABCxyz'
         """
         cdef:
-            Memory_* memory = self._
+            const Memory_* memory = self._
             addr_t size = Memory_ContentSize(memory)
             addr_t start
             addr_t endex
+            const Rack_* blocks
+            size_t block_index
+            const Block_* block
+            list inner_list
 
-        if size > STR_MAX_CONTENT_SIZE:
-            start = Memory_Start(memory)
-            endex = Memory_Endex(memory)
-            return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{id(self):X}>'
+        if size < STR_MAX_CONTENT_SIZE:
+            trim_start = f'{memory.trim_start}, ' if memory.trim_start_ else ''
+            trim_endex = f', {memory.trim_endex}' if memory.trim_endex_ else ''
 
+            inner_list = []
+            blocks = memory.blocks
+
+            for block_index in range(Rack_Length(blocks)):
+                block = Rack_Get__(blocks, block_index)
+                inner_list.append(f'[{Block_Start(block)}, {Block_Bytes(block)!r}]')
+
+            inner = ', '.join(inner_list)
+
+            return f'<{trim_start}[{inner}]{trim_endex}>'
         else:
-            return str(Memory_ToBlocks(memory))
+            return repr(self)
 
     def __bool__(
         self: Memory,
