@@ -6449,6 +6449,34 @@ cdef class Memory:
 
         return Memory_Append(self._, item)
 
+    # noinspection PyMethodMayBeStatic
+    def append_backup(
+        self: Memory,
+    ) -> None:
+        r"""Backups an `append()` operation.
+
+        Returns:
+            None: Nothing.
+
+        See Also:
+            :meth:`append`
+            :meth:`append_restore`
+        """
+
+        return None
+
+    def append_restore(
+        self: Memory,
+    ) -> None:
+        r"""Restores an `append()` operation.
+
+        See Also:
+            :meth:`append`
+            :meth:`append_backup`
+        """
+
+        Memory_PopLast_(self._)
+
     def extend(
         self: Memory,
         items: Union[AnyBytes, Memory],
@@ -6470,6 +6498,46 @@ cdef class Memory:
         """
 
         return Memory_Extend(self._, items, offset)
+
+    def extend_backup(
+        self: Memory,
+        offset: Address = 0,
+    ) -> Address:
+        r"""Backups an `extend()` operation.
+
+        Arguments:
+            items (items):
+                Items to append at the end of the current virtual space.
+
+            offset (int):
+                Optional offset w.r.t. :attr:`content_endex`.
+
+        Returns:
+            int: Content exclusive end address.
+
+        See Also:
+            :meth:`extend`
+            :meth:`extend_restore`
+        """
+
+        return Memory_ContentEndex(self._) + <addr_t>offset
+
+    def extend_restore(
+        self: Memory,
+        content_endex: Address,
+    ) -> None:
+        r"""Restores an `extend()` operation.
+
+        Arguments:
+            content_endex (int):
+                Content exclusive end address to restore.
+
+        See Also:
+            :meth:`extend`
+            :meth:`extend_backup`
+        """
+
+        Memory_Clear_(self._, <addr_t>content_endex, ADDR_MAX)
 
     def pop(
         self: Memory,
@@ -6504,6 +6572,56 @@ cdef class Memory:
         """
 
         return Memory_Pop(self._, address)
+
+    def pop_backup(
+        self: Memory,
+        address: Optional[Address] = None,
+    ) -> Tuple[Address, Optional[Value]]:
+        r"""Backups a `pop()` operation.
+
+        Arguments:
+            address (int):
+                Address of the byte to pop.
+                If ``None``, the very last byte is popped.
+
+        Returns:
+            (int, int): `address`, item at `address` (``None`` if empty).
+
+        See Also:
+            :meth:`pop`
+            :meth:`pop_restore`
+        """
+
+        if address is None:
+            address = self.endex - 1
+        return address, Memory_Peek_(self._, <addr_t>address)
+
+    def pop_restore(
+        self: Memory,
+        address: Address,
+        item: Optional[Value],
+    ) -> None:
+        r"""Restores a `pop()` operation.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+            item (int or byte):
+                Item to restore, ``None`` if empty.
+
+        See Also:
+            :meth:`pop`
+            :meth:`pop_backup`
+        """
+        cdef:
+            byte_t value
+
+        if item is None:
+            Memory_Reserve_(self._, <addr_t>address, 1)
+        else:
+            value = <byte_t>item
+            Memory_InsertRaw_(self._, address, 1, &value)
 
     def __bytes__(
         self: Memory,
@@ -7311,6 +7429,50 @@ cdef class Memory:
 
         Memory_Poke(self._, address, item)
 
+    def poke_backup(
+        self: Memory,
+        address: Address,
+    ) -> Tuple[Address, Optional[Value]]:
+        r"""Backups a `poke()` operation.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+        Returns:
+            (int, int): `address`, item at `address` (``None`` if empty).
+
+        See Also:
+            :meth:`poke`
+            :meth:`poke_restore`
+        """
+
+        return address, Memory_Peek_(self._, <addr_t>address)
+
+    def poke_restore(
+        self: Memory,
+        address: Address,
+        item: Optional[Value],
+    ) -> None:
+        r"""Restores a `poke()` operation.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+            item (int or byte):
+                Item to restore.
+
+        See Also:
+            :meth:`poke`
+            :meth:`poke_backup`
+        """
+
+        if item is None:
+            Memory_PokeNone_(self._, <addr_t>address)
+        else:
+            Memory_Poke_(self._, <addr_t>address, <byte_t>item)
+
     def extract(
         self: Memory,
         start: Optional[Address] = None,
@@ -7460,6 +7622,56 @@ cdef class Memory:
 
         Memory_Shift(self._, offset)
 
+    def shift_backup(
+        self: Memory,
+        offset: Address,
+    ) -> Tuple[Address, Memory]:
+        r"""Backups a `shift()` operation.
+
+        Arguments:
+            offset (int):
+                Signed amount of address shifting.
+
+        Returns:
+            (int, :obj:`Memory`): Shifting, backup memory region.
+
+        See Also:
+            :meth:`shift`
+            :meth:`shift_restore`
+        """
+        cdef:
+            Memory backup
+
+        if offset < 0:
+            backup = self._pretrim_start_backup(None, -offset)
+        else:
+            backup = self._pretrim_endex_backup(None, +offset)
+        return offset, backup
+
+    def shift_restore(
+        self: Memory,
+        offset: Address,
+        Memory backup not None: Memory
+    ) -> None:
+        r"""Restores an `shift()` operation.
+
+        Arguments:
+            offset (int):
+                Signed amount of address shifting.
+
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`shift`
+            :meth:`shift_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+
+        Memory_Shift(memory, -offset)
+        Memory_Write(memory, 0, backup, True)
+
     def reserve(
         self: Memory,
         address: Address,
@@ -7508,6 +7720,57 @@ cdef class Memory:
 
         Memory_Reserve(self._, address, size)
 
+    def reserve_backup(
+        self: Memory,
+        address: Address,
+        size: Address,
+    ) -> Tuple[Address, Memory]:
+        r"""Backups a `reserve()` operation.
+
+        Arguments:
+            address (int):
+                Start address of the emptiness to insert.
+
+            size (int):
+                Size of the emptiness to insert.
+
+        Returns:
+            (int, :obj:`Memory`): Reservation address, backup memory region.
+
+        See Also:
+            :meth:`reserve`
+            :meth:`reserve_restore`
+        """
+
+        backup = self._pretrim_endex_backup(address, size)
+        return address, backup
+
+    def reserve_restore(
+        self: Memory,
+        addr_t address: Address,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `reserve()` operation.
+
+        Arguments:
+            address (int):
+                Address of the reservation point.
+
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`reserve`
+            :meth:`reserve_backup`
+        """
+        cdef:
+            addr_t size = Memory_Length(backup._)
+            Memory_* memory = self._
+
+        CheckAddAddrU(address, size)
+        Memory_Delete_(memory, address, address + size)
+        Memory_WriteSame_(memory, 0, backup._, True)
+
     def insert(
         self: Memory,
         address: Address,
@@ -7547,6 +7810,58 @@ cdef class Memory:
 
         Memory_Insert(self._, address, data)
 
+    def insert_backup(
+        self: Memory,
+        address: Address,
+        data: Union[AnyBytes, Value, Memory],
+    ) -> Tuple[Address, Memory]:
+        r"""Backups an `insert()` operation.
+
+        Arguments:
+            address (int):
+                Address of the insertion point.
+
+            data (bytes):
+                Data to insert.
+
+        Returns:
+            (int, :obj:`Memory`): Insertion address, backup memory region.
+
+        See Also:
+            :meth:`insert`
+            :meth:`insert_restore`
+        """
+
+        size = 1 if isinstance(data, int) else len(data)
+        backup = self._pretrim_endex_backup(address, size)
+        return address, backup
+
+    def insert_restore(
+        self: Memory,
+        addr_t address: Address,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores an `insert()` operation.
+
+        Arguments:
+            address (int):
+                Address of the insertion point.
+
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`insert`
+            :meth:`insert_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+            addr_t size = Memory_Length(backup._)
+
+        CheckAddAddrU(address, size)
+        Memory_Delete_(memory, address, address + size)
+        Memory_WriteSame_(memory, 0, backup._, True)
+
     def delete(
         self: Memory,
         start: Optional[Address] = None,
@@ -7579,6 +7894,53 @@ cdef class Memory:
         """
 
         Memory_Delete(self._, start, endex)
+
+    def delete_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `delete()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for deletion.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for deletion.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`delete`
+            :meth:`delete_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def delete_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `delete()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region
+
+        See Also:
+            :meth:`delete`
+            :meth:`delete_backup`
+        """
+
+        Memory_InsertSame_(self._, 0, backup._)
 
     def clear(
         self: Memory,
@@ -7613,6 +7975,173 @@ cdef class Memory:
 
         Memory_Clear(self._, start, endex)
 
+    def clear_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `clear()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for clearing.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for clearing.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`clear`
+            :meth:`clear_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def clear_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `clear()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`clear`
+            :meth:`clear_backup`
+        """
+
+        Memory_WriteSame_(self._, 0, backup._, True)
+
+    def _pretrim_start(
+        self: Memory,
+        endex_max: Optional[Address],
+        size: Address,
+    ) -> None:
+        r"""Trims initial data.
+
+        Low-level method to manage trimming of data starting from an address.
+
+        Arguments:
+            endex_max (int):
+                Exclusive end address of the erasure range.
+                If ``None``, :attr:`trim_start` plus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        See Also:
+            :meth:`_pretrim_start_backup`
+        """
+
+        Memory_PretrimStart(self._, endex_max, size)
+
+    def _pretrim_start_backup(
+        self: Memory,
+        endex_max: Optional[Address],
+        size: Address,
+    ) -> Memory:
+        r"""Backups a `_pretrim_start()` operation.
+
+        Arguments:
+            endex_max (int):
+                Exclusive end address of the erasure range.
+                If ``None``, :attr:`trim_start` plus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`_pretrim_start`
+        """
+        cdef:
+            addr_t endex_max_ = <addr_t>endex_max
+            addr_t size_ = <addr_t>size
+            const Memory_* memory = self._
+            addr_t endex
+
+        if memory.trim_start_ and size_ > 0:
+            endex = memory.trim_start
+            CheckAddAddrU(endex, size)
+            endex += size
+            if endex_max is not None and endex > endex_max_:
+                endex = endex_max_
+            return Memory_Extract_(memory, Memory_Start(memory), endex, 0, NULL, 1, True)
+        else:
+            return Memory()
+
+    def _pretrim_endex(
+        self: Memory,
+        start_min: Optional[Address],
+        size: Address,
+    ) -> None:
+        r"""Trims final data.
+
+        Low-level method to manage trimming of data starting from an address.
+
+        Arguments:
+            start_min (int):
+                Starting address of the erasure range.
+                If ``None``, :attr:`trim_endex` minus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        See Also:
+            :meth:`_pretrim_endex_backup`
+        """
+
+        Memory_PretrimEndex(self._, start_min, size)
+
+    def _pretrim_endex_backup(
+        self: Memory,
+        start_min: Optional[Address],
+        size: Address,
+    ) -> Memory:
+        r"""Backups a `_pretrim_endex()` operation.
+
+        Arguments:
+            start_min (int):
+                Starting address of the erasure range.
+                If ``None``, :attr:`trim_endex` minus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`_pretrim_endex`
+        """
+        cdef:
+            addr_t start_min_ = <addr_t>start_min
+            addr_t size_ = <addr_t>size
+            const Memory_* memory = self._
+            addr_t start
+
+        if memory.trim_endex_ and size_ > 0:
+            start = memory.trim_endex
+            CheckSubAddrU(start, size)
+            start -= size
+            if start_min is not None and start < start_min_:
+                start = start_min_
+            return Memory_Extract_(memory, start, Memory_Endex(memory), 0, NULL, 1, True)
+        else:
+            return Memory()
+
     def crop(
         self: Memory,
         start: Optional[Address] = None,
@@ -7645,6 +8174,78 @@ cdef class Memory:
         """
 
         Memory_Crop(self._, start, endex)
+
+    def crop_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Tuple[Optional[Memory], Optional[Memory]]:
+        r"""Backups a `crop()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for cropping.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for cropping.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory` couple: Backup memory regions.
+
+        See Also:
+            :meth:`crop`
+            :meth:`crop_restore`
+        """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Memory_* memory = self._
+            const Rack_* blocks = memory.blocks
+            addr_t block_start
+            addr_t block_endex
+            Memory backup_start = None
+            Memory backup_endex = None
+
+        if Rack_Length(blocks):
+            if start is not None:
+                start_ = <addr_t>start
+                block_start = Block_Start(Rack_First__(blocks))
+                if block_start < start_:
+                    backup_start = Memory_Extract_(memory, block_start, start_, 0, NULL, 1, True)
+
+            if endex is not None:
+                endex_ = <addr_t>endex
+                block_endex = Block_Endex(Rack_Last__(blocks))
+                if endex_ < block_endex:
+                    backup_endex = Memory_Extract_(memory, endex_, block_endex, 0, NULL, 1, True)
+
+        return backup_start, backup_endex
+
+    def crop_restore(
+        self: Memory,
+        backup_start: Optional[Memory],
+        backup_endex: Optional[Memory],
+    ) -> None:
+        r"""Restores a `crop()` operation.
+
+        Arguments:
+            backup_start (:obj:`Memory`):
+                Backup memory region to restore at the beginning.
+
+            backup_endex (:obj:`Memory`):
+                Backup memory region to restore at the end.
+
+        See Also:
+            :meth:`crop`
+            :meth:`crop_backup`
+        """
+
+        if backup_start is not None:
+            Memory_WriteSame_(self._, 0, (<Memory>backup_start)._, True)
+        if backup_endex is not None:
+            Memory_WriteSame_(self._, 0, (<Memory>backup_endex)._, True)
 
     def write(
         self: Memory,
@@ -7681,6 +8282,51 @@ cdef class Memory:
         """
 
         Memory_Write(self._, address, data, clear)
+
+    def write_backup(
+        self: Memory,
+        address: Address,
+        data: Union[AnyBytes, Value, Memory],
+    ) -> Memory:
+        r"""Backups a `write()` operation.
+
+        Arguments:
+            address (int):
+                Address where to start writing data.
+
+            data (bytes):
+                Data to write.
+
+        Returns:
+            :obj:`Memory` list: Backup memory regions.
+
+        See Also:
+            :meth:`write`
+            :meth:`write_restore`
+        """
+        cdef:
+            addr_t address_ = <addr_t>address
+            addr_t size = 1 if isinstance(data, int) else <addr_t>len(data)
+
+        CheckAddAddrU(address, size)
+        return Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)
+
+    def write_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `write()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`write`
+            :meth:`write_backup`
+        """
+
+        Memory_Write(self._, 0, backup, True)
 
     def fill(
         self: Memory,
@@ -7734,6 +8380,53 @@ cdef class Memory:
 
         Memory_Fill(self._, start, endex, pattern)
 
+    def fill_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `fill()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for filling.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for filling.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`fill`
+            :meth:`fill_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def fill_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `fill()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`fill`
+            :meth:`fill_backup`
+        """
+
+        Memory_WriteSame_(self._, 0, backup._, True)
+
     def flood(
         self: Memory,
         start: Optional[Address] = None,
@@ -7785,6 +8478,52 @@ cdef class Memory:
         """
 
         Memory_Flood(self._, start, endex, pattern)
+
+    def flood_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> List[OpenInterval]:
+        r"""Backups a `flood()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for filling.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for filling.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            list of open intervals: Backup memory gaps.
+
+        See Also:
+            :meth:`flood`
+            :meth:`flood_restore`
+        """
+
+        return list(self.gaps(start, endex))
+
+    def flood_restore(
+        self: Memory,
+        gaps: List[OpenInterval],
+    ) -> None:
+        r"""Restores a `flood()` operation.
+
+        Arguments:
+            gaps (list of open intervals):
+                Backup memory gaps to restore.
+
+        See Also:
+            :meth:`flood`
+            :meth:`flood_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+
+        for gap_start, gap_endex in gaps:
+            Memory_Clear(memory, gap_start, gap_endex)
 
     def keys(
         self: Memory,
