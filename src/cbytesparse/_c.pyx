@@ -4380,7 +4380,7 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
 
     # There is no faster way than the standard block writing method
     Memory_Erase__(that, address, address + 1, False, True)  # insert
-    Memory_Insert__(that, address, 1, &item, False)
+    Memory_Place__(that, address, 1, &item, False)
 
     Memory_Crop_(that, that.trim_start, that.trim_endex, None)
     return -1
@@ -4618,8 +4618,8 @@ cdef vint Memory_Reserve(Memory_* that, object address, object size, list backup
     Memory_Reserve_(that, <addr_t>address, <addr_t>size, backups)
 
 
-cdef vint Memory_Insert__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
-                          bint shift_after) except -1:
+cdef vint Memory_Place__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
+                         bint shift_after) except -1:
     cdef:
         Rack_* blocks
         size_t block_index
@@ -4651,7 +4651,6 @@ cdef vint Memory_Insert__(Memory_* that, addr_t address, size_t size, const byte
                         CheckAddAddrU(block.address, size)
                         block.address += size
                 else:
-                    block_index += 1
                     if block_index < Rack_Length(blocks):
                         CheckAddAddrU(block_endex, size)
                         block_endex += size
@@ -4827,7 +4826,7 @@ cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list 
 
 cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
                             list backups) except -1:
-    Memory_Insert__(that, address, data_size, data_ptr, True)  # TODO: backups
+    Memory_Place__(that, address, data_size, data_ptr, True)  # TODO: backups
 
     if data_size:
         Memory_Crop_(that, that.trim_start, that.trim_endex, None)  # TODO: pre-trimming
@@ -5029,7 +5028,7 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
             block = Rack_Get__(blocks, block_index)
             block_start = Block_Start(block)
             CheckAddAddrU(block_start, address)
-            Memory_Insert__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)  # insert
+            Memory_Place__(that, block_start + address, Block_Length(block), Block_At__(block, 0), False)  # insert
 
         Memory_Crop_(that, that.trim_start, that.trim_endex, None)  # FIXME: prevent after-cropping; trim while writing
 
@@ -5088,7 +5087,7 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
             Memory_Poke_(that, start, data_ptr[0])  # might be faster
         else:
             Memory_Erase__(that, start, endex, False, True)  # insert
-            Memory_Insert__(that, start, <size_t>size, data_ptr, False)
+            Memory_Place__(that, start, <size_t>size, data_ptr, False)
 
 
 cdef vint Memory_Write(Memory_* that, object address, object data, bint clear, list backups) except -1:
@@ -5141,7 +5140,7 @@ cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** patte
 
         # Standard write method
         Memory_Erase__(that, start, endex, False, True)  # insert
-        Memory_Insert__(that, start, size, Block_At__(pattern[0], 0), False)
+        Memory_Place__(that, start, size, Block_At__(pattern[0], 0), False)
 
 
 cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern, list backups) except -1:
