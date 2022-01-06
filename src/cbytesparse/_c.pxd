@@ -636,7 +636,7 @@ cdef vint Memory_Reserve(Memory_* that, object address, object size, list backup
 
 cdef vint Memory_Place__(Memory_* that, addr_t address, size_t size, const byte_t* buffer,
                          bint shift_after) except -1
-cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_after, bint merge_deletion) except -1
+cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_after) except -1
 
 cdef vint Memory_InsertSame_(Memory_* that, addr_t address, Memory_* data, list backups) except -1
 cdef vint Memory_InsertRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr,
