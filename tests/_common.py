@@ -404,10 +404,6 @@ class BaseMemorySuite:
         assert memory2._blocks == [[7, b'ABC']]
         assert (memory1 == memory2) is False
 
-        memory1 = Memory.from_bytes(b'ABC', 10)
-        memory2 = Memory.from_memory(memory1, copy=False)
-        assert all((b1[1] is b2[1]) for b1, b2 in zip(memory1._blocks, memory2._blocks)) is True
-
     def test___repr__(self):
         Memory = self.Memory
         start, endex = 0, 0

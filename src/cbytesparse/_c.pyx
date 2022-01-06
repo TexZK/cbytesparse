@@ -5581,9 +5581,6 @@ cdef class Memory:
             Optional memory exclusive end address.
             Anything at or after it will be trimmed away.
 
-    Raises:
-        :obj:`ValueError`: More than one of `memory`, `data`, and `blocks`.
-
     Examples:
         >>> memory = Memory()
         >>> memory._blocks
@@ -5783,7 +5780,7 @@ cdef class Memory:
             >>> memory1 = Memory.from_bytes(b'ABC', 5)
             >>> memory2 = Memory.from_memory(memory1)
             >>> memory2._blocks
-            [[5, b'ABC]]
+            [[5, b'ABC']]
             >>> memory1 == memory2
             True
             >>> memory1 is memory2
@@ -5796,9 +5793,17 @@ cdef class Memory:
             >>> memory1 = Memory.from_bytes(b'ABC', 10)
             >>> memory2 = Memory.from_memory(memory1, -3)
             >>> memory2._blocks
-            [[7, b'ABC]]
+            [[7, b'ABC']]
             >>> memory1 == memory2
             False
+
+            ~~~
+
+            >>> memory1 = Memory.from_bytes(b'ABC', 10)
+            >>> memory2 = Memory.from_memory(memory1, copy=False)
+            >>> all((b1[1] is b2[1])  # compare block data
+            ...     for b1, b2 in zip(memory1._blocks, memory2._blocks))
+            True
         """
         cdef:
             Memory memory_ = Memory()
@@ -5835,8 +5840,8 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [7, b'xyz']])
-            >>> memory._blocks
-            'ABCxyz'
+            >>> str(memory)
+            <[[1, b'ABC'], [7, b'xyz']]>
         """
         cdef:
             const Memory_* memory = self._
@@ -5878,7 +5883,7 @@ cdef class Memory:
             >>> bool(memory)
             False
 
-            >>> memory = Memory.from_bytes(b'Hello, World!', offset=5)
+            >>> memory = Memory.from_bytes(b'Hello, World!', 5)
             >>> bool(memory)
             True
         """
@@ -5897,11 +5902,12 @@ cdef class Memory:
 
                 If it is a :obj:`Memory`, all of its blocks must match.
 
-                If it is a :obj:`list`, it is expected that it contains the
-                same blocks as `self`.
+                If it is a :obj:`bytes`, a :obj:`bytearray`, or a
+                :obj:`memoryview`, it is expected to match the first and only
+                stored block.
 
-                Otherwise, it must match the first stored block, considered
-                equal if also starts at 0.
+                Otherwise, it must match the first and only stored block,
+                via iteration over the stored values.
 
         Returns:
             bool: `self` is equal to `other`.
@@ -5913,17 +5919,15 @@ cdef class Memory:
             True
             >>> memory.shift(1)
             >>> memory == data
-            False
+            True
 
             >>> data = b'Hello, World!'
             >>> memory = Memory.from_bytes(data)
-            >>> memory == [[0, data]]
-            True
             >>> memory == list(data)
-            False
+            True
             >>> memory.shift(1)
-            >>> memory == [[0, data]]
-            False
+            >>> memory == list(data)
+            True
         """
 
         return Memory_Eq(self._, other)
@@ -6445,6 +6449,10 @@ cdef class Memory:
             >>> memory.append(3)
             >>> memory._blocks
             [[0, b'\x03']]
+
+        See Also:
+            :meth:`append_backup`
+            :meth:`append_restore`
         """
 
         return Memory_Append(self._, item)
@@ -6490,11 +6498,12 @@ cdef class Memory:
             items (items):
                 Items to append at the end of the current virtual space.
 
-                If a :obj:`list`, it is interpreted as a sequence of
-                non-overlapping blocks, sorted by start address.
-
             offset (int):
                 Optional offset w.r.t. :attr:`content_endex`.
+
+        See Also:
+            :meth:`extend_backup`
+            :meth:`extend_restore`
         """
 
         return Memory_Extend(self._, items, offset)
@@ -6569,6 +6578,10 @@ cdef class Memory:
             122
             >>> memory.pop(3)  # -> ord('C') = 67
             67
+
+        See Also:
+            :meth:`pop_backup`
+            :meth:`pop_restore`
         """
 
         return Memory_Pop(self._, address)
@@ -7215,10 +7228,10 @@ cdef class Memory:
             tuple of int: Bounded `start` and `endex`, closed interval.
 
         Examples:
-            >>> Memory().bound()
+            >>> Memory().bound(None, None)
             (0, 0)
-            >>> Memory().bound(endex=100)
-            (0, 0)
+            >>> Memory().bound(None, 100)
+            (0, 100)
 
             ~~~
 
@@ -7230,12 +7243,12 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
             >>> memory.bound(0, 30)
-            (1, 8)
+            (0, 30)
             >>> memory.bound(2, 6)
             (2, 6)
-            >>> memory.bound(endex=6)
+            >>> memory.bound(None, 6)
             (1, 6)
-            >>> memory.bound(start=2)
+            >>> memory.bound(2, None)
             (2, 8)
 
             ~~~
@@ -7247,15 +7260,15 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[3, b'ABC']], start=1, endex=8)
-            >>> memory.bound()
+            >>> memory.bound(None, None)
             (1, 8)
             >>> memory.bound(0, 30)
             (1, 8)
             >>> memory.bound(2, 6)
             (2, 6)
-            >>> memory.bound(start=2)
+            >>> memory.bound(2, None)
             (2, 8)
-            >>> memory.bound(endex=6)
+            >>> memory.bound(None, 6)
             (1, 6)
         """
 
@@ -7418,13 +7431,17 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory.poke(3, b'@')  # -> ord('C') = 67
+            >>> memory.poke(3, b'@')
             >>> memory.peek(3)  # -> ord('@') = 64
             64
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory.poke(5, '@')
+            >>> memory.poke(5, b'@')
             >>> memory.peek(5)  # -> ord('@') = 64
             64
+
+        See Also:
+            :meth:`poke_backup`
+            :meth:`poke_restore`
         """
 
         Memory_Poke(self._, address, item)
@@ -7529,9 +7546,9 @@ cdef class Memory:
             [[1, b'ABCD'], [6, b'$'], [8, b'x']]
             >>> memory.extract(5, 8).span
             (5, 8)
-            >>> memory.extract(pattern='.')._blocks
+            >>> memory.extract(pattern=b'.')._blocks
             [[1, b'ABCD.$.xyz']]
-            >>> memory.extract(pattern='.', step=3)._blocks
+            >>> memory.extract(pattern=b'.', step=3)._blocks
             [[1, b'AD.z']]
         """
 
@@ -7557,7 +7574,7 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`BlockView`: A view of the selected address range.
+            :obj:`memoryview`: A view of the selected address range.
 
         Raises:
             :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
@@ -7569,9 +7586,19 @@ cdef class Memory:
             |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory(blocks=[[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> bytes(memory.view(2, 5))
             b'BCD'
+            >>> bytes(memory.view(9, 10))
+            b'y'
+            >>> memory.view()
+            Traceback (most recent call last):
+                ...
+            ValueError: non-contiguous data within range
+            >>> memory.view(0, 6)
+            Traceback (most recent call last):
+                ...
+            ValueError: non-contiguous data within range
         """
         cdef:
             const Memory_* memory = self._
@@ -7614,10 +7641,14 @@ cdef class Memory:
             |   |[y | z]|   |   |   |   |   |   |   |   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=2)
-            >>> memory.shift(-7)
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=3)
+            >>> memory.shift(-8)
             >>> memory._blocks
             [[2, b'yz']]
+
+        See Also:
+            :meth:`shift_backup`
+            :meth:`shift_restore`
         """
 
         Memory_Shift(self._, offset)
@@ -7700,7 +7731,7 @@ cdef class Memory:
             >>> memory = Memory.from_blocks([[3, b'ABC'], [7, b'xyz']])
             >>> memory.reserve(4, 2)
             >>> memory._blocks
-            [[2, b'A'], [6, b'BC'], [9, b'xyz']]
+            [[3, b'A'], [6, b'BC'], [9, b'xyz']]
 
             ~~~
 
@@ -7716,6 +7747,10 @@ cdef class Memory:
             >>> memory.reserve(5, 5)
             >>> memory._blocks
             [[10, b'AB']]
+
+        See Also:
+            :meth:`reserve_backup`
+            :meth:`reserve_restore`
         """
 
         Memory_Reserve(self._, address, size)
@@ -7806,6 +7841,10 @@ cdef class Memory:
             >>> memory.insert(8, b'1')
             >>> memory._blocks
             [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
+
+        See Also:
+            :meth:`insert_backup`
+            :meth:`insert_restore`
         """
 
         Memory_Insert(self._, address, data)
@@ -7891,6 +7930,10 @@ cdef class Memory:
             >>> memory.delete(6, 10)
             >>> memory._blocks
             [[5, b'Ayz']]
+
+        See Also:
+            :meth:`delete_backup`
+            :meth:`delete_restore`
         """
 
         Memory_Delete(self._, start, endex)
@@ -7971,6 +8014,10 @@ cdef class Memory:
             >>> memory.clear(6, 10)
             >>> memory._blocks
             [[5, b'A'], [10, b'yz']]
+
+        See Also:
+            :meth:`clear_backup`
+            :meth:`clear_restore`
         """
 
         Memory_Clear(self._, start, endex)
@@ -8175,6 +8222,10 @@ cdef class Memory:
             >>> memory.crop(6, 10)
             >>> memory._blocks
             [[6, b'BC'], [9, b'x']]
+
+        See Also:
+            :meth:`crop_backup`
+            :meth:`crop_restore`
         """
 
         Memory_Crop(self._, start, endex)
@@ -8283,6 +8334,10 @@ cdef class Memory:
             >>> memory.write(5, b'123')
             >>> memory._blocks
             [[1, b'ABC'], [5, b'123z']]
+
+        See Also:
+            :meth:`write_backup`
+            :meth:`write_restore`
         """
 
         Memory_Write(self._, address, data, clear)
@@ -8380,6 +8435,10 @@ cdef class Memory:
             >>> memory.fill(3, 7, b'123')
             >>> memory._blocks
             [[1, b'AB1231yz']]
+
+        See Also:
+            :meth:`fill_backup`
+            :meth:`fill_restore`
         """
 
         Memory_Fill(self._, start, endex, pattern)
@@ -8479,6 +8538,10 @@ cdef class Memory:
             >>> memory.flood(3, 7, b'123')
             >>> memory._blocks
             [[1, b'ABC23xyz']]
+
+        See Also:
+            :meth:`flood_backup`
+            :meth:`flood_restore`
         """
 
         Memory_Flood(self._, start, endex, pattern)
@@ -8576,7 +8639,7 @@ cdef class Memory:
             >>> list(memory.keys())
             [1, 2, 3, 4, 5, 6, 7, 8]
             >>> list(memory.keys(endex=8))
-            [0, 1, 2, 3, 4, 5, 6, 7]
+            [1, 2, 3, 4, 5, 6, 7]
             >>> list(memory.keys(3, 8))
             [3, 4, 5, 6, 7]
             >>> list(islice(memory.keys(3, ...), 7))
@@ -8633,7 +8696,7 @@ cdef class Memory:
             >>> from itertools import islice
             >>> memory = Memory()
             >>> list(memory.values(endex=8))
-            [None, None, None, None, None, None, None]
+            [None, None, None, None, None, None, None, None]
             >>> list(memory.values(3, 8))
             [None, None, None, None, None]
             >>> list(islice(memory.values(3, ...), 7))
@@ -8729,7 +8792,7 @@ cdef class Memory:
             >>> from itertools import islice
             >>> memory = Memory()
             >>> list(memory.values(endex=8))
-            [None, None, None, None, None, None, None]
+            [None, None, None, None, None, None, None, None]
             >>> list(memory.values(3, 8))
             [None, None, None, None, None]
             >>> list(islice(memory.values(3, ...), 7))
@@ -8940,10 +9003,6 @@ cdef class Memory:
                 Exclusive end address.
                 If ``None``, :attr:`endex` is considered.
 
-            bound (bool):
-                Only gaps within blocks are considered; emptiness before and
-                after global data bounds are ignored.
-
         Yields:
             couple of addresses: Block data interval boundaries.
 
@@ -8957,7 +9016,9 @@ cdef class Memory:
             >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
             >>> list(memory.gaps())
             [(None, 1), (3, 5), (6, 7), (10, None)]
-            >>> list(memory.gaps(bound=True))
+            >>> list(memory.gaps(0, 11))
+            [(0, 1), (3, 5), (6, 7), (10, 11)]
+            >>> list(memory.gaps(*memory.span))
             [(3, 5), (6, 7)]
             >>> list(memory.gaps(2, 6))
             [(3, 5)]
