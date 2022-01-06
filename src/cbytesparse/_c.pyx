@@ -3773,7 +3773,7 @@ cdef object Memory_SetItem(Memory_* that, object key, object value):
         # below: self.poke(key, value)
         address = <addr_t>key
         if value is None:
-            Memory_PokeNone__(that, address)
+            Memory_PokeNone_(that, address)
         else:
             if isinstance(value, int):
                 Memory_Poke_(that, address, <byte_t>value)
@@ -4307,22 +4307,12 @@ cdef object Memory_Peek(const Memory_* that, object address):
     return None if value < 0 else value
 
 
-cdef int Memory_PokeNone_(Memory_* that, addr_t address) except -2:
-    cdef:
-        int value
-
-    # Standard clear method
-    value = Memory_Peek_(that, address)
-    Memory_Erase__(that, address, address + 1, False)  # clear
-    return value
-
-
-cdef vint Memory_PokeNone__(Memory_* that, addr_t address) except -1:
+cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1:
     # Standard clear method
     Memory_Erase__(that, address, address + 1, False)  # clear
 
 
-cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
+cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
     cdef:
         Rack_* blocks = that.blocks
         size_t block_count = Rack_Length(blocks)
@@ -4332,7 +4322,6 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
         addr_t block_endex
         Block_* block2
         addr_t block_start2
-        int value
 
     block_index = Rack_IndexEndex(blocks, address) - 1
 
@@ -4344,9 +4333,8 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
         if block_start <= address < block_endex:
             # Address within existing block, update directly
             address -= block_start
-            value = Block_Get__(block, <size_t>address)
             Block_Set__(block, <size_t>address, item)
-            return value
+            return 0
 
         elif address == block_endex:
             # Address just after the end of the block, append
@@ -4363,7 +4351,7 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
                     block = Block_Extend(block, block2)
                     Rack_Set__(blocks, block_index - 1, block)  # update pointer
                     that.blocks = blocks = Rack_Pop_(blocks, block_index, NULL)
-            return -1
+            return 0
 
         else:
             block_index += 1
@@ -4376,32 +4364,29 @@ cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2:
                     block = Block_AppendLeft(block, item)
                     Rack_Set__(blocks, block_index, block)  # update pointer
                     block.address -= 1  # update address
-                    return -1
+                    return 0
 
     # There is no faster way than the standard block writing method
     Memory_Erase__(that, address, address + 1, False)  # clear
     Memory_Place__(that, address, 1, &item, False)  # write
 
     Memory_Crop_(that, that.trim_start, that.trim_endex)
-    return -1
+    return 0
 
 
-cdef object Memory_Poke(Memory_* that, object address, object item):
+cdef vint Memory_Poke(Memory_* that, object address, object item) except -1:
     cdef:
         addr_t address_ = <addr_t>address
-        int value
 
     if item is None:
-        value = Memory_PokeNone_(that, address_)
+        Memory_PokeNone_(that, address_)
     else:
         if isinstance(item, int):
-            value = Memory_Poke_(that, address_, <byte_t>item)
+            Memory_Poke_(that, address_, <byte_t>item)
         else:
             if len(item) != 1:
                 raise ValueError('expecting single item')
-            value = Memory_Poke_(that, address_, <byte_t>item[0])
-
-    return None if value < 0 else value
+            Memory_Poke_(that, address_, <byte_t>item[0])
 
 
 cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
@@ -7286,7 +7271,7 @@ cdef class Memory:
         self: Memory,
         address: Address,
         item: Optional[Union[AnyBytes, Value]],
-    ) -> Optional[Value]:
+    ) -> None:
         r"""Sets the item at an address.
 
         Arguments:
@@ -7295,9 +7280,6 @@ cdef class Memory:
 
             item (int or byte):
                 Item to set, ``None`` to clear the cell.
-
-        Returns:
-            int: The previous item at `address`, ``None`` if empty.
 
         Examples:
             +---+---+---+---+---+---+---+---+---+---+---+---+
@@ -7308,17 +7290,15 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.poke(3, b'@')  # -> ord('C') = 67
-            67
             >>> memory.peek(3)  # -> ord('@') = 64
             64
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory.poke(5, '@')
-            None
             >>> memory.peek(5)  # -> ord('@') = 64
             64
         """
 
-        return Memory_Poke(self._, address, item)
+        Memory_Poke(self._, address, item)
 
     def extract(
         self: Memory,

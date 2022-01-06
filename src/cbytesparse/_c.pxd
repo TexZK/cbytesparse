@@ -612,10 +612,9 @@ cdef int Memory_Peek_(const Memory_* that, addr_t address) except -2
 
 cdef object Memory_Peek(const Memory_* that, object address)
 
-cdef int Memory_PokeNone_(Memory_* that, addr_t address) except -2
-cdef vint Memory_PokeNone__(Memory_* that, addr_t address) except -1
-cdef int Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -2
-cdef object Memory_Poke(Memory_* that, object address, object item)
+cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1
+cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1
+cdef vint Memory_Poke(Memory_* that, object address, object item) except -1
 
 cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
                                size_t pattern_size, const byte_t* pattern_ptr,
