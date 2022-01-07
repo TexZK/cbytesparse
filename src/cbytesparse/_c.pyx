@@ -5006,11 +5006,11 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
     for block_index in range(block_count):
         block = Rack_Get__(blocks, block_index)
 
-        block_start = Block_Start(block) + address
+        block_endex = Block_Endex(block) + address
         if trim_start_ and block_endex <= trim_start:
             continue
 
-        block_endex = Block_Endex(block) + address
+        block_start = Block_Start(block) + address
         if trim_endex_ and trim_endex <= block_start:
             break
 

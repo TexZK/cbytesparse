@@ -49347,22 +49347,22 @@ static __pyx_t_11cbytesparse_2_c_vint __pyx_f_11cbytesparse_2_c_Memory_WriteSame
  *     for block_index in range(block_count):
  *         block = Rack_Get__(blocks, block_index)             # <<<<<<<<<<<<<<
  * 
- *         block_start = Block_Start(block) + address
+ *         block_endex = Block_Endex(block) + address
  */
     __pyx_v_block = __pyx_f_11cbytesparse_2_c_Rack_Get__(__pyx_v_blocks, __pyx_v_block_index);
 
     /* "cbytesparse/_c.pyx":5009
  *         block = Rack_Get__(blocks, block_index)
  * 
- *         block_start = Block_Start(block) + address             # <<<<<<<<<<<<<<
+ *         block_endex = Block_Endex(block) + address             # <<<<<<<<<<<<<<
  *         if trim_start_ and block_endex <= trim_start:
  *             continue
  */
-    __pyx_v_block_start = (__pyx_f_11cbytesparse_2_c_Block_Start(__pyx_v_block) + __pyx_v_address);
+    __pyx_v_block_endex = (__pyx_f_11cbytesparse_2_c_Block_Endex(__pyx_v_block) + __pyx_v_address);
 
     /* "cbytesparse/_c.pyx":5010
  * 
- *         block_start = Block_Start(block) + address
+ *         block_endex = Block_Endex(block) + address
  *         if trim_start_ and block_endex <= trim_start:             # <<<<<<<<<<<<<<
  *             continue
  * 
@@ -49379,17 +49379,17 @@ static __pyx_t_11cbytesparse_2_c_vint __pyx_f_11cbytesparse_2_c_Memory_WriteSame
     if (__pyx_t_1) {
 
       /* "cbytesparse/_c.pyx":5011
- *         block_start = Block_Start(block) + address
+ *         block_endex = Block_Endex(block) + address
  *         if trim_start_ and block_endex <= trim_start:
  *             continue             # <<<<<<<<<<<<<<
  * 
- *         block_endex = Block_Endex(block) + address
+ *         block_start = Block_Start(block) + address
  */
       goto __pyx_L14_continue;
 
       /* "cbytesparse/_c.pyx":5010
  * 
- *         block_start = Block_Start(block) + address
+ *         block_endex = Block_Endex(block) + address
  *         if trim_start_ and block_endex <= trim_start:             # <<<<<<<<<<<<<<
  *             continue
  * 
@@ -49399,15 +49399,15 @@ static __pyx_t_11cbytesparse_2_c_vint __pyx_f_11cbytesparse_2_c_Memory_WriteSame
     /* "cbytesparse/_c.pyx":5013
  *             continue
  * 
- *         block_endex = Block_Endex(block) + address             # <<<<<<<<<<<<<<
+ *         block_start = Block_Start(block) + address             # <<<<<<<<<<<<<<
  *         if trim_endex_ and trim_endex <= block_start:
  *             break
  */
-    __pyx_v_block_endex = (__pyx_f_11cbytesparse_2_c_Block_Endex(__pyx_v_block) + __pyx_v_address);
+    __pyx_v_block_start = (__pyx_f_11cbytesparse_2_c_Block_Start(__pyx_v_block) + __pyx_v_address);
 
     /* "cbytesparse/_c.pyx":5014
  * 
- *         block_endex = Block_Endex(block) + address
+ *         block_start = Block_Start(block) + address
  *         if trim_endex_ and trim_endex <= block_start:             # <<<<<<<<<<<<<<
  *             break
  * 
@@ -49424,7 +49424,7 @@ static __pyx_t_11cbytesparse_2_c_vint __pyx_f_11cbytesparse_2_c_Memory_WriteSame
     if (__pyx_t_1) {
 
       /* "cbytesparse/_c.pyx":5015
- *         block_endex = Block_Endex(block) + address
+ *         block_start = Block_Start(block) + address
  *         if trim_endex_ and trim_endex <= block_start:
  *             break             # <<<<<<<<<<<<<<
  * 
@@ -49434,7 +49434,7 @@ static __pyx_t_11cbytesparse_2_c_vint __pyx_f_11cbytesparse_2_c_Memory_WriteSame
 
       /* "cbytesparse/_c.pyx":5014
  * 
- *         block_endex = Block_Endex(block) + address
+ *         block_start = Block_Start(block) + address
  *         if trim_endex_ and trim_endex <= block_start:             # <<<<<<<<<<<<<<
  *             break
  * 
