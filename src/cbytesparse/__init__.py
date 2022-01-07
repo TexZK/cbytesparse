@@ -112,6 +112,6 @@ True
 
 """
 
-__version__ = '0.0.2'
+__version__ = '0.0.4'
 
 from ._c import *  # noqa: F401, F403
