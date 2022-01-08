@@ -23,56 +23,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import importlib
-import inspect
-import sys
-
-import pytest
-from _common import *
+r"""Python wrapper around C (Cython) implementation."""
 
 # noinspection PyUnresolvedReferences
-from cbytesparse.c import Memory as _Memory
+from .c import collapse_blocks
+# noinspection PyUnresolvedReferences
+from .c import Memory as _Memory
+
+from bytesparse.base import MutableMemory
 
 
-# Patch inspect.isfunction() to allow Cython functions to be discovered
-@pytest.mark.skip
-def _patch_inspect_isfunction():
-    isfunction_ = inspect.isfunction
-
-    def isfunction(obj):
-        return (isfunction_(obj)
-                or type(obj).__name__ == 'cython_function_or_method')
-
-    isfunction.isfunction_ = isfunction_
-    inspect.isfunction = isfunction
-
-
-_patch_inspect_isfunction()
-
-
-def _load_cython_tests():
-    # List of Cython modules containing tests
-    cython_test_modules = ['_test_c']
-
-    for mod in cython_test_modules:
-        try:
-            # For each callable in `mod` with name `test_*`,
-            # set the result as an attribute of this module.
-            mod = importlib.import_module(mod)
-
-            for name in dir(mod):
-                item = getattr(mod, name)
-
-                if callable(item) and name.startswith('test_'):
-                    setattr(sys.modules[__name__], name, item)
-
-        except ImportError:
-            pass
-
-
-_load_cython_tests()
-
-
-class TestMemory(BaseMemorySuite):
-    Memory: type = _Memory
-    ADDR_NEG: bool = False
+# Proper Python wrapper around the C (Cython) implementation.
+class Memory(_Memory, MutableMemory):
+    pass

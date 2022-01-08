@@ -30,12 +30,11 @@ from typing import Optional
 
 import pytest
 
-from cbytesparse import STR_MAX_CONTENT_SIZE
-from cbytesparse import Address
-from cbytesparse import BlockList
-from cbytesparse import OpenInterval
-from cbytesparse import Value
-from cbytesparse import collapse_blocks
+from bytesparse.base import STR_MAX_CONTENT_SIZE
+from bytesparse.base import Address
+from bytesparse.base import BlockList
+from bytesparse.base import OpenInterval
+from bytesparse.base import Value
 
 MAX_START: Address = 22
 MAX_SIZE: Address = 26
@@ -229,29 +228,6 @@ def test_create_bitmask_values():
     assert create_bitmask_values(4, 4) == [None, None, 2, None]
     assert create_bitmask_values(8, 4) == [None, None, None, 3]
     assert create_bitmask_values(15, 4) == [0, 1, 2, 3]
-
-
-def test_collapse_blocks___doctest__():
-    blocks = [
-        [0, b'0123456789'],
-        [0, b'ABCD'],
-        [3, b'EF'],
-        [0, b'$'],
-        [6, b'xyz'],
-    ]
-    ans_out = collapse_blocks(blocks)
-    ans_ref = [[0, b'$BCEF5xyz9']]
-    assert ans_out == ans_ref
-
-    blocks = [
-        [0, b'012'],
-        [4, b'AB'],
-        [6, b'xyz'],
-        [1, b'$'],
-    ]
-    ans_out = collapse_blocks(blocks)
-    ans_ref = [[0, b'0$2'], [4, b'ABxyz']]
-    assert ans_out == ans_ref
 
 
 class BaseMemorySuite:

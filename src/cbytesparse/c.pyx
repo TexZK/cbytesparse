@@ -48,24 +48,16 @@ from typing import Tuple
 from typing import Type
 from typing import Union
 
-Address = int
-Value = int
-AnyBytes = Union[ByteString, bytes, bytearray, memoryview, Sequence[Value]]
-Data = bytearray
-
-Block = List[Union[Address, Data]]  # typed as Tuple[Address, Data]
-BlockIndex = int
-BlockIterable = Iterable[Block]
-BlockSequence = Sequence[Block]
-BlockList = List[Block]
-MemoryList = List[Memory]
-
-OpenInterval = Tuple[Optional[Address], Optional[Address]]
-ClosedInterval = Tuple[Address, Address]
-
-EllipsisType = Type['Ellipsis']
-
-STR_MAX_CONTENT_SIZE: Address = 1000
+from bytesparse.base import Address
+from bytesparse.base import AnyBytes
+from bytesparse.base import BlockIndex
+from bytesparse.base import BlockIterable
+from bytesparse.base import BlockList
+from bytesparse.base import ClosedInterval
+from bytesparse.base import EllipsisType
+from bytesparse.base import OpenInterval
+from bytesparse.base import STR_MAX_CONTENT_SIZE
+from bytesparse.base import Value
 
 # Allocate an empty block, so that an empty view can be returned statically
 cdef:

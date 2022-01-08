@@ -114,4 +114,5 @@ True
 
 __version__ = '0.0.4'
 
-from ._c import *  # noqa: F401, F403
+from .py import collapse_blocks
+from .py import Memory
