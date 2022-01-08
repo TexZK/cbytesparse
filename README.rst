@@ -111,7 +111,7 @@ limits stated above.
 If in doubt about using the Cython implementation, just stick with the Python
 one, which is much easier to integrate and debug.
 
-More details can be found within ``cbytesparse._c``.
+More details can be found within ``cbytesparse.c``.
 
 
 Documentation
@@ -125,13 +125,13 @@ https://cbytesparse.readthedocs.io/
 Installation
 ============
 
-From PIP (might not be the latest version found on *github*):
+From PyPI (might not be the latest version found on *github*):
 
 .. code-block:: sh
 
     $ pip install cbytesparse
 
-From source root directory:
+From the source code root directory:
 
 .. code-block:: sh
 
@@ -141,17 +141,23 @@ From source root directory:
 Development
 ===========
 
-To regenerate the Cython files, run the following commands:
-
-.. code-block:: sh
-
-    $ python scripts/cython_build_src.py
-    $ python scripts/cython_build_tests.py
-
-
 To run the all the tests:
 
 .. code-block:: sh
 
     $ pip install tox
     $ tox
+
+
+To regenerate the Cython files manually, run the following commands:
+
+.. code-block:: sh
+
+    $ python scripts/cython_build_src.py
+    $ python scripts/cython_build_tests.py
+
+or alternatively:
+
+.. code-block:: sh
+
+	$ tox -e cythonize

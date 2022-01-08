@@ -1,14 +1,16 @@
 Changelog
 =========
 
-0.0.4 (TODO)
-------------
+0.0.4 (2022-01-09)
+------------------
 
 * Following the ``bytesparse`` Python package, version ``0.0.4``.
+* Refactored current implementation as the ``c`` sub-module.
 * Removed experimental backup feature.
 * Added dedicated methods to backup/restore mutated state.
 * Fixed some write/insert bugs.
 * Fixed some trim/bound bugs.
+* Methods sorted by name.
 * Removed useless functions.
 
 
