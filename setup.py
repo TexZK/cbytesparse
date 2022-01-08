@@ -67,7 +67,7 @@ setup(
     keywords=[
     ],
     install_requires=[
-#        'bytesparse>=0.0.4',  # TODO FIXME: installing local dependency `bytesparse` until official release on PyPI
+        # 'bytesparse>=0.0.4',  # TODO FIXME: installing local dependency `bytesparse` until official release on PyPI
     ],
     extras_require={
         'testing': [

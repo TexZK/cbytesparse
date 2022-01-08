@@ -114,5 +114,6 @@ True
 
 __version__ = '0.0.4'
 
-from .py import collapse_blocks
-from .py import Memory
+# noinspection PyUnresolvedReferences
+from .c import collapse_blocks  # noqa F401
+from .py import Memory  # noqa F401

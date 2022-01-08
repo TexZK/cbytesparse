@@ -48,6 +48,7 @@ from typing import Tuple
 from typing import Type
 from typing import Union
 
+from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
 from bytesparse.base import AnyBytes
 from bytesparse.base import BlockIndex
@@ -56,7 +57,6 @@ from bytesparse.base import BlockList
 from bytesparse.base import ClosedInterval
 from bytesparse.base import EllipsisType
 from bytesparse.base import OpenInterval
-from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Value
 
 # Allocate an empty block, so that an empty view can be returned statically

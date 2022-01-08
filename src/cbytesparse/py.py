@@ -25,16 +25,8 @@
 
 r"""Python wrapper around C (Cython) implementation."""
 
-from typing import Optional
-
-from bytesparse.base import Address
-from bytesparse.base import ClosedInterval
-from bytesparse.base import ImmutableMemory
 from bytesparse.base import MutableMemory
-from bytesparse.base import OpenInterval
 
-# noinspection PyUnresolvedReferences
-from .c import collapse_blocks
 # noinspection PyUnresolvedReferences
 from .c import Memory as _Memory
 

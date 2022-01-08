@@ -90020,7 +90020,7 @@ if (!__Pyx_RefNanny) {
  * from typing import Type
  * from typing import Union             # <<<<<<<<<<<<<<
  * 
- * from bytesparse.base import Address
+ * from bytesparse.base import STR_MAX_CONTENT_SIZE
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -90039,195 +90039,195 @@ if (!__Pyx_RefNanny) {
   /* "cbytesparse/c.pyx":51
  * from typing import Union
  * 
- * from bytesparse.base import Address             # <<<<<<<<<<<<<<
+ * from bytesparse.base import STR_MAX_CONTENT_SIZE             # <<<<<<<<<<<<<<
+ * from bytesparse.base import Address
  * from bytesparse.base import AnyBytes
- * from bytesparse.base import BlockIndex
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_n_s_Address);
-  __Pyx_GIVEREF(__pyx_n_s_Address);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_Address);
+  __Pyx_INCREF(__pyx_n_s_STR_MAX_CONTENT_SIZE);
+  __Pyx_GIVEREF(__pyx_n_s_STR_MAX_CONTENT_SIZE);
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_STR_MAX_CONTENT_SIZE);
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_Address); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_STR_MAX_CONTENT_SIZE); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Address, __pyx_t_1) < 0) __PYX_ERR(0, 51, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_STR_MAX_CONTENT_SIZE, __pyx_t_1) < 0) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "cbytesparse/c.pyx":52
  * 
+ * from bytesparse.base import STR_MAX_CONTENT_SIZE
+ * from bytesparse.base import Address             # <<<<<<<<<<<<<<
+ * from bytesparse.base import AnyBytes
+ * from bytesparse.base import BlockIndex
+ */
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(__pyx_n_s_Address);
+  __Pyx_GIVEREF(__pyx_n_s_Address);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_Address);
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_Address); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Address, __pyx_t_2) < 0) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "cbytesparse/c.pyx":53
+ * from bytesparse.base import STR_MAX_CONTENT_SIZE
  * from bytesparse.base import Address
  * from bytesparse.base import AnyBytes             # <<<<<<<<<<<<<<
  * from bytesparse.base import BlockIndex
  * from bytesparse.base import BlockIterable
  */
-  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 52, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s_AnyBytes);
   __Pyx_GIVEREF(__pyx_n_s_AnyBytes);
-  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_AnyBytes);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_AnyBytes); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 52, __pyx_L1_error)
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_AnyBytes);
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_AnyBytes, __pyx_t_2) < 0) __PYX_ERR(0, 52, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_AnyBytes); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_AnyBytes, __pyx_t_1) < 0) __PYX_ERR(0, 53, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "cbytesparse/c.pyx":53
+  /* "cbytesparse/c.pyx":54
  * from bytesparse.base import Address
  * from bytesparse.base import AnyBytes
  * from bytesparse.base import BlockIndex             # <<<<<<<<<<<<<<
  * from bytesparse.base import BlockIterable
  * from bytesparse.base import BlockList
  */
-  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_s_BlockIndex);
   __Pyx_GIVEREF(__pyx_n_s_BlockIndex);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_BlockIndex);
-  __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_BlockIndex); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_BlockIndex);
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockIndex, __pyx_t_1) < 0) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_BlockIndex); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockIndex, __pyx_t_2) < 0) __PYX_ERR(0, 54, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "cbytesparse/c.pyx":54
+  /* "cbytesparse/c.pyx":55
  * from bytesparse.base import AnyBytes
  * from bytesparse.base import BlockIndex
  * from bytesparse.base import BlockIterable             # <<<<<<<<<<<<<<
  * from bytesparse.base import BlockList
  * from bytesparse.base import ClosedInterval
  */
-  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s_BlockIterable);
   __Pyx_GIVEREF(__pyx_n_s_BlockIterable);
-  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_BlockIterable);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_BlockIterable); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_BlockIterable);
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockIterable, __pyx_t_2) < 0) __PYX_ERR(0, 54, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_BlockIterable); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockIterable, __pyx_t_1) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "cbytesparse/c.pyx":55
+  /* "cbytesparse/c.pyx":56
  * from bytesparse.base import BlockIndex
  * from bytesparse.base import BlockIterable
  * from bytesparse.base import BlockList             # <<<<<<<<<<<<<<
  * from bytesparse.base import ClosedInterval
  * from bytesparse.base import EllipsisType
  */
-  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_s_BlockList);
   __Pyx_GIVEREF(__pyx_n_s_BlockList);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_BlockList);
-  __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 55, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_BlockList); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_BlockList);
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockList, __pyx_t_1) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_BlockList); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_BlockList, __pyx_t_2) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "cbytesparse/c.pyx":56
+  /* "cbytesparse/c.pyx":57
  * from bytesparse.base import BlockIterable
  * from bytesparse.base import BlockList
  * from bytesparse.base import ClosedInterval             # <<<<<<<<<<<<<<
  * from bytesparse.base import EllipsisType
  * from bytesparse.base import OpenInterval
  */
-  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_INCREF(__pyx_n_s_ClosedInterval);
-  __Pyx_GIVEREF(__pyx_n_s_ClosedInterval);
-  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_ClosedInterval);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_ClosedInterval); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ClosedInterval, __pyx_t_2) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-  /* "cbytesparse/c.pyx":57
- * from bytesparse.base import BlockList
- * from bytesparse.base import ClosedInterval
- * from bytesparse.base import EllipsisType             # <<<<<<<<<<<<<<
- * from bytesparse.base import OpenInterval
- * from bytesparse.base import STR_MAX_CONTENT_SIZE
- */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_n_s_EllipsisType);
-  __Pyx_GIVEREF(__pyx_n_s_EllipsisType);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_EllipsisType);
+  __Pyx_INCREF(__pyx_n_s_ClosedInterval);
+  __Pyx_GIVEREF(__pyx_n_s_ClosedInterval);
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_ClosedInterval);
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_EllipsisType); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_ClosedInterval); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_EllipsisType, __pyx_t_1) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ClosedInterval, __pyx_t_1) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "cbytesparse/c.pyx":58
+ * from bytesparse.base import BlockList
  * from bytesparse.base import ClosedInterval
- * from bytesparse.base import EllipsisType
- * from bytesparse.base import OpenInterval             # <<<<<<<<<<<<<<
- * from bytesparse.base import STR_MAX_CONTENT_SIZE
+ * from bytesparse.base import EllipsisType             # <<<<<<<<<<<<<<
+ * from bytesparse.base import OpenInterval
  * from bytesparse.base import Value
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_INCREF(__pyx_n_s_OpenInterval);
-  __Pyx_GIVEREF(__pyx_n_s_OpenInterval);
-  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_OpenInterval);
+  __Pyx_INCREF(__pyx_n_s_EllipsisType);
+  __Pyx_GIVEREF(__pyx_n_s_EllipsisType);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_EllipsisType);
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_OpenInterval); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 58, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_EllipsisType); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_OpenInterval, __pyx_t_2) < 0) __PYX_ERR(0, 58, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_EllipsisType, __pyx_t_2) < 0) __PYX_ERR(0, 58, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "cbytesparse/c.pyx":59
+ * from bytesparse.base import ClosedInterval
  * from bytesparse.base import EllipsisType
- * from bytesparse.base import OpenInterval
- * from bytesparse.base import STR_MAX_CONTENT_SIZE             # <<<<<<<<<<<<<<
+ * from bytesparse.base import OpenInterval             # <<<<<<<<<<<<<<
  * from bytesparse.base import Value
  * 
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_n_s_STR_MAX_CONTENT_SIZE);
-  __Pyx_GIVEREF(__pyx_n_s_STR_MAX_CONTENT_SIZE);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_STR_MAX_CONTENT_SIZE);
+  __Pyx_INCREF(__pyx_n_s_OpenInterval);
+  __Pyx_GIVEREF(__pyx_n_s_OpenInterval);
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_OpenInterval);
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_bytesparse_base, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_STR_MAX_CONTENT_SIZE); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_OpenInterval); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_STR_MAX_CONTENT_SIZE, __pyx_t_1) < 0) __PYX_ERR(0, 59, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_OpenInterval, __pyx_t_1) < 0) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "cbytesparse/c.pyx":60
+ * from bytesparse.base import EllipsisType
  * from bytesparse.base import OpenInterval
- * from bytesparse.base import STR_MAX_CONTENT_SIZE
  * from bytesparse.base import Value             # <<<<<<<<<<<<<<
  * 
  * # Allocate an empty block, so that an empty view can be returned statically
