@@ -590,7 +590,7 @@ cdef object Memory_GetTrimEndex(const Memory_* that)
 cdef vint Memory_SetTrimEndex(Memory_* that, object trim_endex) except -1
 
 cdef object Memory_GetTrimSpan(const Memory_* that)
-cdef vint Memory_SetTrimSpan(Memory_* that, object span) except -1
+cdef vint Memory_SetTrimSpan(Memory_* that, object trim_span) except -1
 
 cdef addr_t Memory_Start(const Memory_* that) nogil
 cdef addr_t Memory_Endex(const Memory_* that) nogil
@@ -677,7 +677,7 @@ cdef list Memory_ToBlocks(const Memory_* that)
 cdef extern from *:
     r"""
     typedef struct Rover_ {
-    	// Sorted by data size
+        // Sorted by data size
         addr_t start;
         addr_t endex;
         addr_t address;
@@ -702,7 +702,7 @@ cdef extern from *:
     """
 
     ctypedef struct Rover_:
-    	# Sorted by data size
+        # Sorted by data size
         addr_t start
         addr_t endex
         addr_t address

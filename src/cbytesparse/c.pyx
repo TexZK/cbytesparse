@@ -1844,9 +1844,6 @@ cdef class BlockView:
 
     Memory view around an underlying block slice, implementing Python's `buffer`
     protocol API.
-
-    Accessing a block makes it read-only. Please ensure any views get
-    disposed before trying to write to the memory block again.
     """
 
     cdef vint check_(self: BlockView) except -1:
@@ -1858,64 +1855,6 @@ cdef class BlockView:
 
         if self._block:
             self._block = Block_Release(self._block)
-
-    def __cinit__(self: BlockView):
-        self._block = NULL
-
-    def __dealloc__(self: BlockView):
-        self.dispose_()
-
-    def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
-        cdef:
-            int CONTIGUOUS = PyBUF_C_CONTIGUOUS | PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
-
-        # if flags & PyBUF_WRITABLE:
-        #     raise ValueError('read only access')
-
-        self.check_()
-
-        self._block = Block_Acquire(self._block)
-
-        buffer.buf = &self._block.data[self._start]
-        buffer.obj = self
-        buffer.len = self._endex - self._start
-        buffer.itemsize = 1
-        buffer.readonly = not (flags & PyBUF_WRITABLE)
-        buffer.ndim = 1
-        buffer.format = <char*>'B' if flags & (PyBUF_FORMAT | CONTIGUOUS) else NULL
-        buffer.shape = &buffer.len if flags & (PyBUF_ND | CONTIGUOUS) else NULL
-        buffer.strides = &buffer.itemsize if flags & (PyBUF_STRIDES | CONTIGUOUS) else NULL
-        buffer.suboffsets = NULL
-        buffer.internal = NULL
-
-    def __releasebuffer__(self: BlockView, Py_buffer* buffer):
-        if self._block:
-            self._block = Block_Release_(self._block)
-
-    def __repr__(
-        self: BlockView,
-    ) -> str:
-
-        return repr(self.__str__())
-
-    def __str__(
-        self: BlockView,
-    ) -> str:
-        cdef:
-            const Block_* block = self._block
-            size_t size = self._endex - self._start
-            addr_t start
-            addr_t endex
-
-        self.check_()
-
-        if size > STR_MAX_CONTENT_SIZE:
-            start = block.address
-            CheckAddAddrU(start, size)
-            endex = start + size
-            return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{<uintptr_t><void*>self:X}>'
-        else:
-            return self.__bytes__().decode('ascii')
 
     def __bool__(
         self: BlockView,
@@ -1950,36 +1889,11 @@ cdef class BlockView:
 
         return PyBytes_FromStringAndSize(<char*><void*>data, <ssize_t>size)
 
-    @property
-    def memview(
-        self: BlockView,
-    ) -> memoryview:
-        r"""memoryview: Python :class:`memoryview` wrapper."""
-        cdef:
-            byte_t *data
-            size_t size
-            byte_t[:] view
+    def __cinit__(self: BlockView):
+        self._block = NULL
 
-        self.check_()
-
-        if self._memview is None:
-            data = &self._block.data[self._start]
-            size = self._endex - self._start
-
-            if size > 0:
-                self._memview = <byte_t[:size]>data
-            else:
-                self._memview = b''
-
-        return self._memview
-
-    def __len__(
-        self: BlockView,
-    ) -> Address:
-        r"""int: Slice length."""
-
-        self.check_()
-        return self._endex - self._start
+    def __dealloc__(self: BlockView):
+        self.dispose_()
 
     def __getattr__(
         self: BlockView,
@@ -1987,6 +1901,29 @@ cdef class BlockView:
     ) -> Any:
 
         return getattr(self.memview, attr)
+
+    def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
+        cdef:
+            int CONTIGUOUS = PyBUF_C_CONTIGUOUS | PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
+
+        # if flags & PyBUF_WRITABLE:
+        #     raise ValueError('read only access')
+
+        self.check_()
+
+        self._block = Block_Acquire(self._block)
+
+        buffer.buf = &self._block.data[self._start]
+        buffer.obj = self
+        buffer.len = self._endex - self._start
+        buffer.itemsize = 1
+        buffer.readonly = not (flags & PyBUF_WRITABLE)
+        buffer.ndim = 1
+        buffer.format = <char*>'B' if flags & (PyBUF_FORMAT | CONTIGUOUS) else NULL
+        buffer.shape = &buffer.len if flags & (PyBUF_ND | CONTIGUOUS) else NULL
+        buffer.strides = &buffer.itemsize if flags & (PyBUF_STRIDES | CONTIGUOUS) else NULL
+        buffer.suboffsets = NULL
+        buffer.internal = NULL
 
     def __getitem__(
         self: BlockView,
@@ -1996,31 +1933,42 @@ cdef class BlockView:
         self.check_()
         return self.memview[item]
 
-    @property
-    def start(
+    def __len__(
         self: BlockView,
     ) -> Address:
-        r"""int: Slice inclusive start address."""
+        r"""int: Slice length."""
 
         self.check_()
-        return self._block.address
+        return self._endex - self._start
 
-    @property
-    def endex(
+    def __releasebuffer__(self: BlockView, Py_buffer* buffer):
+        if self._block:
+            self._block = Block_Release_(self._block)
+
+    def __repr__(
         self: BlockView,
-    ) -> Address:
-        r"""int: Slice exclusive end address."""
+    ) -> str:
+
+        return repr(self.__str__())
+
+    def __str__(
+        self: BlockView,
+    ) -> str:
+        cdef:
+            const Block_* block = self._block
+            size_t size = self._endex - self._start
+            addr_t start
+            addr_t endex
 
         self.check_()
-        return self._block.address + self._endex - self._start
 
-    @property
-    def endin(
-        self: BlockView,
-    ) -> Address:
-        r"""int: Slice inclusive end address."""
-
-        return self.endex - 1
+        if size > STR_MAX_CONTENT_SIZE:
+            start = block.address
+            CheckAddAddrU(start, size)
+            endex = start + size
+            return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{<uintptr_t><void*>self:X}>'
+        else:
+            return self.__bytes__().decode('ascii')
 
     @property
     def acquired(
@@ -2049,6 +1997,55 @@ cdef class BlockView:
         """
 
         self.dispose_()
+
+    @property
+    def endex(
+        self: BlockView,
+    ) -> Address:
+        r"""int: Slice exclusive end address."""
+
+        self.check_()
+        return self._block.address + self._endex - self._start
+
+    @property
+    def endin(
+        self: BlockView,
+    ) -> Address:
+        r"""int: Slice inclusive end address."""
+
+        return self.endex - 1
+
+    @property
+    def memview(
+        self: BlockView,
+    ) -> memoryview:
+        r"""memoryview: Python :class:`memoryview` wrapper."""
+        cdef:
+            byte_t *data
+            size_t size
+            byte_t[:] view
+
+        self.check_()
+
+        if self._memview is None:
+            data = &self._block.data[self._start]
+            size = self._endex - self._start
+
+            if size > 0:
+                self._memview = <byte_t[:size]>data
+            else:
+                self._memview = b''
+
+        return self._memview
+
+    @property
+    def start(
+        self: BlockView,
+    ) -> Address:
+        r"""int: Slice inclusive start address."""
+
+        self.check_()
+        return self._block.address
 
 
 # =====================================================================================================================
@@ -4049,8 +4046,8 @@ cdef object Memory_GetTrimSpan(const Memory_* that):
             that.trim_endex if that.trim_endex_ else None)
 
 
-cdef vint Memory_SetTrimSpan(Memory_* that, object span) except -1:
-    trim_start, trim_endex = span
+cdef vint Memory_SetTrimSpan(Memory_* that, object trim_span) except -1:
+    trim_start, trim_endex = trim_span
 
     if trim_start is None:
         trim_start_ = 0
@@ -5583,13 +5580,294 @@ cdef class Memory:
         [[5, b'Hello, World!']]
     """
 
+    def __add__(
+        self: Memory,
+        value: Union[AnyBytes, Memory],
+    ) -> Memory:
+        cdef:
+            Memory_* memory_ = Memory_Add(self._, value)
+            Memory memory = Memory_AsObject(memory_)
+
+        return memory
+
+    def __bool__(
+        self: Memory,
+    ) -> bool:
+        r"""Has any items.
+
+        Returns:
+            bool: Has any items.
+
+        Examples:
+            >>> memory = Memory()
+            >>> bool(memory)
+            False
+
+            >>> memory = Memory.from_bytes(b'Hello, World!', 5)
+            >>> bool(memory)
+            True
+        """
+
+        return not Memory_IsEmpty(self._)
+
+    def __bytes__(
+        self: Memory,
+    ) -> bytes:
+        r"""Creates a bytes clone.
+
+        Returns:
+            :obj:`bytes`: Cloned data.
+
+        Raises:
+            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start = Memory_Start(memory)
+            addr_t endex = Memory_Endex(memory)
+            BlockView view = Memory_View(memory, start, endex)
+            bytes data
+
+        data = view.__bytes__()
+        view.dispose()
+        return data
+
     def __cinit__(self):
         r"""Cython constructor."""
         self._ = NULL
 
+    def __contains__(
+        self: Memory,
+        item: Union[AnyBytes, Value],
+    ) -> bool:
+        r"""Checks if some items are contained.
+
+        Arguments:
+            item (items):
+                Items to find. Can be either some byte string or an integer.
+
+        Returns:
+            bool: Item is contained.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[1 | 2 | 3]|   |[x | y | z]|
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'123'], [9, b'xyz']])
+            >>> b'23' in memory
+            True
+            >>> ord('y') in memory
+            True
+            >>> b'$' in memory
+            False
+        """
+
+        return Memory_Contains(self._, item)
+
+    def __copy__(
+        self: Memory,
+    ) -> Memory:
+        r"""Creates a shallow copy.
+
+        Note:
+            The Cython implementation actually creates a deep copy.
+
+        Returns:
+            :obj:`Memory`: Shallow copy.
+        """
+        cdef:
+            Memory_* memory_ = Memory_Copy(self._)
+            Memory memory = Memory_AsObject(memory_)
+
+        return memory
+
     def __dealloc__(self):
         r"""Cython deallocation method."""
         self._ = Memory_Free(self._)
+
+    def __deepcopy__(
+        self: Memory,
+    ) -> Memory:
+        r"""Creates a deep copy.
+
+        Returns:
+            :obj:`Memory`: Deep copy.
+        """
+        cdef:
+            Memory_* memory_ = Memory_Copy(self._)
+            Memory memory = Memory_AsObject(memory_)
+
+        return memory
+
+    def __delitem__(
+        self: Memory,
+        key: Union[Address, slice],
+    ) -> None:
+        r"""Deletes data.
+
+        Arguments:
+            key (slice or int):
+                Deletion range or address.
+
+        Note:
+            This method is not optimized for a :class:`slice` where its `step`
+            is an integer greater than 1.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C | y | z]|   |   |   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> del memory[4:9]
+            >>> memory._blocks
+            [[1, b'ABCyz']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C | D]|   |[$]|   |[x | z]|   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | D]|   |[$]|   |[x | z]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | D]|   |   |[x]|   |   |   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> del memory[9]
+            >>> memory._blocks
+            [[1, b'ABCD'], [6, b'$'], [8, b'xz']]
+            >>> del memory[3]
+            >>> memory._blocks
+            [[1, b'ABD'], [5, b'$'], [7, b'xz']]
+            >>> del memory[2:10:3]
+            >>> memory._blocks
+            [[1, b'AD'], [5, b'x']]
+        """
+
+        Memory_DelItem(self._, key)
+
+    def __eq__(
+        self: Memory,
+        other: Any,
+    ) -> bool:
+        r"""Equality comparison.
+
+        Arguments:
+            other (Memory):
+                Data to compare with `self`.
+
+                If it is a :obj:`Memory`, all of its blocks must match.
+
+                If it is a :obj:`bytes`, a :obj:`bytearray`, or a
+                :obj:`memoryview`, it is expected to match the first and only
+                stored block.
+
+                Otherwise, it must match the first and only stored block,
+                via iteration over the stored values.
+
+        Returns:
+            bool: `self` is equal to `other`.
+
+        Examples:
+            >>> data = b'Hello, World!'
+            >>> memory = Memory.from_bytes(data)
+            >>> memory == data
+            True
+            >>> memory.shift(1)
+            >>> memory == data
+            True
+
+            >>> data = b'Hello, World!'
+            >>> memory = Memory.from_bytes(data)
+            >>> memory == list(data)
+            True
+            >>> memory.shift(1)
+            >>> memory == list(data)
+            True
+        """
+
+        return Memory_Eq(self._, other)
+
+    def __getitem__(
+        self: Memory,
+        key: Union[Address, slice],
+    ) -> Any:
+        r"""Gets data.
+
+        Arguments:
+            key (slice or int):
+                Selection range or address.
+                If it is a :obj:`slice` with bytes-like `step`, the latter is
+                interpreted as the filling pattern.
+
+        Returns:
+            items: Items from the requested range.
+
+        Note:
+            This method is not optimized for a :class:`slice` where its `step`
+            is an integer greater than 1.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|
+            +---+---+---+---+---+---+---+---+---+---+---+
+            |   | 65| 66| 67| 68|   | 36|   |120|121|122|
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory[9]  # -> ord('y') = 121
+            121
+            >>> memory[:3]._blocks
+            [[1, b'AB']]
+            >>> memory[3:10]._blocks
+            [[3, b'CD'], [6, b'$'], [8, b'xy']]
+            >>> bytes(memory[3:10:b'.'])
+            b'CD.$.xy'
+            >>> memory[memory.endex]
+            None
+            >>> bytes(memory[3:10:3])
+            b'C$y'
+            >>> memory[3:10:2]._blocks
+            [[3, b'C'], [6, b'y']]
+            >>> bytes(memory[3:10:2])
+            Traceback (most recent call last):
+                ...
+            ValueError: non-contiguous data within range
+        """
+
+        return Memory_GetItem(self._, key)
+
+    def __iadd__(
+        self: Memory,
+        value: Union[AnyBytes, Memory],
+    ) -> Memory:
+
+        Memory_IAdd(self._, value)
+        return self
+
+    def __imul__(
+        self: Memory,
+        times: int,
+    ) -> Memory:
+        cdef:
+            addr_t times_ = 0 if times < 0 else <addr_t>times
+
+        Memory_IMul(self._, times_)
+        return self
 
     def __init__(
         self: Memory,
@@ -5598,6 +5876,1804 @@ cdef class Memory:
     ):
 
         self._ = Memory_Create(NULL, None, None, None, start, endex, False, False)
+
+    def __iter__(
+        self: Memory,
+    ) -> Iterator[Optional[Value]]:
+        r"""Iterates over values.
+
+        Iterates over values between :attr:`start` and :attr:`endex`.
+
+        Yields:
+            int: Value as byte integer, or ``None``.
+        """
+
+        yield from self.values()
+
+    def __len__(
+        self: Memory,
+    ) -> Address:
+        r"""Actual length.
+
+        Computes the actual length of the stored items, i.e.
+        (:attr:`endex` - :attr:`start`).
+        This will consider any trimmings being active.
+
+        Returns:
+            int: Memory length.
+        """
+
+        return Memory_Length(self._)
+
+    def __mul__(
+        self: Memory,
+        times: int,
+    ) -> Memory:
+        cdef:
+            addr_t times_ = 0 if times < 0 else <addr_t>times
+            Memory_* memory_ = Memory_Mul(self._, times_)
+            Memory memory = Memory_AsObject(memory_)
+
+        return memory
+
+    def __repr__(
+        self: Memory,
+    ) -> str:
+
+        return f'<{type(self).__name__}[0x{self.start:X}:0x{self.endex:X}]@0x{id(self):X}>'
+
+    def __reversed__(
+        self: Memory,
+    ) -> Iterator[Optional[Value]]:
+        r"""Iterates over values, reversed order.
+
+        Iterates over values between :attr:`start` and :attr:`endex`, in
+        reversed order.
+
+        Yields:
+            int: Value as byte integer, or ``None``.
+        """
+
+        yield from self.rvalues()
+
+    def __setitem__(
+        self: Memory,
+        key: Union[Address, slice],
+        value: Optional[Union[AnyBytes, Value]],
+    ) -> None:
+        r"""Sets data.
+
+        Arguments:
+            key (slice or int):
+                Selection range or address.
+
+            value (items):
+                Items to write at the selection address.
+                If `value` is null, the range is cleared.
+
+        Note:
+            This method is not optimized for a :class:`slice` where its `step`
+            is an integer greater than 1.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+
+            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |[A]|   |   |   |   |[y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |[A]|   |[C]|   |   | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |[A | 1 | C]|   |[2 | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory[7:10] = None
+            >>> memory._blocks
+            [[5, b'AB'], [10, b'yz']]
+            >>> memory[7] = b'C'
+            >>> memory[9] = b'x'
+            >>> memory._blocks == [[5, b'ABC'], [9, b'xyz']]
+            True
+            >>> memory[6:12:3] = None
+            >>> memory._blocks
+            [[5, b'A'], [7, b'C'], [10, b'yz']]
+            >>> memory[6:13:3] = b'123'
+            >>> memory._blocks
+            [[5, b'A1C'], [9, b'2yz3']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |   |   |   |   |[A | B | C]|   |[x | y | z]|
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |[$]|   |[A | B | C]|   |[x | y | z]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |[$]|   |[A | B | 4 | 5 | 6 | 7 | 8 | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |[$]|   |[A | B | 4 | 5 | < | > | 8 | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory[0:4] = b'$'
+            >>> memory._blocks
+            [[0, b'$'], [2, b'ABC'], [6, b'xyz']]
+            >>> memory[4:7] = b'45678'
+            >>> memory._blocks
+            [[0, b'$'], [2, b'AB45678yz']]
+            >>> memory[6:8] = b'<>'
+            >>> memory._blocks
+            [[0, b'$'], [2, b'AB45<>8yz']]
+        """
+
+        Memory_SetItem(self._, key, value)
+
+    def __str__(
+        self: Memory,
+    ) -> str:
+        r"""String representation.
+
+        If :attr:`content_size` is lesser than ``STR_MAX_CONTENT_SIZE``, then
+        the memory is represented as a list of blocks.
+
+        If exceeding, it is equivalent to :meth:`__repr__`.
+
+
+        Returns:
+            str: String representation.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [7, b'xyz']])
+            >>> str(memory)
+            <[[1, b'ABC'], [7, b'xyz']]>
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t size = Memory_ContentSize(memory)
+            addr_t start
+            addr_t endex
+            const Rack_* blocks
+            size_t block_index
+            const Block_* block
+            list inner_list
+
+        if size < STR_MAX_CONTENT_SIZE:
+            trim_start = f'{memory.trim_start}, ' if memory.trim_start_ else ''
+            trim_endex = f', {memory.trim_endex}' if memory.trim_endex_ else ''
+
+            inner_list = []
+            blocks = memory.blocks
+
+            for block_index in range(Rack_Length(blocks)):
+                block = Rack_Get__(blocks, block_index)
+                inner_list.append(f'[{Block_Start(block)}, {Block_Bytes(block)!r}]')
+
+            inner = ', '.join(inner_list)
+
+            return f'<{trim_start}[{inner}]{trim_endex}>'
+        else:
+            return repr(self)
+
+    def _block_index_at(
+        self: Memory,
+        address: Address,
+    ) -> Optional[BlockIndex]:
+        r"""Locates the block enclosing an address.
+
+        Returns the index of the block enclosing the given address.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+        Returns:
+            int: Block index if found, ``None`` otherwise.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   | 0 | 0 | 0 | 0 |   | 1 |   | 2 | 2 | 2 |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_at(i) for i in range(12)]
+            [None, 0, 0, 0, 0, None, 1, None, 2, 2, 2, None]
+        """
+        cdef:
+            ssize_t block_index
+
+        block_index = Rack_IndexAt(self._.blocks, address)
+        return None if block_index < 0 else block_index
+
+    def _block_index_endex(
+        self: Memory,
+        address: Address,
+    ) -> BlockIndex:
+        r"""Locates the first block after an address range.
+
+        Returns the index of the first block whose end address is lesser than or
+        equal to `address`.
+
+        Useful to find the termination block index in a ranged search.
+
+        Arguments:
+            address (int):
+                Exclusive end address of the scanned range.
+
+        Returns:
+            int: First block index after `address`.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 1 | 1 | 1 | 1 | 2 | 2 | 3 | 3 | 3 | 3 |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_endex(i) for i in range(12)]
+            [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]
+        """
+
+        return Rack_IndexEndex(self._.blocks, address)
+
+    def _block_index_start(
+        self: Memory,
+        address: Address,
+    ) -> BlockIndex:
+        r"""Locates the first block inside of an address range.
+
+        Returns the index of the first block whose start address is greater than
+        or equal to `address`.
+
+        Useful to find the initial block index in a ranged search.
+
+        Arguments:
+            address (int):
+                Inclusive start address of the scanned range.
+
+        Returns:
+            int: First block index since `address`.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 3 |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> [memory._block_index_start(i) for i in range(12)]
+            [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
+        """
+
+        return Rack_IndexStart(self._.blocks, address)
+
+    @property
+    def _blocks(
+        self: Memory,
+    ) -> BlockList:
+        r"""list of blocks: A sequence of spaced blocks, sorted by address."""
+
+        return Memory_ToBlocks(self._)
+
+    def _pretrim_endex(
+        self: Memory,
+        start_min: Optional[Address],
+        size: Address,
+    ) -> None:
+        r"""Trims final data.
+
+        Low-level method to manage trimming of data starting from an address.
+
+        Arguments:
+            start_min (int):
+                Starting address of the erasure range.
+                If ``None``, :attr:`trim_endex` minus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        See Also:
+            :meth:`_pretrim_endex_backup`
+        """
+
+        Memory_PretrimEndex(self._, start_min, size)
+
+    def _pretrim_endex_backup(
+        self: Memory,
+        start_min: Optional[Address],
+        size: Address,
+    ) -> Memory:
+        r"""Backups a `_pretrim_endex()` operation.
+
+        Arguments:
+            start_min (int):
+                Starting address of the erasure range.
+                If ``None``, :attr:`trim_endex` minus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`_pretrim_endex`
+        """
+        cdef:
+            addr_t start_min_
+            addr_t size_ = <addr_t>size
+            const Memory_* memory = self._
+            addr_t start
+
+        if memory.trim_endex_ and size_ > 0:
+            start = memory.trim_endex
+            CheckSubAddrU(start, size)
+            start -= size
+            if start_min is not None:
+                start_min_ = <addr_t>start_min
+                if start < start_min_:
+                    start = start_min_
+            return Memory_Extract_(memory, start, Memory_Endex(memory), 0, NULL, 1, True)
+        else:
+            return Memory()
+
+    def _pretrim_start(
+        self: Memory,
+        endex_max: Optional[Address],
+        size: Address,
+    ) -> None:
+        r"""Trims initial data.
+
+        Low-level method to manage trimming of data starting from an address.
+
+        Arguments:
+            endex_max (int):
+                Exclusive end address of the erasure range.
+                If ``None``, :attr:`trim_start` plus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        See Also:
+            :meth:`_pretrim_start_backup`
+        """
+
+        Memory_PretrimStart(self._, endex_max, size)
+
+    def _pretrim_start_backup(
+        self: Memory,
+        endex_max: Optional[Address],
+        size: Address,
+    ) -> Memory:
+        r"""Backups a `_pretrim_start()` operation.
+
+        Arguments:
+            endex_max (int):
+                Exclusive end address of the erasure range.
+                If ``None``, :attr:`trim_start` plus `size` is considered.
+
+            size (int):
+                Size of the erasure range.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`_pretrim_start`
+        """
+        cdef:
+            addr_t endex_max_
+            addr_t size_ = <addr_t>size
+            const Memory_* memory = self._
+            addr_t endex
+
+        if memory.trim_start_ and size_ > 0:
+            endex = memory.trim_start
+            CheckAddAddrU(endex, size)
+            endex += size
+            if endex_max is not None:
+                endex_max_ = <addr_t>endex_max
+                if endex > endex_max_:
+                    endex = endex_max_
+            return Memory_Extract_(memory, Memory_Start(memory), endex, 0, NULL, 1, True)
+        else:
+            return Memory()
+
+    def append(
+        self: Memory,
+        item: Union[AnyBytes, Value],
+    ) -> None:
+        r"""Appends a single item.
+
+        Arguments:
+            item (int):
+                Value to append. Can be a single byte string or integer.
+
+        Examples:
+            >>> memory = Memory()
+            >>> memory.append(b'$')
+            >>> memory._blocks
+            [[0, b'$']]
+
+            ~~~
+
+            >>> memory = Memory()
+            >>> memory.append(3)
+            >>> memory._blocks
+            [[0, b'\x03']]
+
+        See Also:
+            :meth:`append_backup`
+            :meth:`append_restore`
+        """
+
+        return Memory_Append(self._, item)
+
+    # noinspection PyMethodMayBeStatic
+    def append_backup(
+        self: Memory,
+    ) -> None:
+        r"""Backups an `append()` operation.
+
+        Returns:
+            None: Nothing.
+
+        See Also:
+            :meth:`append`
+            :meth:`append_restore`
+        """
+
+        return None
+
+    def append_restore(
+        self: Memory,
+    ) -> None:
+        r"""Restores an `append()` operation.
+
+        See Also:
+            :meth:`append`
+            :meth:`append_backup`
+        """
+
+        Memory_PopLast_(self._)
+
+    def block_span(
+        self: Memory,
+        address: Address,
+    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
+        r"""Span of block data.
+
+        It searches for the biggest chunk of data adjacent to the given
+        address.
+
+        If the address is within a gap, its bounds are returned, and its
+        value is ``None``.
+
+        If the address is before or after any data, bounds are ``None``.
+
+        Arguments:
+            address (int):
+                Reference address.
+
+        Returns:
+            tuple: Start bound, exclusive end bound, and reference value.
+
+        Examples:
+            >>> memory = Memory()
+            >>> memory.block_span(0)
+            (None, None, None)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |[A | B | B | B | C]|   |   |[C | C | D]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
+            >>> memory.block_span(2)
+            (0, 5, 66)
+            >>> memory.block_span(4)
+            (0, 5, 67)
+            >>> memory.block_span(5)
+            (5, 7, None)
+            >>> memory.block_span(10)
+            (10, None, None)
+        """
+        cdef:
+            addr_t address_ = <addr_t>address
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            byte_t value
+
+        block_index = Rack_IndexStart(blocks, address_)
+
+        if block_index < block_count:
+            block = Rack_Get__(blocks, block_index)
+            block_start = Block_Start(block)
+            block_endex = Block_Endex(block)
+
+            if block_start <= address_ < block_endex:
+                # Address within a block
+                CheckSubAddrU(address_, block_start)
+                CheckAddrToSizeU(address_ - block_start)
+                value = Block_Get__(block, <size_t>(address_ - block_start))
+                return block_start, block_endex, value  # block span
+
+            elif block_index:
+                # Address within a gap
+                block_endex = block_start  # end gap before next block
+                block = Rack_Get__(blocks, block_index - 1)
+                block_start = Block_Endex(block)  # start gap after previous block
+                return block_start, block_endex, None  # gap span
+
+            else:
+                # Address before content
+                return None, block_start, None  # open left
+
+        else:
+            # Address after content
+            if block_count:
+                block = Rack_Last__(blocks)
+                block_start = Block_Start(block)
+                block_endex = Block_Endex(block)
+                return block_endex, None, None  # open right
+
+            else:
+                return None, None, None  # fully open
+
+    def bound(
+        self: Memory,
+        start: Optional[Address],
+        endex: Optional[Address],
+    ) -> ClosedInterval:
+        r"""Bounds addresses.
+
+        It bounds the given addresses to stay within memory limits.
+        ``None`` is used to ignore a limit for the `start` or `endex`
+        directions.
+
+        In case of stored data, :attr:`content_start` and
+        :attr:`content_endex` are used as bounds.
+
+        In case of trimming limits, :attr:`trim_start` or :attr:`trim_endex`
+        are used as bounds, when not ``None``.
+
+        In case `start` and `endex` are in the wrong order, one clamps
+        the other if present (see the Python implementation for details).
+
+        Returns:
+            tuple of int: Bounded `start` and `endex`, closed interval.
+
+        Examples:
+            >>> Memory().bound(None, None)
+            (0, 0)
+            >>> Memory().bound(None, 100)
+            (0, 100)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.bound(0, 30)
+            (0, 30)
+            >>> memory.bound(2, 6)
+            (2, 6)
+            >>> memory.bound(None, 6)
+            (1, 6)
+            >>> memory.bound(2, None)
+            (2, 8)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[[[|   |[A | B | C]|   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[3, b'ABC']], start=1, endex=8)
+            >>> memory.bound(None, None)
+            (1, 8)
+            >>> memory.bound(0, 30)
+            (1, 8)
+            >>> memory.bound(2, 6)
+            (2, 6)
+            >>> memory.bound(2, None)
+            (2, 8)
+            >>> memory.bound(None, 6)
+            (1, 6)
+        """
+
+        return Memory_Bound(self._, start, endex)
+
+    def clear(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+        r"""Clears an address range.
+
+        Arguments:
+            start (int):
+                Inclusive start address for clearing.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for clearing.
+                If ``None``, :attr:`endex` is considered.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+
+            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |[A]|   |   |   |   |[y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory.clear(6, 10)
+            >>> memory._blocks
+            [[5, b'A'], [10, b'yz']]
+
+        See Also:
+            :meth:`clear_backup`
+            :meth:`clear_restore`
+        """
+
+        Memory_Clear(self._, start, endex)
+
+    def clear_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `clear()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for clearing.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for clearing.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`clear`
+            :meth:`clear_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def clear_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `clear()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`clear`
+            :meth:`clear_backup`
+        """
+
+        Memory_WriteSame_(self._, 0, backup._, True)
+
+    @property
+    def content_endex(
+        self: Memory,
+    ) -> Address:
+        r"""int: Exclusive content end address.
+
+        This property holds the exclusive end address of the memory content.
+        By default, it is the current maximmum exclusive end address of
+        the last stored block.
+
+        If the memory has no data and no trimming, :attr:`start` is returned.
+
+        Trimming is considered only for an empty memory.
+
+        Examples:
+            >>> Memory().content_endex
+            0
+            >>> Memory(endex=8).content_endex
+            0
+            >>> Memory(start=1, endex=8).content_endex
+            1
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_endex
+            8
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.content_endex
+            4
+        """
+
+        return Memory_ContentEndex(self._)
+
+    @property
+    def content_endin(
+        self: Memory,
+    ) -> Address:
+        r"""int: Inclusive content end address.
+
+        This property holds the inclusive end address of the memory content.
+        By default, it is the current maximmum inclusive end address of
+        the last stored block.
+
+        If the memory has no data and no trimming, :attr:`start` minus one is
+        returned.
+
+        Trimming is considered only for an empty memory.
+
+        Examples:
+            >>> Memory().content_endin
+            -1
+            >>> Memory(endex=8).content_endin
+            -1
+            >>> Memory(start=1, endex=8).content_endin
+            0
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_endin
+            7
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.content_endin
+            3
+        """
+
+        return Memory_ContentEndin(self._)
+
+    @property
+    def content_parts(
+        self: Memory,
+    ) -> int:
+        r"""Number of blocks.
+
+        Returns:
+            int: The number of blocks.
+
+        Examples:
+            >>> Memory().content_parts
+            0
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_parts
+            2
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.content_parts
+            1
+        """
+
+        return Memory_ContentParts(self._)
+
+    @property
+    def content_size(
+        self: Memory,
+    ) -> Address:
+        r"""Actual content size.
+
+        Returns:
+            int: The sum of all block lengths.
+
+        Examples:
+            >>> Memory().content_size
+            0
+            >>> Memory(start=1, endex=8).content_size
+            0
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_size
+            6
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.content_size
+            3
+        """
+
+        return Memory_ContentSize(self._)
+
+    @property
+    def content_span(
+        self: Memory,
+    ) -> ClosedInterval:
+        r"""tuple of int: Memory content address span.
+
+        A :attr:`tuple` holding both :attr:`content_start` and
+        :attr:`content_endex`.
+
+        Examples:
+            >>> Memory().content_span
+            (0, 0)
+            >>> Memory(start=1).content_span
+            (1, 1)
+            >>> Memory(endex=8).content_span
+            (0, 0)
+            >>> Memory(start=1, endex=8).content_span
+            (1, 1)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_span
+            (1, 8)
+        """
+
+        return Memory_ContentSpan(self._)
+
+    @property
+    def content_start(
+        self: Memory,
+    ) -> Address:
+        r"""int: Inclusive content start address.
+
+        This property holds the inclusive start address of the memory content.
+        By default, it is the current minimum inclusive start address of
+        the first stored block.
+
+        If the memory has no data and no trimming, 0 is returned.
+
+        Trimming is considered only for an empty memory.
+
+        Examples:
+            >>> Memory().content_start
+            0
+            >>> Memory(start=1).content_start
+            1
+            >>> Memory(start=1, endex=8).content_start
+            1
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.content_start
+            1
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[[[|   |   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
+            >>> memory.content_start
+            5
+        """
+
+        return Memory_ContentStart(self._)
+
+    @property
+    def contiguous(
+        self: Memory,
+    ) -> bool:
+        r"""bool: Contains contiguous data.
+
+        The memory is considered to have contiguous data if there is no empty
+        space between blocks.
+
+        If trimming is defined, there must be no empty space also towards it.
+        """
+
+        return Memory_Contiguous(self._)
+
+    def count(
+        self: Memory,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> int:
+        r"""Counts items.
+
+        Arguments:
+            item (items):
+                Reference value to count.
+
+            start (int):
+                Inclusive start of the searched range.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end of the searched range.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            int: The number of items equal to `value`.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[B | a | t]|   |[t | a | b]|
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'Bat'], [9, b'tab']])
+            >>> memory.count(b'a')
+            2
+        """
+
+        return Memory_Count(self._, item, start, endex)
+
+    def crop(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+        r"""Keeps data within an address range.
+
+        Arguments:
+            start (int):
+                Inclusive start address for cropping.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for cropping.
+                If ``None``, :attr:`endex` is considered.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+
+            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+            |   |   |[B | C]|   |[x]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory.crop(6, 10)
+            >>> memory._blocks
+            [[6, b'BC'], [9, b'x']]
+
+        See Also:
+            :meth:`crop_backup`
+            :meth:`crop_restore`
+        """
+
+        Memory_Crop(self._, start, endex)
+
+    def crop_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Tuple[Optional[Memory], Optional[Memory]]:
+        r"""Backups a `crop()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for cropping.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for cropping.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory` couple: Backup memory regions.
+
+        See Also:
+            :meth:`crop`
+            :meth:`crop_restore`
+        """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Memory_* memory = self._
+            const Rack_* blocks = memory.blocks
+            addr_t block_start
+            addr_t block_endex
+            Memory backup_start = None
+            Memory backup_endex = None
+
+        if Rack_Length(blocks):
+            if start is not None:
+                start_ = <addr_t>start
+                block_start = Block_Start(Rack_First__(blocks))
+                if block_start < start_:
+                    backup_start = Memory_Extract_(memory, block_start, start_, 0, NULL, 1, True)
+
+            if endex is not None:
+                endex_ = <addr_t>endex
+                block_endex = Block_Endex(Rack_Last__(blocks))
+                if endex_ < block_endex:
+                    backup_endex = Memory_Extract_(memory, endex_, block_endex, 0, NULL, 1, True)
+
+        return backup_start, backup_endex
+
+    def crop_restore(
+        self: Memory,
+        backup_start: Optional[Memory],
+        backup_endex: Optional[Memory],
+    ) -> None:
+        r"""Restores a `crop()` operation.
+
+        Arguments:
+            backup_start (:obj:`Memory`):
+                Backup memory region to restore at the beginning.
+
+            backup_endex (:obj:`Memory`):
+                Backup memory region to restore at the end.
+
+        See Also:
+            :meth:`crop`
+            :meth:`crop_backup`
+        """
+
+        if backup_start is not None:
+            Memory_WriteSame_(self._, 0, (<Memory>backup_start)._, True)
+        if backup_endex is not None:
+            Memory_WriteSame_(self._, 0, (<Memory>backup_endex)._, True)
+
+    def delete(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+        r"""Deletes an address range.
+
+        Arguments:
+            start (int):
+                Inclusive start address for deletion.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for deletion.
+                If ``None``, :attr:`endex` is considered.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+
+            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13|
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[A | y | z]|   |   |   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory.delete(6, 10)
+            >>> memory._blocks
+            [[5, b'Ayz']]
+
+        See Also:
+            :meth:`delete_backup`
+            :meth:`delete_restore`
+        """
+
+        Memory_Delete(self._, start, endex)
+
+    def delete_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `delete()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for deletion.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for deletion.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`delete`
+            :meth:`delete_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def delete_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `delete()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region
+
+        See Also:
+            :meth:`delete`
+            :meth:`delete_backup`
+        """
+
+        Memory_InsertSame_(self._, 0, backup._)
+
+    @property
+    def endex(
+        self: Memory,
+    ) -> Address:
+        r"""int: Exclusive end address.
+
+        This property holds the exclusive end address of the virtual space.
+        By default, it is the current maximmum exclusive end address of
+        the last stored block.
+
+        If  :attr:`trim_endex` not ``None``, that is returned.
+
+        If the memory has no data and no trimming, :attr:`start` is returned.
+
+        Examples:
+            >>> Memory().endex
+            0
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.endex
+            8
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.endex
+            8
+        """
+
+        return Memory_Endex(self._)
+
+    @property
+    def endin(
+        self: Memory,
+    ) -> Address:
+        r"""int: Inclusive end address.
+
+        This property holds the inclusive end address of the virtual space.
+        By default, it is the current maximmum inclusive end address of
+        the last stored block.
+
+        If  :attr:`trim_endex` not ``None``, that minus one is returned.
+
+        If the memory has no data and no trimming, :attr:`start` is returned.
+
+        Examples:
+            >>> Memory().endin
+            -1
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.endin
+            7
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |   |   |)))|
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
+            >>> memory.endin
+            7
+        """
+
+        return Memory_Endin(self._)
+
+    def equal_span(
+        self: Memory,
+        address: Address,
+    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
+        r"""Span of homogeneous data.
+
+        It searches for the biggest chunk of data adjacent to the given
+        address, with the same value at that address.
+
+        If the address is within a gap, its bounds are returned, and its
+        value is ``None``.
+
+        If the address is before or after any data, bounds are ``None``.
+
+        Arguments:
+            address (int):
+                Reference address.
+
+        Returns:
+            tuple: Start bound, exclusive end bound, and reference value.
+
+        Examples:
+            >>> memory = Memory()
+            >>> memory.equal_span(0)
+            (None, None, None)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |[A | B | B | B | C]|   |   |[C | C | D]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
+            >>> memory.equal_span(2)
+            (1, 4, 66)
+            >>> memory.equal_span(4)
+            (4, 5, 67)
+            >>> memory.equal_span(5)
+            (5, 7, None)
+            >>> memory.equal_span(10)
+            (10, None, None)
+        """
+        cdef:
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t address_ = <addr_t>address
+            addr_t start
+            addr_t endex
+            size_t offset
+            byte_t value
+
+        block_index = Rack_IndexStart(blocks, address_)
+
+        if block_index < block_count:
+            block = Rack_Get__(blocks, block_index)
+            block_start = Block_Start(block)
+            block_endex = Block_Endex(block)
+
+            if block_start <= address_ < block_endex:
+                # Address within a block
+                CheckSubAddrU(address_, block_start)
+                CheckAddrToSizeU(address - block_start)
+                offset = <size_t>(address_ - block_start)
+                start = offset
+                CheckAddAddrU(offset, 1)
+                endex = offset + 1
+                value = Block_Get__(block, offset)
+
+                for start in range(start + 1, 0, -1):
+                    if Block_Get__(block, start - 1) != value:
+                        break
+                else:
+                    start = 0
+
+                for endex in range(endex, Block_Length(block)):
+                    if Block_Get__(block, endex) != value:
+                        break
+                else:
+                    endex = Block_Length(block)
+
+                block_endex = block_start + endex
+                block_start = block_start + start
+                return block_start, block_endex, value  # equal data span
+
+            elif block_index:
+                # Address within a gap
+                block_endex = block_start  # end gap before next block
+                block = Rack_Get__(blocks, block_index - 1)
+                block_start = Block_Endex(block)  # start gap after previous block
+                return block_start, block_endex, None  # gap span
+
+            else:
+                # Address before content
+                return None, block_start, None  # open left
+
+        else:
+            # Address after content
+            if block_count:
+                block = Rack_Last__(blocks)
+                block_start = Block_Start(block)
+                block_endex = Block_Endex(block)
+                return block_endex, None, None  # open right
+
+            else:
+                return None, None, None  # fully open
+
+    def extend(
+        self: Memory,
+        items: Union[AnyBytes, Memory],
+        offset: Address = 0,
+    ) -> None:
+        r"""Concatenates items.
+
+        Equivalent to ``self += items``.
+
+        Arguments:
+            items (items):
+                Items to append at the end of the current virtual space.
+
+            offset (int):
+                Optional offset w.r.t. :attr:`content_endex`.
+
+        See Also:
+            :meth:`extend_backup`
+            :meth:`extend_restore`
+        """
+
+        return Memory_Extend(self._, items, offset)
+
+    def extend_backup(
+        self: Memory,
+        offset: Address = 0,
+    ) -> Address:
+        r"""Backups an `extend()` operation.
+
+        Arguments:
+            items (items):
+                Items to append at the end of the current virtual space.
+
+            offset (int):
+                Optional offset w.r.t. :attr:`content_endex`.
+
+        Returns:
+            int: Content exclusive end address.
+
+        See Also:
+            :meth:`extend`
+            :meth:`extend_restore`
+        """
+
+        return Memory_ContentEndex(self._) + <addr_t>offset
+
+    def extend_restore(
+        self: Memory,
+        content_endex: Address,
+    ) -> None:
+        r"""Restores an `extend()` operation.
+
+        Arguments:
+            content_endex (int):
+                Content exclusive end address to restore.
+
+        See Also:
+            :meth:`extend`
+            :meth:`extend_backup`
+        """
+
+        Memory_Clear_(self._, <addr_t>content_endex, ADDR_MAX)
+
+    def extract(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+        step: Optional[Address] = None,
+        bound: bool = True,
+    ) -> Memory:
+        r"""Selects items from a range.
+
+        Arguments:
+            start (int):
+                Inclusive start of the extracted range.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end of the extracted range.
+                If ``None``, :attr:`endex` is considered.
+
+            pattern (items):
+                Optional pattern of items to fill the emptiness.
+
+            step (int):
+                Optional address stepping between bytes extracted from the
+                range. It has the same meaning of Python's :attr:`slice.step`,
+                but negative steps are ignored.
+                Please note that a `step` greater than 1 could take much more
+                time to process than the default unitary step.
+
+            bound (bool):
+                The selected address range is applied to the resulting memory
+                as its trimming range. This retains information about any
+                initial and final emptiness of that range, which would be lost
+                otherwise.
+
+        Returns:
+            :obj:`Memory`: A copy of the memory from the selected range.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory.extract()._blocks
+            [[1, b'ABCD'], [6, b'$'], [8, b'xyz']]
+            >>> memory.extract(2, 9)._blocks
+            [[2, b'BCD'], [6, b'$'], [8, b'x']]
+            >>> memory.extract(start=2)._blocks
+            [[2, b'BCD'], [6, b'$'], [8, b'xyz']]
+            >>> memory.extract(endex=9)._blocks
+            [[1, b'ABCD'], [6, b'$'], [8, b'x']]
+            >>> memory.extract(5, 8).span
+            (5, 8)
+            >>> memory.extract(pattern=b'.')._blocks
+            [[1, b'ABCD.$.xyz']]
+            >>> memory.extract(pattern=b'.', step=3)._blocks
+            [[1, b'AD.z']]
+        """
+
+        return Memory_Extract(self._, start, endex, pattern, step, bound)
+
+    def fill(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Union[AnyBytes, Value] = 0,
+    ) -> None:
+        r"""Overwrites a range with a pattern.
+
+        Arguments:
+            start (int):
+                Inclusive start address for filling.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for filling.
+                If ``None``, :attr:`endex` is considered.
+
+            pattern (items):
+                Pattern of items to fill the range.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[1 | 2 | 3 | 1 | 2 | 3 | 1 | 2]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.fill(pattern=b'123')
+            >>> memory._blocks
+            [[1, b'12312312']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | 1 | 2 | 3 | 1 | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.fill(3, 7, b'123')
+            >>> memory._blocks
+            [[1, b'AB1231yz']]
+
+        See Also:
+            :meth:`fill_backup`
+            :meth:`fill_restore`
+        """
+
+        Memory_Fill(self._, start, endex, pattern)
+
+    def fill_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Memory:
+        r"""Backups a `fill()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for filling.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for filling.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`fill`
+            :meth:`fill_restore`
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
+
+    def fill_restore(
+        self: Memory,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `fill()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`fill`
+            :meth:`fill_backup`
+        """
+
+        Memory_WriteSame_(self._, 0, backup._, True)
+
+    def find(
+        self: Memory,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Address:
+        r"""Index of an item.
+
+        Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
+            start (int):
+                Inclusive start of the searched range.
+                If ``None``, :attr:`endex` is considered.
+
+            endex (int):
+                Exclusive end of the searched range.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            int: The index of the first item equal to `value`, or -1.
+        """
+
+        return Memory_Find(self._, item, start, endex)
+
+    def flood(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Union[AnyBytes, Value] = 0,
+    ) -> None:
+        r"""Fills emptiness between non-touching blocks.
+
+        Arguments:
+            start (int):
+                Inclusive start address for flooding.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for flooding.
+                If ``None``, :attr:`endex` is considered.
+
+            pattern (items):
+                Pattern of items to fill the range.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C | 1 | 2 | x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.flood(pattern=b'123')
+            >>> memory._blocks
+            [[1, b'ABC12xyz']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C | 2 | 3 | x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.flood(3, 7, b'123')
+            >>> memory._blocks
+            [[1, b'ABC23xyz']]
+
+        See Also:
+            :meth:`flood_backup`
+            :meth:`flood_restore`
+        """
+
+        Memory_Flood(self._, start, endex, pattern)
+
+    def flood_backup(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> List[OpenInterval]:
+        r"""Backups a `flood()` operation.
+
+        Arguments:
+            start (int):
+                Inclusive start address for filling.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for filling.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            list of open intervals: Backup memory gaps.
+
+        See Also:
+            :meth:`flood`
+            :meth:`flood_restore`
+        """
+
+        return list(self.gaps(start, endex))
+
+    def flood_restore(
+        self: Memory,
+        gaps: List[OpenInterval],
+    ) -> None:
+        r"""Restores a `flood()` operation.
+
+        Arguments:
+            gaps (list of open intervals):
+                Backup memory gaps to restore.
+
+        See Also:
+            :meth:`flood`
+            :meth:`flood_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+
+        for gap_start, gap_endex in gaps:
+            Memory_Clear(memory, gap_start, gap_endex)
 
     @classmethod
     def from_blocks(
@@ -5804,310 +7880,93 @@ cdef class Memory:
         memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate)
         return memory_
 
-    def __repr__(
+    def gaps(
         self: Memory,
-    ) -> str:
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        bound: bool = False,
+    ) -> Iterator[OpenInterval]:
+        r"""Iterates over block gaps.
 
-        return f'<{type(self).__name__}[0x{self.start:X}:0x{self.endex:X}]@0x{id(self):X}>'
+        Iterates over gaps emptiness bounds within an address range.
+        If a yielded bound is ``None``, that direction is infinitely empty
+        (valid before or after global data bounds).
 
-    def __str__(
-        self: Memory,
-    ) -> str:
-        r"""String representation.
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
 
-        If :attr:`content_size` is lesser than ``STR_MAX_CONTENT_SIZE``, then
-        the memory is represented as a list of blocks.
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
 
-        If exceeding, it is equivalent to :meth:`__repr__`.
-
-
-        Returns:
-            str: String representation.
+        Yields:
+            couple of addresses: Block data interval boundaries.
 
         Example:
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
             +===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |[x | y | z]|   |
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
             +---+---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [7, b'xyz']])
-            >>> str(memory)
-            <[[1, b'ABC'], [7, b'xyz']]>
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> list(memory.gaps())
+            [(None, 1), (3, 5), (6, 7), (10, None)]
+            >>> list(memory.gaps(0, 11))
+            [(0, 1), (3, 5), (6, 7), (10, 11)]
+            >>> list(memory.gaps(*memory.span))
+            [(3, 5), (6, 7)]
+            >>> list(memory.gaps(2, 6))
+            [(3, 5)]
         """
         cdef:
-            const Memory_* memory = self._
-            addr_t size = Memory_ContentSize(memory)
-            addr_t start
-            addr_t endex
-            const Rack_* blocks
+            addr_t start_
+            addr_t endex_
+            bint bound_ = <bint>bound
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
             size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
             const Block_* block
-            list inner_list
+            addr_t block_start
+            addr_t block_endex
 
-        if size < STR_MAX_CONTENT_SIZE:
-            trim_start = f'{memory.trim_start}, ' if memory.trim_start_ else ''
-            trim_endex = f', {memory.trim_endex}' if memory.trim_endex_ else ''
+        if block_count:
+            start__ = start
+            endex__ = endex
+            start_, endex_ = Memory_Bound(self._, start, endex)
 
-            inner_list = []
-            blocks = memory.blocks
+            if start__ is None:
+                if not bound_:
+                    block = Rack_First__(blocks)
+                    start_ = Block_Start(block)  # override trim start
+                    yield None, start_
+                block_index_start = 0
+            else:
+                block_index_start = Rack_IndexStart(blocks, start_)
 
-            for block_index in range(Rack_Length(blocks)):
+            if endex__ is None:
+                block_index_endex = block_count
+            else:
+                block_index_endex = Rack_IndexEndex(blocks, endex_)
+
+            for block_index in range(block_index_start, block_index_endex):
                 block = Rack_Get__(blocks, block_index)
-                inner_list.append(f'[{Block_Start(block)}, {Block_Bytes(block)!r}]')
+                block_start = Block_Start(block)
+                if start_ < block_start:
+                    yield start_, block_start
+                start_ = Block_Endex(block)
 
-            inner = ', '.join(inner_list)
+            if endex__ is None and not bound_:
+                yield start_, None
+            elif start_ < endex_:
+                yield start_, endex_
 
-            return f'<{trim_start}[{inner}]{trim_endex}>'
-        else:
-            return repr(self)
-
-    def __bool__(
-        self: Memory,
-    ) -> bool:
-        r"""Has any items.
-
-        Returns:
-            bool: Has any items.
-
-        Examples:
-            >>> memory = Memory()
-            >>> bool(memory)
-            False
-
-            >>> memory = Memory.from_bytes(b'Hello, World!', 5)
-            >>> bool(memory)
-            True
-        """
-
-        return not Memory_IsEmpty(self._)
-
-    def __eq__(
-        self: Memory,
-        other: Any,
-    ) -> bool:
-        r"""Equality comparison.
-
-        Arguments:
-            other (Memory):
-                Data to compare with `self`.
-
-                If it is a :obj:`Memory`, all of its blocks must match.
-
-                If it is a :obj:`bytes`, a :obj:`bytearray`, or a
-                :obj:`memoryview`, it is expected to match the first and only
-                stored block.
-
-                Otherwise, it must match the first and only stored block,
-                via iteration over the stored values.
-
-        Returns:
-            bool: `self` is equal to `other`.
-
-        Examples:
-            >>> data = b'Hello, World!'
-            >>> memory = Memory.from_bytes(data)
-            >>> memory == data
-            True
-            >>> memory.shift(1)
-            >>> memory == data
-            True
-
-            >>> data = b'Hello, World!'
-            >>> memory = Memory.from_bytes(data)
-            >>> memory == list(data)
-            True
-            >>> memory.shift(1)
-            >>> memory == list(data)
-            True
-        """
-
-        return Memory_Eq(self._, other)
-
-    def __iter__(
-        self: Memory,
-    ) -> Iterator[Optional[Value]]:
-        r"""Iterates over values.
-
-        Iterates over values between :attr:`start` and :attr:`endex`.
-
-        Yields:
-            int: Value as byte integer, or ``None``.
-        """
-
-        yield from self.values()
-
-    def __reversed__(
-        self: Memory,
-    ) -> Iterator[Optional[Value]]:
-        r"""Iterates over values, reversed order.
-
-        Iterates over values between :attr:`start` and :attr:`endex`, in
-        reversed order.
-
-        Yields:
-            int: Value as byte integer, or ``None``.
-        """
-
-        yield from self.rvalues()
-
-    def __add__(
-        self: Memory,
-        value: Union[AnyBytes, Memory],
-    ) -> Memory:
-        cdef:
-            Memory_* memory_ = Memory_Add(self._, value)
-            Memory memory = Memory_AsObject(memory_)
-
-        return memory
-
-    def __iadd__(
-        self: Memory,
-        value: Union[AnyBytes, Memory],
-    ) -> Memory:
-
-        Memory_IAdd(self._, value)
-        return self
-
-    def __mul__(
-        self: Memory,
-        times: int,
-    ) -> Memory:
-        cdef:
-            addr_t times_ = 0 if times < 0 else <addr_t>times
-            Memory_* memory_ = Memory_Mul(self._, times_)
-            Memory memory = Memory_AsObject(memory_)
-
-        return memory
-
-    def __imul__(
-        self: Memory,
-        times: int,
-    ) -> Memory:
-        cdef:
-            addr_t times_ = 0 if times < 0 else <addr_t>times
-
-        Memory_IMul(self._, times_)
-        return self
-
-    def __len__(
-        self: Memory,
-    ) -> Address:
-        r"""Actual length.
-
-        Computes the actual length of the stored items, i.e.
-        (:attr:`endex` - :attr:`start`).
-        This will consider any trimmings being active.
-
-        Returns:
-            int: Memory length.
-        """
-
-        return Memory_Length(self._)
-
-    def ofind(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Optional[Address]:
-        r"""Index of an item.
-
-        Arguments:
-            item (items):
-                Value to find. Can be either some byte string or an integer.
-
-            start (int):
-                Inclusive start of the searched range.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            int: The index of the first item equal to `value`, or ``None``.
-        """
-
-        return Memory_ObjFind(self._, item, start, endex)
-
-    def rofind(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Optional[Address]:
-        r"""Index of an item, reversed search.
-
-        Arguments:
-            item (items):
-                Value to find. Can be either some byte string or an integer.
-
-            start (int):
-                Inclusive start of the searched range.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            int: The index of the last item equal to `value`, or ``None``.
-        """
-
-        return Memory_RevObjFind(self._, item, start, endex)
-
-    def find(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Address:
-        r"""Index of an item.
-
-        Arguments:
-            item (items):
-                Value to find. Can be either some byte string or an integer.
-
-            start (int):
-                Inclusive start of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-            endex (int):
-                Exclusive end of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            int: The index of the first item equal to `value`, or -1.
-        """
-
-        return Memory_Find(self._, item, start, endex)
-
-    def rfind(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Address:
-        r"""Index of an item, reversed search.
-
-        Arguments:
-            item (items):
-                Value to find. Can be either some byte string or an integer.
-
-            start (int):
-                Inclusive start of the searched range.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            int: The index of the last item equal to `value`, or -1.
-        """
-
-        return Memory_RevFind(self._, item, start, endex)
+        elif not bound_:
+            yield None, None
 
     def index(
         self: Memory,
@@ -6138,13 +7997,303 @@ cdef class Memory:
 
         return Memory_Index(self._, item, start, endex)
 
-    def rindex(
+    def insert(
+        self: Memory,
+        address: Address,
+        data: Union[AnyBytes, Value, Memory],
+    ) -> None:
+        r"""Inserts data.
+
+        Inserts data, moving existing items after the insertion address by the
+        size of the inserted data.
+
+        Arguments::
+            address (int):
+                Address of the insertion point.
+
+            data (bytes):
+                Data to insert.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C]|   |   |[x | y | z]|   |[$]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C]|   |   |[x | y | 1 | z]|   |[$]|
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.insert(10, b'$')
+            >>> memory._blocks
+            [[1, b'ABC'], [6, b'xyz'], [10, b'$']]
+            >>> memory.insert(8, b'1')
+            >>> memory._blocks
+            [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
+
+        See Also:
+            :meth:`insert_backup`
+            :meth:`insert_restore`
+        """
+
+        Memory_Insert(self._, address, data)
+
+    def insert_backup(
+        self: Memory,
+        address: Address,
+        data: Union[AnyBytes, Value, Memory],
+    ) -> Tuple[Address, Memory]:
+        r"""Backups an `insert()` operation.
+
+        Arguments:
+            address (int):
+                Address of the insertion point.
+
+            data (bytes):
+                Data to insert.
+
+        Returns:
+            (int, :obj:`Memory`): Insertion address, backup memory region.
+
+        See Also:
+            :meth:`insert`
+            :meth:`insert_restore`
+        """
+
+        size = 1 if isinstance(data, int) else len(data)
+        backup = self._pretrim_endex_backup(address, size)
+        return address, backup
+
+    def insert_restore(
+        self: Memory,
+        addr_t address: Address,
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores an `insert()` operation.
+
+        Arguments:
+            address (int):
+                Address of the insertion point.
+
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`insert`
+            :meth:`insert_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+            addr_t size = Memory_Length(backup._)
+
+        CheckAddAddrU(address, size)
+        Memory_Delete_(memory, address, address + size)
+        Memory_WriteSame_(memory, 0, backup._, True)
+
+    def intervals(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[ClosedInterval]:
+        r"""Iterates over block intervals.
+
+        Iterates over data boundaries within an address range.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Yields:
+            couple of addresses: Block data interval boundaries.
+
+        Example:
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> list(memory.intervals())
+            [(1, 3), (5, 6), (7, 10)]
+            >>> list(memory.intervals(2, 9))
+            [(2, 3), (5, 6), (7, 9)]
+            >>> list(memory.intervals(3, 5))
+            []
+        """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            size_t slice_start
+            size_t slice_endex
+
+        if block_count:
+            block_index_start = 0 if start is None else Rack_IndexStart(blocks, <addr_t>start)
+            block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, <addr_t>endex)
+            start_, endex_ = Memory_Bound(self._, start, endex)
+
+            for block_index in range(block_index_start, block_index_endex):
+                block = Rack_Get__(blocks, block_index)
+                block_start = Block_Start(block)
+                block_endex = Block_Endex(block)
+                slice_start = block_start if start_ < block_start else start_
+                slice_endex = endex_ if endex_ < block_endex else block_endex
+                if slice_start < slice_endex:
+                    yield slice_start, slice_endex
+
+    def items(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Union[Address, EllipsisType]] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+    ) -> Iterator[Tuple[Address, Value]]:
+        r"""Iterates over address and value couples.
+
+        Iterates over address and value couples, from `start` to `endex`.
+        Implemets the interface of :obj:`dict`.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+                If ``Ellipsis``, the iterator is infinite.
+
+            pattern (items):
+                Pattern of values to fill emptiness.
+
+        Yields:
+            int: Range address and value couples.
+
+        Examples:
+            >>> from itertools import islice
+            >>> memory = Memory()
+            >>> list(memory.items(endex=8))
+            [(0, None), (1, None), (2, None), (3, None), (4, None), (5, None), (6, None), (7, None)]
+            >>> list(memory.items(3, 8))
+            [(3, None), (4, None), (5, None), (6, None), (7, None)]
+            >>> list(islice(memory.items(3, ...), 7))
+            [(3, None), (4, None), (5, None), (6, None), (7, None), (8, None), (9, None)]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   | 65| 66| 67|   |   |120|121|122|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> list(memory.items())
+            [(1, 65), (2, 66), (3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122)]
+            >>> list(memory.items(3, 8))
+            [(3, 67), (4, None), (5, None), (6, 120), (7, 121)]
+            >>> list(islice(memory.items(3, ...), 7))
+            [(3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122), (9, None)]
+        """
+
+        yield from zip(self.keys(start, endex), self.values(start, endex, pattern))  # TODO: cythonize
+
+    def keys(
+        self: Memory,
+        start: Optional[Address] = None,
+        endex: Optional[Union[Address, EllipsisType]] = None,
+    ) -> Iterator[Address]:
+        r"""Iterates over addresses.
+
+        Iterates over addresses, from `start` to `endex`.
+        Implemets the interface of :obj:`dict`.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+                If ``Ellipsis``, the iterator is infinite.
+
+        Yields:
+            int: Range address.
+
+        Examples:
+            >>> from itertools import islice
+            >>> memory = Memory()
+            >>> list(memory.keys())
+            []
+            >>> list(memory.keys(endex=8))
+            [0, 1, 2, 3, 4, 5, 6, 7]
+            >>> list(memory.keys(3, 8))
+            [3, 4, 5, 6, 7]
+            >>> list(islice(memory.keys(3, ...), 7))
+            [3, 4, 5, 6, 7, 8, 9]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> list(memory.keys())
+            [1, 2, 3, 4, 5, 6, 7, 8]
+            >>> list(memory.keys(endex=8))
+            [1, 2, 3, 4, 5, 6, 7]
+            >>> list(memory.keys(3, 8))
+            [3, 4, 5, 6, 7]
+            >>> list(islice(memory.keys(3, ...), 7))
+            [3, 4, 5, 6, 7, 8, 9]
+        """
+        cdef:
+            addr_t start_
+            addr_t endex_
+
+        if start is None:
+            start_ = Memory_Start(self._)
+        else:
+            start_ = <addr_t>start
+
+        if endex is None:
+            endex_ = Memory_Endex(self._)
+        elif endex is Ellipsis:
+            endex_ = ADDR_MAX
+        else:
+            endex_ = <addr_t>endex
+
+        while start_ < endex_:
+            yield start_
+            start_ += 1
+
+    def ofind(
         self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Address:
-        r"""Index of an item, reversed search.
+    ) -> Optional[Address]:
+        r"""Index of an item.
 
         Arguments:
             item (items):
@@ -6159,1214 +8308,10 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            int: The index of the last item equal to `value`.
-
-        Raises:
-            :obj:`ValueError`: Item not found.
+            int: The index of the first item equal to `value`, or ``None``.
         """
 
-        return Memory_RevIndex(self._, item, start, endex)
-
-    def __contains__(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-    ) -> bool:
-        r"""Checks if some items are contained.
-
-        Arguments:
-            item (items):
-                Items to find. Can be either some byte string or an integer.
-
-        Returns:
-            bool: Item is contained.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[1 | 2 | 3]|   |[x | y | z]|
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'123'], [9, b'xyz']])
-            >>> b'23' in memory
-            True
-            >>> ord('y') in memory
-            True
-            >>> b'$' in memory
-            False
-        """
-
-        return Memory_Contains(self._, item)
-
-    def count(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> int:
-        r"""Counts items.
-
-        Arguments:
-            item (items):
-                Reference value to count.
-
-            start (int):
-                Inclusive start of the searched range.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end of the searched range.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            int: The number of items equal to `value`.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[B | a | t]|   |[t | a | b]|
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'Bat'], [9, b'tab']])
-            >>> memory.count(b'a')
-            2
-        """
-
-        return Memory_Count(self._, item, start, endex)
-
-    def __getitem__(
-        self: Memory,
-        key: Union[Address, slice],
-    ) -> Any:
-        r"""Gets data.
-
-        Arguments:
-            key (slice or int):
-                Selection range or address.
-                If it is a :obj:`slice` with bytes-like `step`, the latter is
-                interpreted as the filling pattern.
-
-        Returns:
-            items: Items from the requested range.
-
-        Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|
-            +---+---+---+---+---+---+---+---+---+---+---+
-            |   | 65| 66| 67| 68|   | 36|   |120|121|122|
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory[9]  # -> ord('y') = 121
-            121
-            >>> memory[:3]._blocks
-            [[1, b'AB']]
-            >>> memory[3:10]._blocks
-            [[3, b'CD'], [6, b'$'], [8, b'xy']]
-            >>> bytes(memory[3:10:b'.'])
-            b'CD.$.xy'
-            >>> memory[memory.endex]
-            None
-            >>> bytes(memory[3:10:3])
-            b'C$y'
-            >>> memory[3:10:2]._blocks
-            [[3, b'C'], [6, b'y']]
-            >>> bytes(memory[3:10:2])
-            Traceback (most recent call last):
-                ...
-            ValueError: non-contiguous data within range
-        """
-
-        return Memory_GetItem(self._, key)
-
-    def __setitem__(
-        self: Memory,
-        key: Union[Address, slice],
-        value: Optional[Union[AnyBytes, Value]],
-    ) -> None:
-        r"""Sets data.
-
-        Arguments:
-            key (slice or int):
-                Selection range or address.
-
-            value (items):
-                Items to write at the selection address.
-                If `value` is null, the range is cleared.
-
-        Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
-
-        Examples:
-            +---+---+---+---+---+---+---+---+---+
-            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |[A]|   |   |   |   |[y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |[A]|   |[C]|   |   | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |[A | 1 | C]|   |[2 | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory[7:10] = None
-            >>> memory._blocks
-            [[5, b'AB'], [10, b'yz']]
-            >>> memory[7] = b'C'
-            >>> memory[9] = b'x'
-            >>> memory._blocks == [[5, b'ABC'], [9, b'xyz']]
-            True
-            >>> memory[6:12:3] = None
-            >>> memory._blocks
-            [[5, b'A'], [7, b'C'], [10, b'yz']]
-            >>> memory[6:13:3] = b'123'
-            >>> memory._blocks
-            [[5, b'A1C'], [9, b'2yz3']]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |   |   |   |   |[A | B | C]|   |[x | y | z]|
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |[$]|   |[A | B | C]|   |[x | y | z]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |[$]|   |[A | B | 4 | 5 | 6 | 7 | 8 | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |[$]|   |[A | B | 4 | 5 | < | > | 8 | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory[0:4] = b'$'
-            >>> memory._blocks
-            [[0, b'$'], [2, b'ABC'], [6, b'xyz']]
-            >>> memory[4:7] = b'45678'
-            >>> memory._blocks
-            [[0, b'$'], [2, b'AB45678yz']]
-            >>> memory[6:8] = b'<>'
-            >>> memory._blocks
-            [[0, b'$'], [2, b'AB45<>8yz']]
-        """
-
-        Memory_SetItem(self._, key, value)
-
-    def __delitem__(
-        self: Memory,
-        key: Union[Address, slice],
-    ) -> None:
-        r"""Deletes data.
-
-        Arguments:
-            key (slice or int):
-                Deletion range or address.
-
-        Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
-
-        Examples:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C | y | z]|   |   |   |   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> del memory[4:9]
-            >>> memory._blocks
-            [[1, b'ABCyz']]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C | D]|   |[$]|   |[x | z]|   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | D]|   |[$]|   |[x | z]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | D]|   |   |[x]|   |   |   |   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> del memory[9]
-            >>> memory._blocks
-            [[1, b'ABCD'], [6, b'$'], [8, b'xz']]
-            >>> del memory[3]
-            >>> memory._blocks
-            [[1, b'ABD'], [5, b'$'], [7, b'xz']]
-            >>> del memory[2:10:3]
-            >>> memory._blocks
-            [[1, b'AD'], [5, b'x']]
-        """
-
-        Memory_DelItem(self._, key)
-
-    def append(
-        self: Memory,
-        item: Union[AnyBytes, Value],
-    ) -> None:
-        r"""Appends a single item.
-
-        Arguments:
-            item (int):
-                Value to append. Can be a single byte string or integer.
-
-        Examples:
-            >>> memory = Memory()
-            >>> memory.append(b'$')
-            >>> memory._blocks
-            [[0, b'$']]
-
-            ~~~
-
-            >>> memory = Memory()
-            >>> memory.append(3)
-            >>> memory._blocks
-            [[0, b'\x03']]
-
-        See Also:
-            :meth:`append_backup`
-            :meth:`append_restore`
-        """
-
-        return Memory_Append(self._, item)
-
-    # noinspection PyMethodMayBeStatic
-    def append_backup(
-        self: Memory,
-    ) -> None:
-        r"""Backups an `append()` operation.
-
-        Returns:
-            None: Nothing.
-
-        See Also:
-            :meth:`append`
-            :meth:`append_restore`
-        """
-
-        return None
-
-    def append_restore(
-        self: Memory,
-    ) -> None:
-        r"""Restores an `append()` operation.
-
-        See Also:
-            :meth:`append`
-            :meth:`append_backup`
-        """
-
-        Memory_PopLast_(self._)
-
-    def extend(
-        self: Memory,
-        items: Union[AnyBytes, Memory],
-        offset: Address = 0,
-    ) -> None:
-        r"""Concatenates items.
-
-        Equivalent to ``self += items``.
-
-        Arguments:
-            items (items):
-                Items to append at the end of the current virtual space.
-
-            offset (int):
-                Optional offset w.r.t. :attr:`content_endex`.
-
-        See Also:
-            :meth:`extend_backup`
-            :meth:`extend_restore`
-        """
-
-        return Memory_Extend(self._, items, offset)
-
-    def extend_backup(
-        self: Memory,
-        offset: Address = 0,
-    ) -> Address:
-        r"""Backups an `extend()` operation.
-
-        Arguments:
-            items (items):
-                Items to append at the end of the current virtual space.
-
-            offset (int):
-                Optional offset w.r.t. :attr:`content_endex`.
-
-        Returns:
-            int: Content exclusive end address.
-
-        See Also:
-            :meth:`extend`
-            :meth:`extend_restore`
-        """
-
-        return Memory_ContentEndex(self._) + <addr_t>offset
-
-    def extend_restore(
-        self: Memory,
-        content_endex: Address,
-    ) -> None:
-        r"""Restores an `extend()` operation.
-
-        Arguments:
-            content_endex (int):
-                Content exclusive end address to restore.
-
-        See Also:
-            :meth:`extend`
-            :meth:`extend_backup`
-        """
-
-        Memory_Clear_(self._, <addr_t>content_endex, ADDR_MAX)
-
-    def pop(
-        self: Memory,
-        address: Optional[Address] = None,
-    ) -> Optional[Value]:
-        r"""Takes a value away.
-
-        Arguments:
-            address (int):
-                Address of the byte to pop.
-                If ``None``, the very last byte is popped.
-
-        Return:
-            int: Value at `address`; ``None`` within emptiness.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C | D]|   |[$]|   |[x | y]|   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | D]|   |[$]|   |[x | y]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory.pop()  # -> ord('z') = 122
-            122
-            >>> memory.pop(3)  # -> ord('C') = 67
-            67
-
-        See Also:
-            :meth:`pop_backup`
-            :meth:`pop_restore`
-        """
-
-        return Memory_Pop(self._, address)
-
-    def pop_backup(
-        self: Memory,
-        address: Optional[Address] = None,
-    ) -> Tuple[Address, Optional[Value]]:
-        r"""Backups a `pop()` operation.
-
-        Arguments:
-            address (int):
-                Address of the byte to pop.
-                If ``None``, the very last byte is popped.
-
-        Returns:
-            (int, int): `address`, item at `address` (``None`` if empty).
-
-        See Also:
-            :meth:`pop`
-            :meth:`pop_restore`
-        """
-
-        if address is None:
-            address = self.endex - 1
-        return address, Memory_Peek(self._, address)
-
-    def pop_restore(
-        self: Memory,
-        address: Address,
-        item: Optional[Value],
-    ) -> None:
-        r"""Restores a `pop()` operation.
-
-        Arguments:
-            address (int):
-                Address of the target item.
-
-            item (int or byte):
-                Item to restore, ``None`` if empty.
-
-        See Also:
-            :meth:`pop`
-            :meth:`pop_backup`
-        """
-        cdef:
-            byte_t value
-
-        if item is None:
-            Memory_Reserve_(self._, <addr_t>address, 1)
-        else:
-            value = <byte_t>item
-            Memory_InsertRaw_(self._, address, 1, &value)
-
-    def __bytes__(
-        self: Memory,
-    ) -> bytes:
-        r"""Creates a bytes clone.
-
-        Returns:
-            :obj:`bytes`: Cloned data.
-
-        Raises:
-            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
-        """
-        cdef:
-            const Memory_* memory = self._
-            addr_t start = Memory_Start(memory)
-            addr_t endex = Memory_Endex(memory)
-            BlockView view = Memory_View(memory, start, endex)
-            bytes data
-
-        data = view.__bytes__()
-        view.dispose()
-        return data
-
-    def __copy__(
-        self: Memory,
-    ) -> Memory:
-        r"""Creates a shallow copy.
-
-        Note:
-            The Cython implementation actually creates a deep copy.
-
-        Returns:
-            :obj:`Memory`: Shallow copy.
-        """
-        cdef:
-            Memory_* memory_ = Memory_Copy(self._)
-            Memory memory = Memory_AsObject(memory_)
-
-        return memory
-
-    def __deepcopy__(
-        self: Memory,
-    ) -> Memory:
-        r"""Creates a deep copy.
-
-        Returns:
-            :obj:`Memory`: Deep copy.
-        """
-        cdef:
-            Memory_* memory_ = Memory_Copy(self._)
-            Memory memory = Memory_AsObject(memory_)
-
-        return memory
-
-    @property
-    def contiguous(
-        self: Memory,
-    ) -> bool:
-        r"""bool: Contains contiguous data.
-
-        The memory is considered to have contiguous data if there is no empty
-        space between blocks.
-
-        If trimming is defined, there must be no empty space also towards it.
-        """
-
-        return Memory_Contiguous(self._)
-
-    @property
-    def trim_start(
-        self: Memory,
-    ) -> Optional[Address]:
-        r"""int: Trimming start address.
-
-        Any data before this address is automatically discarded.
-        Disabled if ``None``.
-        """
-
-        return Memory_GetTrimStart(self._)
-
-    @trim_start.setter
-    def trim_start(
-        self: Memory,
-        trim_start: Address,
-    ) -> None:
-
-        Memory_SetTrimStart(self._, trim_start)
-
-    @property
-    def trim_endex(
-        self: Memory,
-    ) -> Optional[Address]:
-        r"""int: Trimming exclusive end address.
-
-        Any data at or after this address is automatically discarded.
-        Disabled if ``None``.
-        """
-
-        return Memory_GetTrimEndex(self._)
-
-    @trim_endex.setter
-    def trim_endex(
-        self: Memory,
-        trim_endex: Address,
-    ) -> None:
-
-        Memory_SetTrimEndex(self._, trim_endex)
-
-    @property
-    def trim_span(
-        self: Memory,
-    ) -> OpenInterval:
-        r"""tuple of int: Trimming span addresses.
-
-        A :obj:`tuple` holding :attr:`trim_start` and :attr:`trim_endex`.
-        """
-
-        return Memory_GetTrimSpan(self._)
-
-    @trim_span.setter
-    def trim_span(
-        self: Memory,
-        span: OpenInterval,
-    ) -> None:
-
-        Memory_SetTrimSpan(self._, span)
-
-    @property
-    def start(
-        self: Memory,
-    ) -> Address:
-        r"""int: Inclusive start address.
-
-        This property holds the inclusive start address of the virtual space.
-        By default, it is the current minimum inclusive start address of
-        the first stored block.
-
-        If :attr:`trim_start` not ``None``, that is returned.
-
-        If the memory has no data and no trimming, 0 is returned.
-
-        Examples:
-            >>> Memory().start
-            0
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.start
-            1
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[[[|   |   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
-            >>> memory.start
-            1
-        """
-
-        return Memory_Start(self._)
-
-    @property
-    def endex(
-        self: Memory,
-    ) -> Address:
-        r"""int: Exclusive end address.
-
-        This property holds the exclusive end address of the virtual space.
-        By default, it is the current maximmum exclusive end address of
-        the last stored block.
-
-        If  :attr:`trim_endex` not ``None``, that is returned.
-
-        If the memory has no data and no trimming, :attr:`start` is returned.
-
-        Examples:
-            >>> Memory().endex
-            0
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.endex
-            8
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.endex
-            8
-        """
-
-        return Memory_Endex(self._)
-
-    @property
-    def span(
-        self: Memory,
-    ) -> ClosedInterval:
-        r"""tuple of int: Memory address span.
-
-        A :obj:`tuple` holding both :attr:`start` and :attr:`endex`.
-
-        Examples:
-            >>> Memory().span
-            (0, 0)
-            >>> Memory(start=1, endex=8).span
-            (1, 8)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.span
-            (1, 8)
-        """
-
-        return Memory_Span(self._)
-
-    @property
-    def endin(
-        self: Memory,
-    ) -> Address:
-        r"""int: Inclusive end address.
-
-        This property holds the inclusive end address of the virtual space.
-        By default, it is the current maximmum inclusive end address of
-        the last stored block.
-
-        If  :attr:`trim_endex` not ``None``, that minus one is returned.
-
-        If the memory has no data and no trimming, :attr:`start` is returned.
-
-        Examples:
-            >>> Memory().endin
-            -1
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.endin
-            7
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.endin
-            7
-        """
-
-        return Memory_Endin(self._)
-
-    @property
-    def content_start(
-        self: Memory,
-    ) -> Address:
-        r"""int: Inclusive content start address.
-
-        This property holds the inclusive start address of the memory content.
-        By default, it is the current minimum inclusive start address of
-        the first stored block.
-
-        If the memory has no data and no trimming, 0 is returned.
-
-        Trimming is considered only for an empty memory.
-
-        Examples:
-            >>> Memory().content_start
-            0
-            >>> Memory(start=1).content_start
-            1
-            >>> Memory(start=1, endex=8).content_start
-            1
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_start
-            1
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[[[|   |   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
-            >>> memory.content_start
-            5
-        """
-
-        return Memory_ContentStart(self._)
-
-    @property
-    def content_endex(
-        self: Memory,
-    ) -> Address:
-        r"""int: Exclusive content end address.
-
-        This property holds the exclusive end address of the memory content.
-        By default, it is the current maximmum exclusive end address of
-        the last stored block.
-
-        If the memory has no data and no trimming, :attr:`start` is returned.
-
-        Trimming is considered only for an empty memory.
-
-        Examples:
-            >>> Memory().content_endex
-            0
-            >>> Memory(endex=8).content_endex
-            0
-            >>> Memory(start=1, endex=8).content_endex
-            1
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_endex
-            8
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.content_endex
-            4
-        """
-
-        return Memory_ContentEndex(self._)
-
-    @property
-    def content_span(
-        self: Memory,
-    ) -> ClosedInterval:
-        r"""tuple of int: Memory content address span.
-
-        A :attr:`tuple` holding both :attr:`content_start` and
-        :attr:`content_endex`.
-
-        Examples:
-            >>> Memory().content_span
-            (0, 0)
-            >>> Memory(start=1).content_span
-            (1, 1)
-            >>> Memory(endex=8).content_span
-            (0, 0)
-            >>> Memory(start=1, endex=8).content_span
-            (1, 1)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_span
-            (1, 8)
-        """
-
-        return Memory_ContentSpan(self._)
-
-    @property
-    def content_endin(
-        self: Memory,
-    ) -> Address:
-        r"""int: Inclusive content end address.
-
-        This property holds the inclusive end address of the memory content.
-        By default, it is the current maximmum inclusive end address of
-        the last stored block.
-
-        If the memory has no data and no trimming, :attr:`start` minus one is
-        returned.
-
-        Trimming is considered only for an empty memory.
-
-        Examples:
-            >>> Memory().content_endin
-            -1
-            >>> Memory(endex=8).content_endin
-            -1
-            >>> Memory(start=1, endex=8).content_endin
-            0
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_endin
-            7
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.content_endin
-            3
-        """
-
-        return Memory_ContentEndin(self._)
-
-    @property
-    def content_size(
-        self: Memory,
-    ) -> Address:
-        r"""Actual content size.
-
-        Returns:
-            int: The sum of all block lengths.
-
-        Examples:
-            >>> Memory().content_size
-            0
-            >>> Memory(start=1, endex=8).content_size
-            0
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_size
-            6
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.content_size
-            3
-        """
-
-        return Memory_ContentSize(self._)
-
-    @property
-    def content_parts(
-        self: Memory,
-    ) -> int:
-        r"""Number of blocks.
-
-        Returns:
-            int: The number of blocks.
-
-        Examples:
-            >>> Memory().content_parts
-            0
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.content_parts
-            2
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC']], endex=8)
-            >>> memory.content_parts
-            1
-        """
-
-        return Memory_ContentParts(self._)
-
-    def validate(
-        self: Memory,
-    ) -> None:
-        r"""Validates internal structure.
-
-        It makes sure that all the allocated blocks are sorted by block start
-        address, and that all the blocks are non-overlapping.
-
-        Raises:
-            :obj:`ValueError`: Invalid data detected (see exception message).
-        """
-
-        Memory_Validate(self._)
-
-    def bound(
-        self: Memory,
-        start: Optional[Address],
-        endex: Optional[Address],
-    ) -> ClosedInterval:
-        r"""Bounds addresses.
-
-        It bounds the given addresses to stay within memory limits.
-        ``None`` is used to ignore a limit for the `start` or `endex`
-        directions.
-
-        In case of stored data, :attr:`content_start` and
-        :attr:`content_endex` are used as bounds.
-
-        In case of trimming limits, :attr:`trim_start` or :attr:`trim_endex`
-        are used as bounds, when not ``None``.
-
-        In case `start` and `endex` are in the wrong order, one clamps
-        the other if present (see the Python implementation for details).
-
-        Returns:
-            tuple of int: Bounded `start` and `endex`, closed interval.
-
-        Examples:
-            >>> Memory().bound(None, None)
-            (0, 0)
-            >>> Memory().bound(None, 100)
-            (0, 100)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
-            >>> memory.bound(0, 30)
-            (0, 30)
-            >>> memory.bound(2, 6)
-            (2, 6)
-            >>> memory.bound(None, 6)
-            (1, 6)
-            >>> memory.bound(2, None)
-            (2, 8)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-            +===+===+===+===+===+===+===+===+===+
-            |   |[[[|   |[A | B | C]|   |   |)))|
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[3, b'ABC']], start=1, endex=8)
-            >>> memory.bound(None, None)
-            (1, 8)
-            >>> memory.bound(0, 30)
-            (1, 8)
-            >>> memory.bound(2, 6)
-            (2, 6)
-            >>> memory.bound(2, None)
-            (2, 8)
-            >>> memory.bound(None, 6)
-            (1, 6)
-        """
-
-        return Memory_Bound(self._, start, endex)
-
-    def _block_index_at(
-        self: Memory,
-        address: Address,
-    ) -> Optional[BlockIndex]:
-        r"""Locates the block enclosing an address.
-
-        Returns the index of the block enclosing the given address.
-
-        Arguments:
-            address (int):
-                Address of the target item.
-
-        Returns:
-            int: Block index if found, ``None`` otherwise.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   | 0 | 0 | 0 | 0 |   | 1 |   | 2 | 2 | 2 |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> [memory._block_index_at(i) for i in range(12)]
-            [None, 0, 0, 0, 0, None, 1, None, 2, 2, 2, None]
-        """
-        cdef:
-            ssize_t block_index
-
-        block_index = Rack_IndexAt(self._.blocks, address)
-        return None if block_index < 0 else block_index
-
-    def _block_index_start(
-        self: Memory,
-        address: Address,
-    ) -> BlockIndex:
-        r"""Locates the first block inside of an address range.
-
-        Returns the index of the first block whose start address is greater than
-        or equal to `address`.
-
-        Useful to find the initial block index in a ranged search.
-
-        Arguments:
-            address (int):
-                Inclusive start address of the scanned range.
-
-        Returns:
-            int: First block index since `address`.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 3 |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> [memory._block_index_start(i) for i in range(12)]
-            [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
-        """
-
-        return Rack_IndexStart(self._.blocks, address)
-
-    def _block_index_endex(
-        self: Memory,
-        address: Address,
-    ) -> BlockIndex:
-        r"""Locates the first block after an address range.
-
-        Returns the index of the first block whose end address is lesser than or
-        equal to `address`.
-
-        Useful to find the termination block index in a ranged search.
-
-        Arguments:
-            address (int):
-                Exclusive end address of the scanned range.
-
-        Returns:
-            int: First block index after `address`.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 1 | 1 | 1 | 1 | 2 | 2 | 3 | 3 | 3 | 3 |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> [memory._block_index_endex(i) for i in range(12)]
-            [0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]
-        """
-
-        return Rack_IndexEndex(self._.blocks, address)
+        return Memory_ObjFind(self._, item, start, endex)
 
     def peek(
         self: Memory,
@@ -7482,218 +8427,93 @@ cdef class Memory:
         else:
             Memory_Poke_(self._, <addr_t>address, <byte_t>item)
 
-    def extract(
+    def pop(
         self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-        pattern: Optional[Union[AnyBytes, Value]] = None,
-        step: Optional[Address] = None,
-        bound: bool = True,
-    ) -> Memory:
-        r"""Selects items from a range.
+        address: Optional[Address] = None,
+    ) -> Optional[Value]:
+        r"""Takes a value away.
 
         Arguments:
-            start (int):
-                Inclusive start of the extracted range.
-                If ``None``, :attr:`start` is considered.
+            address (int):
+                Address of the byte to pop.
+                If ``None``, the very last byte is popped.
 
-            endex (int):
-                Exclusive end of the extracted range.
-                If ``None``, :attr:`endex` is considered.
+        Return:
+            int: Value at `address`; ``None`` within emptiness.
 
-            pattern (items):
-                Optional pattern of items to fill the emptiness.
-
-            step (int):
-                Optional address stepping between bytes extracted from the
-                range. It has the same meaning of Python's :attr:`slice.step`,
-                but negative steps are ignored.
-                Please note that a `step` greater than 1 could take much more
-                time to process than the default unitary step.
-
-            bound (bool):
-                The selected address range is applied to the resulting memory
-                as its trimming range. This retains information about any
-                initial and final emptiness of that range, which would be lost
-                otherwise.
-
-        Returns:
-            :obj:`Memory`: A copy of the memory from the selected range.
-
-        Examples:
+        Example:
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
             |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C | D]|   |[$]|   |[x | y]|   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | D]|   |[$]|   |[x | y]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory.extract()._blocks
-            [[1, b'ABCD'], [6, b'$'], [8, b'xyz']]
-            >>> memory.extract(2, 9)._blocks
-            [[2, b'BCD'], [6, b'$'], [8, b'x']]
-            >>> memory.extract(start=2)._blocks
-            [[2, b'BCD'], [6, b'$'], [8, b'xyz']]
-            >>> memory.extract(endex=9)._blocks
-            [[1, b'ABCD'], [6, b'$'], [8, b'x']]
-            >>> memory.extract(5, 8).span
-            (5, 8)
-            >>> memory.extract(pattern=b'.')._blocks
-            [[1, b'ABCD.$.xyz']]
-            >>> memory.extract(pattern=b'.', step=3)._blocks
-            [[1, b'AD.z']]
+            >>> memory.pop()  # -> ord('z') = 122
+            122
+            >>> memory.pop(3)  # -> ord('C') = 67
+            67
+
+        See Also:
+            :meth:`pop_backup`
+            :meth:`pop_restore`
         """
 
-        return Memory_Extract(self._, start, endex, pattern, step, bound)
+        return Memory_Pop(self._, address)
 
-    def view(
+    def pop_backup(
         self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> BlockView:
-        r"""Creates a view over a range.
-
-        Creates a memory view over the selected address range.
-        Data within the range is required to be contiguous.
+        address: Optional[Address] = None,
+    ) -> Tuple[Address, Optional[Value]]:
+        r"""Backups a `pop()` operation.
 
         Arguments:
-            start (int):
-                Inclusive start of the viewed range.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end of the viewed range.
-                If ``None``, :attr:`endex` is considered.
+            address (int):
+                Address of the byte to pop.
+                If ``None``, the very last byte is popped.
 
         Returns:
-            :obj:`memoryview`: A view of the selected address range.
+            (int, int): `address`, item at `address` (``None`` if empty).
 
-        Raises:
-            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
-
-        Examples:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> bytes(memory.view(2, 5))
-            b'BCD'
-            >>> bytes(memory.view(9, 10))
-            b'y'
-            >>> memory.view()
-            Traceback (most recent call last):
-                ...
-            ValueError: non-contiguous data within range
-            >>> memory.view(0, 6)
-            Traceback (most recent call last):
-                ...
-            ValueError: non-contiguous data within range
+        See Also:
+            :meth:`pop`
+            :meth:`pop_restore`
         """
-        cdef:
-            const Memory_* memory = self._
-            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
-            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
 
-        return Memory_View(memory, start_, endex_)
+        if address is None:
+            address = self.endex - 1
+        return address, Memory_Peek(self._, address)
 
-    def shift(
+    def pop_restore(
         self: Memory,
-        offset: Address,
+        address: Address,
+        item: Optional[Value],
     ) -> None:
-        r"""Shifts the items.
+        r"""Restores a `pop()` operation.
 
         Arguments:
-            offset (int):
-                Signed amount of address shifting.
+            address (int):
+                Address of the target item.
 
-        Examples:
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |   |   |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C]|   |[x | y | z]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory.shift(-2)
-            >>> memory._blocks
-            [[3, b'ABC'], [7, b'xyz']]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |   |[[[|   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-            |   |[y | z]|   |   |   |   |   |   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=3)
-            >>> memory.shift(-8)
-            >>> memory._blocks
-            [[2, b'yz']]
+            item (int or byte):
+                Item to restore, ``None`` if empty.
 
         See Also:
-            :meth:`shift_backup`
-            :meth:`shift_restore`
-        """
-
-        Memory_Shift(self._, offset)
-
-    def shift_backup(
-        self: Memory,
-        offset: Address,
-    ) -> Tuple[Address, Memory]:
-        r"""Backups a `shift()` operation.
-
-        Arguments:
-            offset (int):
-                Signed amount of address shifting.
-
-        Returns:
-            (int, :obj:`Memory`): Shifting, backup memory region.
-
-        See Also:
-            :meth:`shift`
-            :meth:`shift_restore`
+            :meth:`pop`
+            :meth:`pop_backup`
         """
         cdef:
-            Memory backup
+            byte_t value
 
-        if offset < 0:
-            backup = self._pretrim_start_backup(None, -offset)
+        if item is None:
+            Memory_Reserve_(self._, <addr_t>address, 1)
         else:
-            backup = self._pretrim_endex_backup(None, +offset)
-        return offset, backup
-
-    def shift_restore(
-        self: Memory,
-        offset: Address,
-        Memory backup not None: Memory
-    ) -> None:
-        r"""Restores an `shift()` operation.
-
-        Arguments:
-            offset (int):
-                Signed amount of address shifting.
-
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
-
-        See Also:
-            :meth:`shift`
-            :meth:`shift_backup`
-        """
-        cdef:
-            Memory_* memory = self._
-
-        Memory_Shift(memory, -offset)
-        Memory_Write(memory, 0, backup, True)
+            value = <byte_t>item
+            Memory_InsertRaw_(self._, address, 1, &value)
 
     def reserve(
         self: Memory,
@@ -7798,961 +8618,86 @@ cdef class Memory:
         Memory_Delete_(memory, address, address + size)
         Memory_WriteSame_(memory, 0, backup._, True)
 
-    def insert(
+    def rfind(
         self: Memory,
-        address: Address,
-        data: Union[AnyBytes, Value, Memory],
-    ) -> None:
-        r"""Inserts data.
-
-        Inserts data, moving existing items after the insertion address by the
-        size of the inserted data.
-
-        Arguments::
-            address (int):
-                Address of the insertion point.
-
-            data (bytes):
-                Data to insert.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
-            +===+===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C]|   |   |[x | y | z]|   |[$]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C]|   |   |[x | y | 1 | z]|   |[$]|
-            +---+---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.insert(10, b'$')
-            >>> memory._blocks
-            [[1, b'ABC'], [6, b'xyz'], [10, b'$']]
-            >>> memory.insert(8, b'1')
-            >>> memory._blocks
-            [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
-
-        See Also:
-            :meth:`insert_backup`
-            :meth:`insert_restore`
-        """
-
-        Memory_Insert(self._, address, data)
-
-    def insert_backup(
-        self: Memory,
-        address: Address,
-        data: Union[AnyBytes, Value, Memory],
-    ) -> Tuple[Address, Memory]:
-        r"""Backups an `insert()` operation.
-
-        Arguments:
-            address (int):
-                Address of the insertion point.
-
-            data (bytes):
-                Data to insert.
-
-        Returns:
-            (int, :obj:`Memory`): Insertion address, backup memory region.
-
-        See Also:
-            :meth:`insert`
-            :meth:`insert_restore`
-        """
-
-        size = 1 if isinstance(data, int) else len(data)
-        backup = self._pretrim_endex_backup(address, size)
-        return address, backup
-
-    def insert_restore(
-        self: Memory,
-        addr_t address: Address,
-        Memory backup not None: Memory,
-    ) -> None:
-        r"""Restores an `insert()` operation.
-
-        Arguments:
-            address (int):
-                Address of the insertion point.
-
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
-
-        See Also:
-            :meth:`insert`
-            :meth:`insert_backup`
-        """
-        cdef:
-            Memory_* memory = self._
-            addr_t size = Memory_Length(backup._)
-
-        CheckAddAddrU(address, size)
-        Memory_Delete_(memory, address, address + size)
-        Memory_WriteSame_(memory, 0, backup._, True)
-
-    def delete(
-        self: Memory,
+        item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> None:
-        r"""Deletes an address range.
+    ) -> Address:
+        r"""Index of an item, reversed search.
 
         Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
             start (int):
-                Inclusive start address for deletion.
+                Inclusive start of the searched range.
                 If ``None``, :attr:`start` is considered.
 
             endex (int):
-                Exclusive end address for deletion.
-                If ``None``, :attr:`endex` is considered.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+
-            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13|
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[A | y | z]|   |   |   |   |   |   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory.delete(6, 10)
-            >>> memory._blocks
-            [[5, b'Ayz']]
-
-        See Also:
-            :meth:`delete_backup`
-            :meth:`delete_restore`
-        """
-
-        Memory_Delete(self._, start, endex)
-
-    def delete_backup(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Memory:
-        r"""Backups a `delete()` operation.
-
-        Arguments:
-            start (int):
-                Inclusive start address for deletion.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for deletion.
+                Exclusive end of the searched range.
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
-
-        See Also:
-            :meth:`delete`
-            :meth:`delete_restore`
-        """
-        cdef:
-            const Memory_* memory = self._
-            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
-            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
-
-        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
-
-    def delete_restore(
-        self: Memory,
-        Memory backup not None: Memory,
-    ) -> None:
-        r"""Restores a `delete()` operation.
-
-        Arguments:
-            backup (:obj:`Memory`):
-                Backup memory region
-
-        See Also:
-            :meth:`delete`
-            :meth:`delete_backup`
+            int: The index of the last item equal to `value`, or -1.
         """
 
-        Memory_InsertSame_(self._, 0, backup._)
+        return Memory_RevFind(self._, item, start, endex)
 
-    def clear(
+    def rindex(
         self: Memory,
+        item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> None:
-        r"""Clears an address range.
+    ) -> Address:
+        r"""Index of an item, reversed search.
 
         Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
             start (int):
-                Inclusive start address for clearing.
+                Inclusive start of the searched range.
                 If ``None``, :attr:`start` is considered.
 
             endex (int):
-                Exclusive end address for clearing.
-                If ``None``, :attr:`endex` is considered.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+
-            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |[A]|   |   |   |   |[y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory.clear(6, 10)
-            >>> memory._blocks
-            [[5, b'A'], [10, b'yz']]
-
-        See Also:
-            :meth:`clear_backup`
-            :meth:`clear_restore`
-        """
-
-        Memory_Clear(self._, start, endex)
-
-    def clear_backup(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Memory:
-        r"""Backups a `clear()` operation.
-
-        Arguments:
-            start (int):
-                Inclusive start address for clearing.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for clearing.
+                Exclusive end of the searched range.
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            int: The index of the last item equal to `value`.
 
-        See Also:
-            :meth:`clear`
-            :meth:`clear_restore`
-        """
-        cdef:
-            const Memory_* memory = self._
-            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
-            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
-
-        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
-
-    def clear_restore(
-        self: Memory,
-        Memory backup not None: Memory,
-    ) -> None:
-        r"""Restores a `clear()` operation.
-
-        Arguments:
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
-
-        See Also:
-            :meth:`clear`
-            :meth:`clear_backup`
+        Raises:
+            :obj:`ValueError`: Item not found.
         """
 
-        Memory_WriteSame_(self._, 0, backup._, True)
+        return Memory_RevIndex(self._, item, start, endex)
 
-    def _pretrim_start(
+    def rofind(
         self: Memory,
-        endex_max: Optional[Address],
-        size: Address,
-    ) -> None:
-        r"""Trims initial data.
-
-        Low-level method to manage trimming of data starting from an address.
-
-        Arguments:
-            endex_max (int):
-                Exclusive end address of the erasure range.
-                If ``None``, :attr:`trim_start` plus `size` is considered.
-
-            size (int):
-                Size of the erasure range.
-
-        See Also:
-            :meth:`_pretrim_start_backup`
-        """
-
-        Memory_PretrimStart(self._, endex_max, size)
-
-    def _pretrim_start_backup(
-        self: Memory,
-        endex_max: Optional[Address],
-        size: Address,
-    ) -> Memory:
-        r"""Backups a `_pretrim_start()` operation.
-
-        Arguments:
-            endex_max (int):
-                Exclusive end address of the erasure range.
-                If ``None``, :attr:`trim_start` plus `size` is considered.
-
-            size (int):
-                Size of the erasure range.
-
-        Returns:
-            :obj:`Memory`: Backup memory region.
-
-        See Also:
-            :meth:`_pretrim_start`
-        """
-        cdef:
-            addr_t endex_max_
-            addr_t size_ = <addr_t>size
-            const Memory_* memory = self._
-            addr_t endex
-
-        if memory.trim_start_ and size_ > 0:
-            endex = memory.trim_start
-            CheckAddAddrU(endex, size)
-            endex += size
-            if endex_max is not None:
-                endex_max_ = <addr_t>endex_max
-                if endex > endex_max_:
-                    endex = endex_max_
-            return Memory_Extract_(memory, Memory_Start(memory), endex, 0, NULL, 1, True)
-        else:
-            return Memory()
-
-    def _pretrim_endex(
-        self: Memory,
-        start_min: Optional[Address],
-        size: Address,
-    ) -> None:
-        r"""Trims final data.
-
-        Low-level method to manage trimming of data starting from an address.
-
-        Arguments:
-            start_min (int):
-                Starting address of the erasure range.
-                If ``None``, :attr:`trim_endex` minus `size` is considered.
-
-            size (int):
-                Size of the erasure range.
-
-        See Also:
-            :meth:`_pretrim_endex_backup`
-        """
-
-        Memory_PretrimEndex(self._, start_min, size)
-
-    def _pretrim_endex_backup(
-        self: Memory,
-        start_min: Optional[Address],
-        size: Address,
-    ) -> Memory:
-        r"""Backups a `_pretrim_endex()` operation.
-
-        Arguments:
-            start_min (int):
-                Starting address of the erasure range.
-                If ``None``, :attr:`trim_endex` minus `size` is considered.
-
-            size (int):
-                Size of the erasure range.
-
-        Returns:
-            :obj:`Memory`: Backup memory region.
-
-        See Also:
-            :meth:`_pretrim_endex`
-        """
-        cdef:
-            addr_t start_min_
-            addr_t size_ = <addr_t>size
-            const Memory_* memory = self._
-            addr_t start
-
-        if memory.trim_endex_ and size_ > 0:
-            start = memory.trim_endex
-            CheckSubAddrU(start, size)
-            start -= size
-            if start_min is not None:
-                start_min_ = <addr_t>start_min
-                if start < start_min_:
-                    start = start_min_
-            return Memory_Extract_(memory, start, Memory_Endex(memory), 0, NULL, 1, True)
-        else:
-            return Memory()
-
-    def crop(
-        self: Memory,
+        item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> None:
-        r"""Keeps data within an address range.
+    ) -> Optional[Address]:
+        r"""Index of an item, reversed search.
 
         Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
             start (int):
-                Inclusive start address for cropping.
+                Inclusive start of the searched range.
                 If ``None``, :attr:`start` is considered.
 
             endex (int):
-                Exclusive end address for cropping.
-                If ``None``, :attr:`endex` is considered.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+
-            | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
-            +===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+
-            |   |   |[B | C]|   |[x]|   |   |   |
-            +---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
-            >>> memory.crop(6, 10)
-            >>> memory._blocks
-            [[6, b'BC'], [9, b'x']]
-
-        See Also:
-            :meth:`crop_backup`
-            :meth:`crop_restore`
-        """
-
-        Memory_Crop(self._, start, endex)
-
-    def crop_backup(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Tuple[Optional[Memory], Optional[Memory]]:
-        r"""Backups a `crop()` operation.
-
-        Arguments:
-            start (int):
-                Inclusive start address for cropping.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for cropping.
+                Exclusive end of the searched range.
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory` couple: Backup memory regions.
-
-        See Also:
-            :meth:`crop`
-            :meth:`crop_restore`
-        """
-        cdef:
-            addr_t start_
-            addr_t endex_
-            const Memory_* memory = self._
-            const Rack_* blocks = memory.blocks
-            addr_t block_start
-            addr_t block_endex
-            Memory backup_start = None
-            Memory backup_endex = None
-
-        if Rack_Length(blocks):
-            if start is not None:
-                start_ = <addr_t>start
-                block_start = Block_Start(Rack_First__(blocks))
-                if block_start < start_:
-                    backup_start = Memory_Extract_(memory, block_start, start_, 0, NULL, 1, True)
-
-            if endex is not None:
-                endex_ = <addr_t>endex
-                block_endex = Block_Endex(Rack_Last__(blocks))
-                if endex_ < block_endex:
-                    backup_endex = Memory_Extract_(memory, endex_, block_endex, 0, NULL, 1, True)
-
-        return backup_start, backup_endex
-
-    def crop_restore(
-        self: Memory,
-        backup_start: Optional[Memory],
-        backup_endex: Optional[Memory],
-    ) -> None:
-        r"""Restores a `crop()` operation.
-
-        Arguments:
-            backup_start (:obj:`Memory`):
-                Backup memory region to restore at the beginning.
-
-            backup_endex (:obj:`Memory`):
-                Backup memory region to restore at the end.
-
-        See Also:
-            :meth:`crop`
-            :meth:`crop_backup`
+            int: The index of the last item equal to `value`, or ``None``.
         """
 
-        if backup_start is not None:
-            Memory_WriteSame_(self._, 0, (<Memory>backup_start)._, True)
-        if backup_endex is not None:
-            Memory_WriteSame_(self._, 0, (<Memory>backup_endex)._, True)
-
-    def write(
-        self: Memory,
-        address: Address,
-        data: Union[AnyBytes, Value, Memory],
-        clear: bool = False,
-    ) -> None:
-        r"""Writes data.
-
-        Arguments:
-            address (int):
-                Address where to start writing data.
-
-            data (bytes):
-                Data to write.
-
-            clear (bool):
-                Clears the target range before writing data.
-                Useful only if `data` is a :obj:`Memory` with empty spaces.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C]|   |[1 | 2 | 3 | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.write(5, b'123')
-            >>> memory._blocks
-            [[1, b'ABC'], [5, b'123z']]
-
-        See Also:
-            :meth:`write_backup`
-            :meth:`write_restore`
-        """
-
-        Memory_Write(self._, address, data, clear)
-
-    def write_backup(
-        self: Memory,
-        address: Address,
-        data: Union[AnyBytes, Value, Memory],
-    ) -> Memory:
-        r"""Backups a `write()` operation.
-
-        Arguments:
-            address (int):
-                Address where to start writing data.
-
-            data (bytes):
-                Data to write.
-
-        Returns:
-            :obj:`Memory` list: Backup memory regions.
-
-        See Also:
-            :meth:`write`
-            :meth:`write_restore`
-        """
-        cdef:
-            addr_t address_ = <addr_t>address
-            addr_t size = 1 if isinstance(data, int) else <addr_t>len(data)
-
-        CheckAddAddrU(address, size)
-        return Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)
-
-    def write_restore(
-        self: Memory,
-        Memory backup not None: Memory,
-    ) -> None:
-        r"""Restores a `write()` operation.
-
-        Arguments:
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
-
-        See Also:
-            :meth:`write`
-            :meth:`write_backup`
-        """
-
-        Memory_Write(self._, 0, backup, True)
-
-    def fill(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-        pattern: Union[AnyBytes, Value] = 0,
-    ) -> None:
-        r"""Overwrites a range with a pattern.
-
-        Arguments:
-            start (int):
-                Inclusive start address for filling.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for filling.
-                If ``None``, :attr:`endex` is considered.
-
-            pattern (items):
-                Pattern of items to fill the range.
-
-        Examples:
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[1 | 2 | 3 | 1 | 2 | 3 | 1 | 2]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.fill(pattern=b'123')
-            >>> memory._blocks
-            [[1, b'12312312']]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | 1 | 2 | 3 | 1 | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.fill(3, 7, b'123')
-            >>> memory._blocks
-            [[1, b'AB1231yz']]
-
-        See Also:
-            :meth:`fill_backup`
-            :meth:`fill_restore`
-        """
-
-        Memory_Fill(self._, start, endex, pattern)
-
-    def fill_backup(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Memory:
-        r"""Backups a `fill()` operation.
-
-        Arguments:
-            start (int):
-                Inclusive start address for filling.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for filling.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            :obj:`Memory`: Backup memory region.
-
-        See Also:
-            :meth:`fill`
-            :meth:`fill_restore`
-        """
-        cdef:
-            const Memory_* memory = self._
-            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
-            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
-
-        return Memory_Extract_(memory, start_, endex_, 0, NULL, 1, True)
-
-    def fill_restore(
-        self: Memory,
-        Memory backup not None: Memory,
-    ) -> None:
-        r"""Restores a `fill()` operation.
-
-        Arguments:
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
-
-        See Also:
-            :meth:`fill`
-            :meth:`fill_backup`
-        """
-
-        Memory_WriteSame_(self._, 0, backup._, True)
-
-    def flood(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-        pattern: Union[AnyBytes, Value] = 0,
-    ) -> None:
-        r"""Fills emptiness between non-touching blocks.
-
-        Arguments:
-            start (int):
-                Inclusive start address for flooding.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for flooding.
-                If ``None``, :attr:`endex` is considered.
-
-            pattern (items):
-                Pattern of items to fill the range.
-
-        Examples:
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C | 1 | 2 | x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.flood(pattern=b'123')
-            >>> memory._blocks
-            [[1, b'ABC12xyz']]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   |[A | B | C | 2 | 3 | x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> memory.flood(3, 7, b'123')
-            >>> memory._blocks
-            [[1, b'ABC23xyz']]
-
-        See Also:
-            :meth:`flood_backup`
-            :meth:`flood_restore`
-        """
-
-        Memory_Flood(self._, start, endex, pattern)
-
-    def flood_backup(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> List[OpenInterval]:
-        r"""Backups a `flood()` operation.
-
-        Arguments:
-            start (int):
-                Inclusive start address for filling.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for filling.
-                If ``None``, :attr:`endex` is considered.
-
-        Returns:
-            list of open intervals: Backup memory gaps.
-
-        See Also:
-            :meth:`flood`
-            :meth:`flood_restore`
-        """
-
-        return list(self.gaps(start, endex))
-
-    def flood_restore(
-        self: Memory,
-        gaps: List[OpenInterval],
-    ) -> None:
-        r"""Restores a `flood()` operation.
-
-        Arguments:
-            gaps (list of open intervals):
-                Backup memory gaps to restore.
-
-        See Also:
-            :meth:`flood`
-            :meth:`flood_backup`
-        """
-        cdef:
-            Memory_* memory = self._
-
-        for gap_start, gap_endex in gaps:
-            Memory_Clear(memory, gap_start, gap_endex)
-
-    def keys(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Union[Address, EllipsisType]] = None,
-    ) -> Iterator[Address]:
-        r"""Iterates over addresses.
-
-        Iterates over addresses, from `start` to `endex`.
-        Implemets the interface of :obj:`dict`.
-
-        Arguments:
-            start (int):
-                Inclusive start address.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address.
-                If ``None``, :attr:`endex` is considered.
-                If ``Ellipsis``, the iterator is infinite.
-
-        Yields:
-            int: Range address.
-
-        Examples:
-            >>> from itertools import islice
-            >>> memory = Memory()
-            >>> list(memory.keys())
-            []
-            >>> list(memory.keys(endex=8))
-            [0, 1, 2, 3, 4, 5, 6, 7]
-            >>> list(memory.keys(3, 8))
-            [3, 4, 5, 6, 7]
-            >>> list(islice(memory.keys(3, ...), 7))
-            [3, 4, 5, 6, 7, 8, 9]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> list(memory.keys())
-            [1, 2, 3, 4, 5, 6, 7, 8]
-            >>> list(memory.keys(endex=8))
-            [1, 2, 3, 4, 5, 6, 7]
-            >>> list(memory.keys(3, 8))
-            [3, 4, 5, 6, 7]
-            >>> list(islice(memory.keys(3, ...), 7))
-            [3, 4, 5, 6, 7, 8, 9]
-        """
-        cdef:
-            addr_t start_
-            addr_t endex_
-
-        if start is None:
-            start_ = Memory_Start(self._)
-        else:
-            start_ = <addr_t>start
-
-        if endex is None:
-            endex_ = Memory_Endex(self._)
-        elif endex is Ellipsis:
-            endex_ = ADDR_MAX
-        else:
-            endex_ = <addr_t>endex
-
-        while start_ < endex_:
-            yield start_
-            start_ += 1
-
-    def values(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Union[Address, EllipsisType]] = None,
-        pattern: Optional[Union[AnyBytes, Value]] = None,
-    ) -> Iterator[Optional[Value]]:
-        r"""Iterates over values.
-
-        Iterates over values, from `start` to `endex`.
-        Implemets the interface of :obj:`dict`.
-
-        Arguments:
-            start (int):
-                Inclusive start address.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address.
-                If ``None``, :attr:`endex` is considered.
-                If ``Ellipsis``, the iterator is infinite.
-
-            pattern (items):
-                Pattern of values to fill emptiness.
-
-        Yields:
-            int: Range values.
-
-        Examples:
-            >>> from itertools import islice
-            >>> memory = Memory()
-            >>> list(memory.values(endex=8))
-            [None, None, None, None, None, None, None, None]
-            >>> list(memory.values(3, 8))
-            [None, None, None, None, None]
-            >>> list(islice(memory.values(3, ...), 7))
-            [None, None, None, None, None, None, None]
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-            +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
-            +---+---+---+---+---+---+---+---+---+---+
-            |   | 65| 66| 67|   |   |120|121|122|   |
-            +---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> list(memory.values())
-            [65, 66, 67, None, None, 120, 121, 122]
-            >>> list(memory.values(3, 8))
-            [67, None, None, 120, 121]
-            >>> list(islice(memory.values(3, ...), 7))
-            [67, None, None, 120, 121, 122, None]
-        """
-        cdef:
-            addr_t start_
-            addr_t endex_
-            Rover_* rover = NULL
-            byte_t pattern_value
-            const byte_t[:] pattern_view
-            size_t pattern_size = 0
-            const byte_t* pattern_data = NULL
-
-        if start is None:
-            start_ = Memory_Start(self._)
-        else:
-            start_ = <addr_t>start
-
-        if endex is None:
-            endex_ = Memory_Endex(self._)
-        elif endex is Ellipsis:
-            endex_ = ADDR_MAX
-        else:
-            endex_ = <addr_t>endex
-
-        if pattern is not None:
-            if isinstance(pattern, int):
-                pattern_value = <byte_t>pattern
-                pattern_size = 1
-                pattern_data = &pattern_value
-            else:
-                try:
-                    pattern_view = pattern
-                except TypeError:
-                    pattern_view = bytes(pattern)
-                with cython.boundscheck(False):
-                    pattern_size = len(pattern_view)
-                    pattern_data = &pattern_view[0]
-
-        try:
-            rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
-            while Rover_HasNext(rover):
-                yield Rover_Next(rover)
-        finally:
-            rover = Rover_Free(rover)
+        return Memory_RevObjFind(self._, item, start, endex)
 
     def rvalues(
         self: Memory,
@@ -8852,15 +8797,258 @@ cdef class Memory:
         finally:
             Rover_Free(rover)
 
-    def items(
+    def shift(
+        self: Memory,
+        offset: Address,
+    ) -> None:
+        r"""Shifts the items.
+
+        Arguments:
+            offset (int):
+                Signed amount of address shifting.
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |   |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C]|   |[x | y | z]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
+            >>> memory.shift(-2)
+            >>> memory._blocks
+            [[3, b'ABC'], [7, b'xyz']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[[[|   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+            |   |[y | z]|   |   |   |   |   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=3)
+            >>> memory.shift(-8)
+            >>> memory._blocks
+            [[2, b'yz']]
+
+        See Also:
+            :meth:`shift_backup`
+            :meth:`shift_restore`
+        """
+
+        Memory_Shift(self._, offset)
+
+    def shift_backup(
+        self: Memory,
+        offset: Address,
+    ) -> Tuple[Address, Memory]:
+        r"""Backups a `shift()` operation.
+
+        Arguments:
+            offset (int):
+                Signed amount of address shifting.
+
+        Returns:
+            (int, :obj:`Memory`): Shifting, backup memory region.
+
+        See Also:
+            :meth:`shift`
+            :meth:`shift_restore`
+        """
+        cdef:
+            Memory backup
+
+        if offset < 0:
+            backup = self._pretrim_start_backup(None, -offset)
+        else:
+            backup = self._pretrim_endex_backup(None, +offset)
+        return offset, backup
+
+    def shift_restore(
+        self: Memory,
+        offset: Address,
+        Memory backup not None: Memory
+    ) -> None:
+        r"""Restores an `shift()` operation.
+
+        Arguments:
+            offset (int):
+                Signed amount of address shifting.
+
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
+
+        See Also:
+            :meth:`shift`
+            :meth:`shift_backup`
+        """
+        cdef:
+            Memory_* memory = self._
+
+        Memory_Shift(memory, -offset)
+        Memory_Write(memory, 0, backup, True)
+
+    @property
+    def span(
+        self: Memory,
+    ) -> ClosedInterval:
+        r"""tuple of int: Memory address span.
+
+        A :obj:`tuple` holding both :attr:`start` and :attr:`endex`.
+
+        Examples:
+            >>> Memory().span
+            (0, 0)
+            >>> Memory(start=1, endex=8).span
+            (1, 8)
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.span
+            (1, 8)
+        """
+
+        return Memory_Span(self._)
+
+    @property
+    def start(
+        self: Memory,
+    ) -> Address:
+        r"""int: Inclusive start address.
+
+        This property holds the inclusive start address of the virtual space.
+        By default, it is the current minimum inclusive start address of
+        the first stored block.
+
+        If :attr:`trim_start` not ``None``, that is returned.
+
+        If the memory has no data and no trimming, 0 is returned.
+
+        Examples:
+            >>> Memory().start
+            0
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [5, b'xyz']])
+            >>> memory.start
+            1
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |[[[|   |   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[5, b'xyz']], start=1)
+            >>> memory.start
+            1
+        """
+
+        return Memory_Start(self._)
+
+    @property
+    def trim_endex(
+        self: Memory,
+    ) -> Optional[Address]:
+        r"""int: Trimming exclusive end address.
+
+        Any data at or after this address is automatically discarded.
+        Disabled if ``None``.
+        """
+
+        return Memory_GetTrimEndex(self._)
+
+    @trim_endex.setter
+    def trim_endex(
+        self: Memory,
+        trim_endex: Address,
+    ) -> None:
+
+        Memory_SetTrimEndex(self._, trim_endex)
+
+    @property
+    def trim_span(
+        self: Memory,
+    ) -> OpenInterval:
+        r"""tuple of int: Trimming span addresses.
+
+        A :obj:`tuple` holding :attr:`trim_start` and :attr:`trim_endex`.
+        """
+
+        return Memory_GetTrimSpan(self._)
+
+    @trim_span.setter
+    def trim_span(
+        self: Memory,
+        trim_span: OpenInterval,
+    ) -> None:
+
+        Memory_SetTrimSpan(self._, trim_span)
+
+    @property
+    def trim_start(
+        self: Memory,
+    ) -> Optional[Address]:
+        r"""int: Trimming start address.
+
+        Any data before this address is automatically discarded.
+        Disabled if ``None``.
+        """
+
+        return Memory_GetTrimStart(self._)
+
+    @trim_start.setter
+    def trim_start(
+        self: Memory,
+        trim_start: Address,
+    ) -> None:
+
+        Memory_SetTrimStart(self._, trim_start)
+
+    def validate(
+        self: Memory,
+    ) -> None:
+        r"""Validates internal structure.
+
+        It makes sure that all the allocated blocks are sorted by block start
+        address, and that all the blocks are non-overlapping.
+
+        Raises:
+            :obj:`ValueError`: Invalid data detected (see exception message).
+        """
+
+        Memory_Validate(self._)
+
+    def values(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
-    ) -> Iterator[Tuple[Address, Value]]:
-        r"""Iterates over address and value couples.
+    ) -> Iterator[Optional[Value]]:
+        r"""Iterates over values.
 
-        Iterates over address and value couples, from `start` to `endex`.
+        Iterates over values, from `start` to `endex`.
         Implemets the interface of :obj:`dict`.
 
         Arguments:
@@ -8877,17 +9065,17 @@ cdef class Memory:
                 Pattern of values to fill emptiness.
 
         Yields:
-            int: Range address and value couples.
+            int: Range values.
 
         Examples:
             >>> from itertools import islice
             >>> memory = Memory()
-            >>> list(memory.items(endex=8))
-            [(0, None), (1, None), (2, None), (3, None), (4, None), (5, None), (6, None), (7, None)]
-            >>> list(memory.items(3, 8))
-            [(3, None), (4, None), (5, None), (6, None), (7, None)]
-            >>> list(islice(memory.items(3, ...), 7))
-            [(3, None), (4, None), (5, None), (6, None), (7, None), (8, None), (9, None)]
+            >>> list(memory.values(endex=8))
+            [None, None, None, None, None, None, None, None]
+            >>> list(memory.values(3, 8))
+            [None, None, None, None, None]
+            >>> list(islice(memory.values(3, ...), 7))
+            [None, None, None, None, None, None, None]
 
             ~~~
 
@@ -8900,380 +9088,190 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> list(memory.items())
-            [(1, 65), (2, 66), (3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122)]
-            >>> list(memory.items(3, 8))
-            [(3, 67), (4, None), (5, None), (6, 120), (7, 121)]
-            >>> list(islice(memory.items(3, ...), 7))
-            [(3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122), (9, None)]
-        """
-
-        yield from zip(self.keys(start, endex), self.values(start, endex, pattern))  # TODO: cythonize
-
-    def intervals(
-        self: Memory,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Iterator[ClosedInterval]:
-        r"""Iterates over block intervals.
-
-        Iterates over data boundaries within an address range.
-
-        Arguments:
-            start (int):
-                Inclusive start address.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address.
-                If ``None``, :attr:`endex` is considered.
-
-        Yields:
-            couple of addresses: Block data interval boundaries.
-
-        Example:
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
-            >>> list(memory.intervals())
-            [(1, 3), (5, 6), (7, 10)]
-            >>> list(memory.intervals(2, 9))
-            [(2, 3), (5, 6), (7, 9)]
-            >>> list(memory.intervals(3, 5))
-            []
+            >>> list(memory.values())
+            [65, 66, 67, None, None, 120, 121, 122]
+            >>> list(memory.values(3, 8))
+            [67, None, None, 120, 121]
+            >>> list(islice(memory.values(3, ...), 7))
+            [67, None, None, 120, 121, 122, None]
         """
         cdef:
             addr_t start_
             addr_t endex_
-            const Rack_* blocks = self._.blocks
-            size_t block_count = Rack_Length(blocks)
-            size_t block_index
-            size_t block_index_start
-            size_t block_index_endex
-            const Block_* block
-            addr_t block_start
-            addr_t block_endex
-            size_t slice_start
-            size_t slice_endex
+            Rover_* rover = NULL
+            byte_t pattern_value
+            const byte_t[:] pattern_view
+            size_t pattern_size = 0
+            const byte_t* pattern_data = NULL
 
-        if block_count:
-            block_index_start = 0 if start is None else Rack_IndexStart(blocks, <addr_t>start)
-            block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, <addr_t>endex)
-            start_, endex_ = Memory_Bound(self._, start, endex)
+        if start is None:
+            start_ = Memory_Start(self._)
+        else:
+            start_ = <addr_t>start
 
-            for block_index in range(block_index_start, block_index_endex):
-                block = Rack_Get__(blocks, block_index)
-                block_start = Block_Start(block)
-                block_endex = Block_Endex(block)
-                slice_start = block_start if start_ < block_start else start_
-                slice_endex = endex_ if endex_ < block_endex else block_endex
-                if slice_start < slice_endex:
-                    yield slice_start, slice_endex
+        if endex is None:
+            endex_ = Memory_Endex(self._)
+        elif endex is Ellipsis:
+            endex_ = ADDR_MAX
+        else:
+            endex_ = <addr_t>endex
 
-    def gaps(
+        if pattern is not None:
+            if isinstance(pattern, int):
+                pattern_value = <byte_t>pattern
+                pattern_size = 1
+                pattern_data = &pattern_value
+            else:
+                try:
+                    pattern_view = pattern
+                except TypeError:
+                    pattern_view = bytes(pattern)
+                with cython.boundscheck(False):
+                    pattern_size = len(pattern_view)
+                    pattern_data = &pattern_view[0]
+
+        try:
+            rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
+            while Rover_HasNext(rover):
+                yield Rover_Next(rover)
+        finally:
+            rover = Rover_Free(rover)
+
+    def view(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        bound: bool = False,
-    ) -> Iterator[OpenInterval]:
-        r"""Iterates over block gaps.
+    ) -> BlockView:
+        r"""Creates a view over a range.
 
-        Iterates over gaps emptiness bounds within an address range.
-        If a yielded bound is ``None``, that direction is infinitely empty
-        (valid before or after global data bounds).
+        Creates a memory view over the selected address range.
+        Data within the range is required to be contiguous.
 
         Arguments:
             start (int):
-                Inclusive start address.
+                Inclusive start of the viewed range.
                 If ``None``, :attr:`start` is considered.
 
             endex (int):
-                Exclusive end address.
+                Exclusive end of the viewed range.
                 If ``None``, :attr:`endex` is considered.
 
-        Yields:
-            couple of addresses: Block data interval boundaries.
+        Returns:
+            :obj:`memoryview`: A view of the selected address range.
+
+        Raises:
+            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
+
+        Examples:
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> bytes(memory.view(2, 5))
+            b'BCD'
+            >>> bytes(memory.view(9, 10))
+            b'y'
+            >>> memory.view()
+            Traceback (most recent call last):
+                ...
+            ValueError: non-contiguous data within range
+            >>> memory.view(0, 6)
+            Traceback (most recent call last):
+                ...
+            ValueError: non-contiguous data within range
+        """
+        cdef:
+            const Memory_* memory = self._
+            addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
+            addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+
+        return Memory_View(memory, start_, endex_)
+
+    def write(
+        self: Memory,
+        address: Address,
+        data: Union[AnyBytes, Value, Memory],
+        clear: bool = False,
+    ) -> None:
+        r"""Writes data.
+
+        Arguments:
+            address (int):
+                Address where to start writing data.
+
+            data (bytes):
+                Data to write.
+
+            clear (bool):
+                Clears the target range before writing data.
+                Useful only if `data` is a :obj:`Memory` with empty spaces.
 
         Example:
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C]|   |   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |[A | B | C]|   |[1 | 2 | 3 | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+
 
-            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
-            >>> list(memory.gaps())
-            [(None, 1), (3, 5), (6, 7), (10, None)]
-            >>> list(memory.gaps(0, 11))
-            [(0, 1), (3, 5), (6, 7), (10, 11)]
-            >>> list(memory.gaps(*memory.span))
-            [(3, 5), (6, 7)]
-            >>> list(memory.gaps(2, 6))
-            [(3, 5)]
+            >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
+            >>> memory.write(5, b'123')
+            >>> memory._blocks
+            [[1, b'ABC'], [5, b'123z']]
+
+        See Also:
+            :meth:`write_backup`
+            :meth:`write_restore`
         """
-        cdef:
-            addr_t start_
-            addr_t endex_
-            bint bound_ = <bint>bound
-            const Rack_* blocks = self._.blocks
-            size_t block_count = Rack_Length(blocks)
-            size_t block_index
-            size_t block_index_start
-            size_t block_index_endex
-            const Block_* block
-            addr_t block_start
-            addr_t block_endex
 
-        if block_count:
-            start__ = start
-            endex__ = endex
-            start_, endex_ = Memory_Bound(self._, start, endex)
+        Memory_Write(self._, address, data, clear)
 
-            if start__ is None:
-                if not bound_:
-                    block = Rack_First__(blocks)
-                    start_ = Block_Start(block)  # override trim start
-                    yield None, start_
-                block_index_start = 0
-            else:
-                block_index_start = Rack_IndexStart(blocks, start_)
-
-            if endex__ is None:
-                block_index_endex = block_count
-            else:
-                block_index_endex = Rack_IndexEndex(blocks, endex_)
-
-            for block_index in range(block_index_start, block_index_endex):
-                block = Rack_Get__(blocks, block_index)
-                block_start = Block_Start(block)
-                if start_ < block_start:
-                    yield start_, block_start
-                start_ = Block_Endex(block)
-
-            if endex__ is None and not bound_:
-                yield start_, None
-            elif start_ < endex_:
-                yield start_, endex_
-
-        elif not bound_:
-            yield None, None
-
-    def equal_span(
+    def write_backup(
         self: Memory,
         address: Address,
-    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
-        r"""Span of homogeneous data.
-
-        It searches for the biggest chunk of data adjacent to the given
-        address, with the same value at that address.
-
-        If the address is within a gap, its bounds are returned, and its
-        value is ``None``.
-
-        If the address is before or after any data, bounds are ``None``.
+        data: Union[AnyBytes, Value, Memory],
+    ) -> Memory:
+        r"""Backups a `write()` operation.
 
         Arguments:
             address (int):
-                Reference address.
+                Address where to start writing data.
+
+            data (bytes):
+                Data to write.
 
         Returns:
-            tuple: Start bound, exclusive end bound, and reference value.
+            :obj:`Memory` list: Backup memory regions.
 
-        Examples:
-            >>> memory = Memory()
-            >>> memory.equal_span(0)
-            (None, None, None)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |[A | B | B | B | C]|   |   |[C | C | D]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
-            >>> memory.equal_span(2)
-            (1, 4, 66)
-            >>> memory.equal_span(4)
-            (4, 5, 67)
-            >>> memory.equal_span(5)
-            (5, 7, None)
-            >>> memory.equal_span(10)
-            (10, None, None)
+        See Also:
+            :meth:`write`
+            :meth:`write_restore`
         """
         cdef:
-            const Rack_* blocks = self._.blocks
-            size_t block_count = Rack_Length(blocks)
-            size_t block_index
-            size_t block_index_start
-            size_t block_index_endex
-            const Block_* block
-            addr_t block_start
-            addr_t block_endex
             addr_t address_ = <addr_t>address
-            addr_t start
-            addr_t endex
-            size_t offset
-            byte_t value
+            addr_t size = 1 if isinstance(data, int) else <addr_t>len(data)
 
-        block_index = Rack_IndexStart(blocks, address_)
+        CheckAddAddrU(address, size)
+        return Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)
 
-        if block_index < block_count:
-            block = Rack_Get__(blocks, block_index)
-            block_start = Block_Start(block)
-            block_endex = Block_Endex(block)
-
-            if block_start <= address_ < block_endex:
-                # Address within a block
-                CheckSubAddrU(address_, block_start)
-                CheckAddrToSizeU(address - block_start)
-                offset = <size_t>(address_ - block_start)
-                start = offset
-                CheckAddAddrU(offset, 1)
-                endex = offset + 1
-                value = Block_Get__(block, offset)
-
-                for start in range(start + 1, 0, -1):
-                    if Block_Get__(block, start - 1) != value:
-                        break
-                else:
-                    start = 0
-
-                for endex in range(endex, Block_Length(block)):
-                    if Block_Get__(block, endex) != value:
-                        break
-                else:
-                    endex = Block_Length(block)
-
-                block_endex = block_start + endex
-                block_start = block_start + start
-                return block_start, block_endex, value  # equal data span
-
-            elif block_index:
-                # Address within a gap
-                block_endex = block_start  # end gap before next block
-                block = Rack_Get__(blocks, block_index - 1)
-                block_start = Block_Endex(block)  # start gap after previous block
-                return block_start, block_endex, None  # gap span
-
-            else:
-                # Address before content
-                return None, block_start, None  # open left
-
-        else:
-            # Address after content
-            if block_count:
-                block = Rack_Last__(blocks)
-                block_start = Block_Start(block)
-                block_endex = Block_Endex(block)
-                return block_endex, None, None  # open right
-
-            else:
-                return None, None, None  # fully open
-
-    def block_span(
+    def write_restore(
         self: Memory,
-        address: Address,
-    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
-        r"""Span of block data.
-
-        It searches for the biggest chunk of data adjacent to the given
-        address.
-
-        If the address is within a gap, its bounds are returned, and its
-        value is ``None``.
-
-        If the address is before or after any data, bounds are ``None``.
+        Memory backup not None: Memory,
+    ) -> None:
+        r"""Restores a `write()` operation.
 
         Arguments:
-            address (int):
-                Reference address.
+            backup (:obj:`Memory`):
+                Backup memory region to restore.
 
-        Returns:
-            tuple: Start bound, exclusive end bound, and reference value.
-
-        Examples:
-            >>> memory = Memory()
-            >>> memory.block_span(0)
-            (None, None, None)
-
-            ~~~
-
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
-            +===+===+===+===+===+===+===+===+===+===+===+
-            |[A | B | B | B | C]|   |   |[C | C | D]|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-            | 65| 66| 66| 66| 67|   |   | 67| 67| 68|   |
-            +---+---+---+---+---+---+---+---+---+---+---+
-
-            >>> memory = Memory.from_blocks([[0, b'ABBBC'], [7, b'CCD']])
-            >>> memory.block_span(2)
-            (0, 5, 66)
-            >>> memory.block_span(4)
-            (0, 5, 67)
-            >>> memory.block_span(5)
-            (5, 7, None)
-            >>> memory.block_span(10)
-            (10, None, None)
+        See Also:
+            :meth:`write`
+            :meth:`write_backup`
         """
-        cdef:
-            addr_t address_ = <addr_t>address
-            const Rack_* blocks = self._.blocks
-            size_t block_count = Rack_Length(blocks)
-            size_t block_index
-            const Block_* block
-            addr_t block_start
-            addr_t block_endex
-            byte_t value
 
-        block_index = Rack_IndexStart(blocks, address_)
+        Memory_Write(self._, 0, backup, True)
 
-        if block_index < block_count:
-            block = Rack_Get__(blocks, block_index)
-            block_start = Block_Start(block)
-            block_endex = Block_Endex(block)
-
-            if block_start <= address_ < block_endex:
-                # Address within a block
-                CheckSubAddrU(address_, block_start)
-                CheckAddrToSizeU(address_ - block_start)
-                value = Block_Get__(block, <size_t>(address_ - block_start))
-                return block_start, block_endex, value  # block span
-
-            elif block_index:
-                # Address within a gap
-                block_endex = block_start  # end gap before next block
-                block = Rack_Get__(blocks, block_index - 1)
-                block_start = Block_Endex(block)  # start gap after previous block
-                return block_start, block_endex, None  # gap span
-
-            else:
-                # Address before content
-                return None, block_start, None  # open left
-
-        else:
-            # Address after content
-            if block_count:
-                block = Rack_Last__(blocks)
-                block_start = Block_Start(block)
-                block_endex = Block_Endex(block)
-                return block_endex, None, None  # open right
-
-            else:
-                return None, None, None  # fully open
-
-    @property
-    def _blocks(
-        self: Memory,
-    ) -> BlockList:
-        r"""list of blocks: A sequence of spaced blocks, sorted by address."""
-
-        return Memory_ToBlocks(self._)
