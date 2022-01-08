@@ -32,6 +32,8 @@
 
 import pytest
 
+from cbytesparse.c import collapse_blocks
+
 from cbytesparse.c cimport *
 
 cdef:

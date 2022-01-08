@@ -10,7 +10,7 @@ if os.environ.get('CYTHON_TRACE_NOGIL') == '1':
 	compiler_directives['linetrace'] = True
 	compiler_directives['binding'] = True
 
-pyx_path = os.path.join('src', 'cbytesparse', '_c.pyx')
+pyx_path = os.path.join('src', 'cbytesparse', 'c.pyx')
 
 cythonize(
     pyx_path,
