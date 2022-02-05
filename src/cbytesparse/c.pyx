@@ -5573,7 +5573,7 @@ cdef class Memory:
             Anything at or after it will be trimmed away.
 
     Examples:
-        >>> from bytesparse.inplace import Memory
+        >>> from cbytesparse.c import Memory
 
         >>> memory = Memory()
         >>> memory.to_blocks()
@@ -5603,7 +5603,7 @@ cdef class Memory:
             bool: Has any items.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory()
             >>> bool(memory)
@@ -5656,7 +5656,7 @@ cdef class Memory:
             bool: Item is contained.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -5725,7 +5725,7 @@ cdef class Memory:
             its `step` is an integer greater than 1.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -5791,7 +5791,7 @@ cdef class Memory:
             bool: `self` is equal to `other`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> data = b'Hello, World!'
             >>> memory = Memory.from_bytes(data)
@@ -5832,7 +5832,7 @@ cdef class Memory:
             its `step` is an integer greater than 1.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -5966,7 +5966,7 @@ cdef class Memory:
                 If `value` is null, the range is cleared.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
@@ -6039,7 +6039,7 @@ cdef class Memory:
             str: String representation.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -6094,7 +6094,7 @@ cdef class Memory:
             int: Block index if found, ``None`` otherwise.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -6133,7 +6133,7 @@ cdef class Memory:
             int: First block index before `address`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -6169,7 +6169,7 @@ cdef class Memory:
             int: First block index since `address`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -6333,7 +6333,7 @@ cdef class Memory:
             :meth:`append_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory()
             >>> memory.append(b'$')
@@ -6400,7 +6400,7 @@ cdef class Memory:
             tuple: Start bound, exclusive end bound, and reference value.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory()
             >>> memory.block_span(0)
@@ -6497,7 +6497,7 @@ cdef class Memory:
             :meth:`to_blocks`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -6540,7 +6540,7 @@ cdef class Memory:
             tuple of int: Bounded `start` and `endex`, closed interval.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().bound(None, None)
             (0, 0)
@@ -6609,7 +6609,7 @@ cdef class Memory:
             :meth:`clear_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
@@ -6689,7 +6689,7 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_endex
             0
@@ -6741,7 +6741,7 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_endin
             -1
@@ -6801,7 +6801,7 @@ cdef class Memory:
             meth:`content_values`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -6844,7 +6844,7 @@ cdef class Memory:
             meth:`content_values`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -6873,7 +6873,7 @@ cdef class Memory:
             int: The number of blocks.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_parts
             0
@@ -6915,7 +6915,7 @@ cdef class Memory:
             int: The sum of all block lengths.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_size
             0
@@ -6959,7 +6959,7 @@ cdef class Memory:
         :attr:`content_endex`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_span
             (0, 0)
@@ -7000,7 +7000,7 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().content_start
             0
@@ -7060,7 +7060,7 @@ cdef class Memory:
             meth:`content_keys`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -7128,7 +7128,7 @@ cdef class Memory:
             int: The number of items equal to `value`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -7164,7 +7164,7 @@ cdef class Memory:
             :meth:`crop_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
@@ -7275,7 +7275,7 @@ cdef class Memory:
             :meth:`delete_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13|
@@ -7355,7 +7355,7 @@ cdef class Memory:
         If the memory has no data and no trimming, :attr:`start` is returned.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().endex
             0
@@ -7402,7 +7402,7 @@ cdef class Memory:
         If the memory has no data and no trimming, :attr:`start` is returned.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().endin
             -1
@@ -7456,7 +7456,7 @@ cdef class Memory:
             tuple: Start bound, exclusive end bound, and reference value.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory()
             >>> memory.equal_span(0)
@@ -7651,7 +7651,7 @@ cdef class Memory:
             :obj:`ImmutableMemory`: A copy of the memory from the selected range.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -7703,7 +7703,7 @@ cdef class Memory:
             :meth:`fill_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
@@ -7834,7 +7834,7 @@ cdef class Memory:
             :meth:`flood_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
@@ -7956,7 +7956,7 @@ cdef class Memory:
             :meth:`to_blocks`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
@@ -8036,7 +8036,7 @@ cdef class Memory:
             :meth:`to_bytes`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory.from_bytes(b'')
             >>> memory.to_blocks()
@@ -8102,7 +8102,7 @@ cdef class Memory:
             :obj:`ValueError`: Some requirements are not satisfied.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory1 = Memory.from_bytes(b'ABC', 5)
             >>> memory2 = Memory.from_memory(memory1)
@@ -8154,7 +8154,7 @@ cdef class Memory:
             :obj:`ImmutableMemory`: The resulting memory object.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory.fromhex('')
             >>> bytes(memory)
@@ -8197,7 +8197,7 @@ cdef class Memory:
             :meth:`intervals`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -8273,7 +8273,7 @@ cdef class Memory:
             int: The item at `address`, `default` if empty.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -8328,7 +8328,7 @@ cdef class Memory:
             :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().hex() == ''
             True
@@ -8397,7 +8397,7 @@ cdef class Memory:
             :meth:`insert_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -8498,7 +8498,7 @@ cdef class Memory:
             :meth:`gaps`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -8570,7 +8570,7 @@ cdef class Memory:
             int: Range address and value pairs.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> from itertools import islice
             >>> memory = Memory()
@@ -8626,7 +8626,7 @@ cdef class Memory:
             int: Range address.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> from itertools import islice
             >>> memory = Memory()
@@ -8713,7 +8713,7 @@ cdef class Memory:
             int: The item at `address`, ``None`` if empty.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -8757,7 +8757,7 @@ cdef class Memory:
             :meth:`poke_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -8844,7 +8844,7 @@ cdef class Memory:
             :meth:`pop_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -8930,7 +8930,7 @@ cdef class Memory:
             :meth:`popitem_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -9019,7 +9019,7 @@ cdef class Memory:
             :meth:`remove_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -9114,7 +9114,7 @@ cdef class Memory:
             :meth:`reserve_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
@@ -9206,7 +9206,7 @@ cdef class Memory:
         Data is reversed within the memory :attr:`span`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -9347,7 +9347,7 @@ cdef class Memory:
             int: Range values.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
@@ -9456,7 +9456,7 @@ cdef class Memory:
             :meth:`setdefault_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -9542,7 +9542,7 @@ cdef class Memory:
             :meth:`shift_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
@@ -9634,7 +9634,7 @@ cdef class Memory:
         A :obj:`tuple` holding both :attr:`start` and :attr:`endex`.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().span
             (0, 0)
@@ -9671,7 +9671,7 @@ cdef class Memory:
         If the memory has no data and no trimming, 0 is returned.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> Memory().start
             0
@@ -9730,7 +9730,7 @@ cdef class Memory:
             :meth:`from_blocks`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
@@ -9776,7 +9776,7 @@ cdef class Memory:
             :meth:`view`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory.from_bytes(b'')
             >>> memory.to_bytes()
@@ -9888,7 +9888,7 @@ cdef class Memory:
             :meth:`update_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -9996,7 +9996,7 @@ cdef class Memory:
             int: Range values.
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
@@ -10107,7 +10107,7 @@ cdef class Memory:
             :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
@@ -10160,7 +10160,7 @@ cdef class Memory:
             :meth:`write_restore`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
