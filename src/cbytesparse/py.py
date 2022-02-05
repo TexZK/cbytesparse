@@ -23,14 +23,4 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-r"""Python wrapper around C (Cython) implementation."""
-
-from bytesparse.base import MutableMemory
-
-# noinspection PyUnresolvedReferences
-from .c import Memory as _Memory
-
-
-# Decorated with abstract base classes
-class Memory(_Memory, MutableMemory):
-    pass
+r"""Python wrappers around C (Cython) implementation."""

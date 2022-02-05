@@ -22,17 +22,3 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
-import importlib
-import inspect
-import sys
-
-import pytest
-from _common import *
-
-from cbytesparse.py import Memory as _Memory
-
-
-class TestMemory(BaseMemorySuite):
-    Memory: type = _Memory
-    ADDR_NEG: bool = False
