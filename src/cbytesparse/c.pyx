@@ -56,6 +56,8 @@ from bytesparse.base import BlockIterable
 from bytesparse.base import BlockList
 from bytesparse.base import ClosedInterval
 from bytesparse.base import EllipsisType
+from bytesparse.base import ImmutableMemory
+from bytesparse.base import MutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
 
@@ -5571,18 +5573,20 @@ cdef class Memory:
             Anything at or after it will be trimmed away.
 
     Examples:
+        >>> from bytesparse.inplace import Memory
+
         >>> memory = Memory()
-        >>> memory._blocks
+        >>> memory.to_blocks()
         []
 
         >>> memory = Memory.from_bytes(b'Hello, World!', offset=5)
-        >>> memory._blocks
+        >>> memory.to_blocks()
         [[5, b'Hello, World!']]
     """
 
     def __add__(
         self: Memory,
-        value: Union[AnyBytes, Memory],
+        value: Union[AnyBytes, ImmutableMemory],
     ) -> Memory:
         cdef:
             Memory_* memory_ = Memory_Add(self._, value)
@@ -5599,11 +5603,13 @@ cdef class Memory:
             bool: Has any items.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory = Memory()
             >>> bool(memory)
             False
 
-            >>> memory = Memory.from_bytes(b'Hello, World!', 5)
+            >>> memory = Memory.from_bytes(b'Hello, World!', offset=5)
             >>> bool(memory)
             True
         """
@@ -5649,7 +5655,9 @@ cdef class Memory:
         Returns:
             bool: Item is contained.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -5669,14 +5677,14 @@ cdef class Memory:
 
     def __copy__(
         self: Memory,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Creates a shallow copy.
 
         Note:
             The Cython implementation actually creates a deep copy.
 
         Returns:
-            :obj:`Memory`: Shallow copy.
+            :obj:`ImmutableMemory`: Shallow copy.
         """
         cdef:
             Memory_* memory_ = Memory_Copy(self._)
@@ -5690,11 +5698,11 @@ cdef class Memory:
 
     def __deepcopy__(
         self: Memory,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Creates a deep copy.
 
         Returns:
-            :obj:`Memory`: Deep copy.
+            :obj:`ImmutableMemory`: Deep copy.
         """
         cdef:
             Memory_* memory_ = Memory_Copy(self._)
@@ -5713,10 +5721,12 @@ cdef class Memory:
                 Deletion range or address.
 
         Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
+            This method is typically not optimized for a :class:`slice` where
+            its `step` is an integer greater than 1.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -5727,7 +5737,7 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> del memory[4:9]
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABCyz']]
 
             ~~~
@@ -5746,13 +5756,13 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> del memory[9]
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABCD'], [6, b'$'], [8, b'xz']]
             >>> del memory[3]
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABD'], [5, b'$'], [7, b'xz']]
             >>> del memory[2:10:3]
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'AD'], [5, b'x']]
         """
 
@@ -5768,7 +5778,7 @@ cdef class Memory:
             other (Memory):
                 Data to compare with `self`.
 
-                If it is a :obj:`Memory`, all of its blocks must match.
+                If it is a :obj:`ImmutableMemory`, all of its blocks must match.
 
                 If it is a :obj:`bytes`, a :obj:`bytearray`, or a
                 :obj:`memoryview`, it is expected to match the first and only
@@ -5781,6 +5791,8 @@ cdef class Memory:
             bool: `self` is equal to `other`.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> data = b'Hello, World!'
             >>> memory = Memory.from_bytes(data)
             >>> memory == data
@@ -5816,10 +5828,12 @@ cdef class Memory:
             items: Items from the requested range.
 
         Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
+            This method is typically not optimized for a :class:`slice` where
+            its `step` is an integer greater than 1.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -5853,8 +5867,8 @@ cdef class Memory:
 
     def __iadd__(
         self: Memory,
-        value: Union[AnyBytes, Memory],
-    ) -> Memory:
+        value: Union[AnyBytes, ImmutableMemory],
+    ) -> 'MutableMemory':
 
         Memory_IAdd(self._, value)
         return self
@@ -5862,7 +5876,7 @@ cdef class Memory:
     def __imul__(
         self: Memory,
         times: int,
-    ) -> Memory:
+    ) -> 'MutableMemory':
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
 
@@ -5939,7 +5953,7 @@ cdef class Memory:
     def __setitem__(
         self: Memory,
         key: Union[Address, slice],
-        value: Optional[Union[AnyBytes, Value]],
+        value: Optional[Union[AnyBytes, Value, ImmutableMemory]],
     ) -> None:
         r"""Sets data.
 
@@ -5951,11 +5965,9 @@ cdef class Memory:
                 Items to write at the selection address.
                 If `value` is null, the range is cleared.
 
-        Note:
-            This method is not optimized for a :class:`slice` where its `step`
-            is an integer greater than 1.
-
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
             +===+===+===+===+===+===+===+===+===+
@@ -5972,17 +5984,17 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory[7:10] = None
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[5, b'AB'], [10, b'yz']]
             >>> memory[7] = b'C'
             >>> memory[9] = b'x'
-            >>> memory._blocks == [[5, b'ABC'], [9, b'xyz']]
+            >>> memory.to_blocks() == [[5, b'ABC'], [9, b'xyz']]
             True
             >>> memory[6:12:3] = None
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[5, b'A'], [7, b'C'], [10, b'yz']]
             >>> memory[6:13:3] = b'123'
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[5, b'A1C'], [9, b'2yz3']]
 
             ~~~
@@ -6001,13 +6013,13 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory[0:4] = b'$'
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[0, b'$'], [2, b'ABC'], [6, b'xyz']]
             >>> memory[4:7] = b'45678'
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[0, b'$'], [2, b'AB45678yz']]
             >>> memory[6:8] = b'<>'
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[0, b'$'], [2, b'AB45<>8yz']]
         """
 
@@ -6023,11 +6035,12 @@ cdef class Memory:
 
         If exceeding, it is equivalent to :meth:`__repr__`.
 
-
         Returns:
             str: String representation.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -6080,7 +6093,9 @@ cdef class Memory:
         Returns:
             int: Block index if found, ``None`` otherwise.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -6103,9 +6118,9 @@ cdef class Memory:
         self: Memory,
         address: Address,
     ) -> BlockIndex:
-        r"""Locates the first block after an address range.
+        r"""Locates the last block before an address range.
 
-        Returns the index of the first block whose end address is lesser than or
+        Returns the index of the last block whose end address is lesser than or
         equal to `address`.
 
         Useful to find the termination block index in a ranged search.
@@ -6115,9 +6130,11 @@ cdef class Memory:
                 Exclusive end address of the scanned range.
 
         Returns:
-            int: First block index after `address`.
+            int: First block index before `address`.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -6151,7 +6168,9 @@ cdef class Memory:
         Returns:
             int: First block index since `address`.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -6202,7 +6221,7 @@ cdef class Memory:
         self: Memory,
         start_min: Optional[Address],
         size: Address,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Backups a `_pretrim_endex()` operation.
 
         Arguments:
@@ -6214,7 +6233,7 @@ cdef class Memory:
                 Size of the erasure range.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
             :meth:`_pretrim_endex`
@@ -6264,7 +6283,7 @@ cdef class Memory:
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Backups a `_pretrim_start()` operation.
 
         Arguments:
@@ -6276,7 +6295,7 @@ cdef class Memory:
                 Size of the erasure range.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
             :meth:`_pretrim_start`
@@ -6309,22 +6328,24 @@ cdef class Memory:
             item (int):
                 Value to append. Can be a single byte string or integer.
 
+        See Also:
+            :meth:`append_backup`
+            :meth:`append_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory = Memory()
             >>> memory.append(b'$')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[0, b'$']]
 
             ~~~
 
             >>> memory = Memory()
             >>> memory.append(3)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[0, b'\x03']]
-
-        See Also:
-            :meth:`append_backup`
-            :meth:`append_restore`
         """
 
         return Memory_Append(self._, item)
@@ -6379,6 +6400,8 @@ cdef class Memory:
             tuple: Start bound, exclusive end bound, and reference value.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory = Memory()
             >>> memory.block_span(0)
             (None, None, None)
@@ -6448,6 +6471,50 @@ cdef class Memory:
 
             else:
                 return None, None, None  # fully open
+    def blocks(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[Tuple[Address, memoryview]]:
+        r"""Iterates over blocks.
+
+        Iterates over data blocks within an address range.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Yields:
+            (start, memoryview): Start and data view of each block/slice.
+
+        See Also:
+            :meth:`intervals`
+            :meth:`to_blocks`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> [[s, bytes(d)] for s, d in memory.blocks()]
+            [[1, b'AB'], [5, b'x'], [7, b'123']]
+            >>> [[s, bytes(d)] for s, d in memory.blocks(2, 9)]
+            [[2, b'B'], [5, b'x'], [7, b'12']]
+            >>> [[s, bytes(d)] for s, d in memory.blocks(3, 5)]
+            []
+        """
+
+        raise NotImplementedError('TODO')  # TODO
 
     def bound(
         self: Memory,
@@ -6473,6 +6540,8 @@ cdef class Memory:
             tuple of int: Bounded `start` and `endex`, closed interval.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().bound(None, None)
             (0, 0)
             >>> Memory().bound(None, 100)
@@ -6535,7 +6604,13 @@ cdef class Memory:
                 Exclusive end address for clearing.
                 If ``None``, :attr:`endex` is considered.
 
-        Example:
+        See Also:
+            :meth:`clear_backup`
+            :meth:`clear_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
             +===+===+===+===+===+===+===+===+===+
@@ -6546,21 +6621,17 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.clear(6, 10)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[5, b'A'], [10, b'yz']]
-
-        See Also:
-            :meth:`clear_backup`
-            :meth:`clear_restore`
         """
 
         Memory_Clear(self._, start, endex)
 
     def clear_backup(
-        self: Memory,
+        self: Memory
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Backups a `clear()` operation.
 
         Arguments:
@@ -6573,7 +6644,7 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
             :meth:`clear`
@@ -6588,12 +6659,12 @@ cdef class Memory:
 
     def clear_restore(
         self: Memory,
-        Memory backup not None: Memory,
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores a `clear()` operation.
 
         Arguments:
-            backup (:obj:`Memory`):
+            backup (:obj:`ImmutableMemory`):
                 Backup memory region to restore.
 
         See Also:
@@ -6618,6 +6689,8 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_endex
             0
             >>> Memory(endex=8).content_endex
@@ -6668,6 +6741,8 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_endin
             -1
             >>> Memory(endex=8).content_endin
@@ -6702,6 +6777,92 @@ cdef class Memory:
 
         return Memory_ContentEndin(self._)
 
+    def content_items(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[Tuple[Address, Value]]:
+        r"""Iterates over content address and value pairs.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Yields:
+            int: Content address and value pairs.
+
+        See Also:
+            meth:`content_keys`
+            meth:`content_values`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> dict(memory.content_items())
+            {1: 65, 2: 66, 5: 120, 7: 49, 8: 50, 9: 51}
+            >>> dict(memory.content_items(2, 9))
+            {2: 66, 5: 120, 7: 49, 8: 50}
+            >>> dict(memory.content_items(3, 5))
+            {}
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def content_keys(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[Address]:
+        r"""Iterates over content addresses.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Yields:
+            int: Content addresses.
+
+        See Also:
+            meth:`content_items`
+            meth:`content_values`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> list(memory.content_keys())
+            [1, 2, 5, 7, 8, 9]
+            >>> list(memory.content_keys(2, 9))
+            [2, 5, 7, 8]
+            >>> list(memory.content_keys(3, 5))
+            []
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     @property
     def content_parts(
         self: Memory,
@@ -6712,6 +6873,8 @@ cdef class Memory:
             int: The number of blocks.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_parts
             0
 
@@ -6752,6 +6915,8 @@ cdef class Memory:
             int: The sum of all block lengths.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_size
             0
             >>> Memory(start=1, endex=8).content_size
@@ -6794,6 +6959,8 @@ cdef class Memory:
         :attr:`content_endex`.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_span
             (0, 0)
             >>> Memory(start=1).content_span
@@ -6833,6 +7000,8 @@ cdef class Memory:
         Trimming is considered only for an empty memory.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().content_start
             0
             >>> Memory(start=1).content_start
@@ -6867,6 +7036,49 @@ cdef class Memory:
 
         return Memory_ContentStart(self._)
 
+    def content_values(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[Value]:
+        r"""Iterates over content values.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Yields:
+            int: Content values.
+
+        See Also:
+            meth:`content_items`
+            meth:`content_keys`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> list(memory.content_values())
+            [65, 66, 120, 49, 50, 51]
+            >>> list(memory.content_values(2, 9))
+            [66, 120, 49, 50]
+            >>> list(memory.content_values(3, 5))
+            []
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     @property
     def contiguous(
         self: Memory,
@@ -6880,6 +7092,17 @@ cdef class Memory:
         """
 
         return Memory_Contiguous(self._)
+
+    def copy(
+        self,
+    ) -> ImmutableMemory:
+        r"""Creates a shallow copy.
+
+        Returns:
+            :obj:`ImmutableMemory`: Shallow copy.
+        """
+
+        raise NotImplementedError('TODO')  # TODO
 
     def count(
         self: Memory,
@@ -6904,7 +7127,9 @@ cdef class Memory:
         Returns:
             int: The number of items equal to `value`.
 
-        Example:
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -6934,7 +7159,13 @@ cdef class Memory:
                 Exclusive end address for cropping.
                 If ``None``, :attr:`endex` is considered.
 
-        Example:
+        See Also:
+            :meth:`crop_backup`
+            :meth:`crop_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
             +===+===+===+===+===+===+===+===+===+
@@ -6945,12 +7176,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.crop(6, 10)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[6, b'BC'], [9, b'x']]
-
-        See Also:
-            :meth:`crop_backup`
-            :meth:`crop_restore`
         """
 
         Memory_Crop(self._, start, endex)
@@ -6959,7 +7186,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Tuple[Optional[Memory], Optional[Memory]]:
+    ) -> Tuple[Optional[ImmutableMemory], Optional[ImmutableMemory]]:
         r"""Backups a `crop()` operation.
 
         Arguments:
@@ -6972,7 +7199,7 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory` couple: Backup memory regions.
+            :obj:`ImmutableMemory` pair: Backup memory regions.
 
         See Also:
             :meth:`crop`
@@ -7005,16 +7232,16 @@ cdef class Memory:
 
     def crop_restore(
         self: Memory,
-        backup_start: Optional[Memory],
-        backup_endex: Optional[Memory],
+        backup_start: Optional[ImmutableMemory],
+        backup_endex: Optional[ImmutableMemory],
     ) -> None:
         r"""Restores a `crop()` operation.
 
         Arguments:
-            backup_start (:obj:`Memory`):
+            backup_start (:obj:`ImmutableMemory`):
                 Backup memory region to restore at the beginning.
 
-            backup_endex (:obj:`Memory`):
+            backup_endex (:obj:`ImmutableMemory`):
                 Backup memory region to restore at the end.
 
         See Also:
@@ -7043,7 +7270,13 @@ cdef class Memory:
                 Exclusive end address for deletion.
                 If ``None``, :attr:`endex` is considered.
 
-        Example:
+        See Also:
+            :meth:`delete_backup`
+            :meth:`delete_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+
             | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12| 13|
             +===+===+===+===+===+===+===+===+===+===+
@@ -7054,12 +7287,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.delete(6, 10)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[5, b'Ayz']]
-
-        See Also:
-            :meth:`delete_backup`
-            :meth:`delete_restore`
         """
 
         Memory_Delete(self._, start, endex)
@@ -7068,7 +7297,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Backups a `delete()` operation.
 
         Arguments:
@@ -7081,7 +7310,7 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
             :meth:`delete`
@@ -7096,12 +7325,12 @@ cdef class Memory:
 
     def delete_restore(
         self: Memory,
-        Memory backup not None: Memory,
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores a `delete()` operation.
 
         Arguments:
-            backup (:obj:`Memory`):
+            backup (:obj:`ImmutableMemory`):
                 Backup memory region
 
         See Also:
@@ -7126,6 +7355,8 @@ cdef class Memory:
         If the memory has no data and no trimming, :attr:`start` is returned.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().endex
             0
 
@@ -7171,6 +7402,8 @@ cdef class Memory:
         If the memory has no data and no trimming, :attr:`start` is returned.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().endin
             -1
 
@@ -7223,6 +7456,8 @@ cdef class Memory:
             tuple: Start bound, exclusive end bound, and reference value.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory = Memory()
             >>> memory.equal_span(0)
             (None, None, None)
@@ -7319,7 +7554,7 @@ cdef class Memory:
 
     def extend(
         self: Memory,
-        items: Union[AnyBytes, Memory],
+        items: Union[AnyBytes, ImmutableMemory],
         offset: Address = 0,
     ) -> None:
         r"""Concatenates items.
@@ -7347,9 +7582,6 @@ cdef class Memory:
         r"""Backups an `extend()` operation.
 
         Arguments:
-            items (items):
-                Items to append at the end of the current virtual space.
-
             offset (int):
                 Optional offset w.r.t. :attr:`content_endex`.
 
@@ -7387,7 +7619,7 @@ cdef class Memory:
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Selects items from a range.
 
         Arguments:
@@ -7416,9 +7648,11 @@ cdef class Memory:
                 otherwise.
 
         Returns:
-            :obj:`Memory`: A copy of the memory from the selected range.
+            :obj:`ImmutableMemory`: A copy of the memory from the selected range.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -7464,7 +7698,13 @@ cdef class Memory:
             pattern (items):
                 Pattern of items to fill the range.
 
+        See Also:
+            :meth:`fill_backup`
+            :meth:`fill_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
             +===+===+===+===+===+===+===+===+===+===+
@@ -7475,7 +7715,7 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.fill(pattern=b'123')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'12312312']]
 
             ~~~
@@ -7490,12 +7730,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.fill(3, 7, b'123')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'AB1231yz']]
-
-        See Also:
-            :meth:`fill_backup`
-            :meth:`fill_restore`
         """
 
         Memory_Fill(self._, start, endex, pattern)
@@ -7504,7 +7740,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Backups a `fill()` operation.
 
         Arguments:
@@ -7517,7 +7753,7 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Returns:
-            :obj:`Memory`: Backup memory region.
+            :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
             :meth:`fill`
@@ -7532,12 +7768,12 @@ cdef class Memory:
 
     def fill_restore(
         self: Memory,
-        Memory backup not None: Memory,
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores a `fill()` operation.
 
         Arguments:
-            backup (:obj:`Memory`):
+            backup (:obj:`ImmutableMemory`):
                 Backup memory region to restore.
 
         See Also:
@@ -7593,7 +7829,13 @@ cdef class Memory:
             pattern (items):
                 Pattern of items to fill the range.
 
+        See Also:
+            :meth:`flood_backup`
+            :meth:`flood_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
             +===+===+===+===+===+===+===+===+===+===+
@@ -7604,7 +7846,7 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.flood(pattern=b'123')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC12xyz']]
 
             ~~~
@@ -7619,12 +7861,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.flood(3, 7, b'123')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC23xyz']]
-
-        See Also:
-            :meth:`flood_backup`
-            :meth:`flood_restore`
         """
 
         Memory_Flood(self._, start, endex, pattern)
@@ -7684,7 +7922,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Creates a virtual memory from blocks.
 
         Arguments:
@@ -7706,12 +7944,20 @@ cdef class Memory:
                 Forces copy of provided input data.
 
             validate (bool):
-                Validates the resulting :obj:`Memory` object.
+                Validates the resulting :obj:`ImmutableMemory` object.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
 
         Raises:
             :obj:`ValueError`: Some requirements are not satisfied.
 
+        See Also:
+            :meth:`to_blocks`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
             +===+===+===+===+===+===+===+===+===+
@@ -7722,10 +7968,10 @@ cdef class Memory:
 
             >>> blocks = [[1, b'ABC'], [5, b'xyz']]
             >>> memory = Memory.from_blocks(blocks)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC'], [5, b'xyz']]
             >>> memory = Memory.from_blocks(blocks, offset=3)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[4, b'ABC'], [8, b'xyz']]
 
             ~~~
@@ -7754,7 +8000,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Creates a virtual memory from a byte-like chunk.
 
         Arguments:
@@ -7778,14 +8024,22 @@ cdef class Memory:
                 structure.
 
             validate (bool):
-                Validates the resulting :obj:`Memory` object.
+                Validates the resulting :obj:`ImmutableMemory` object.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
 
         Raises:
             :obj:`ValueError`: Some requirements are not satisfied.
 
+        See Also:
+            :meth:`to_bytes`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory = Memory.from_bytes(b'')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             []
 
             ~~~
@@ -7797,7 +8051,7 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_bytes(b'ABCxyz', 2)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[2, b'ABCxyz']]
         """
         cdef:
@@ -7816,12 +8070,12 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> ImmutableMemory:
         r"""Creates a virtual memory from another one.
 
         Arguments:
             memory (Memory):
-                A :obj:`Memory` to copy data from.
+                A :obj:`ImmutableMemory` to copy data from.
 
             offset (int):
                 Some address offset applied to all the blocks.
@@ -7839,12 +8093,17 @@ cdef class Memory:
                 structure.
 
             validate (bool):
-                Validates the resulting :obj:`Memory` object.
+                Validates the resulting :obj:`MemorImmutableMemory` object.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
 
         Raises:
             :obj:`ValueError`: Some requirements are not satisfied.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> memory1 = Memory.from_bytes(b'ABC', 5)
             >>> memory2 = Memory.from_memory(memory1)
             >>> memory2._blocks
@@ -7880,11 +8139,41 @@ cdef class Memory:
         memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate)
         return memory_
 
+    @classmethod
+    def fromhex(
+        cls,
+        string: str,
+    ) -> ImmutableMemory:
+        r"""Creates a virtual memory from an hexadecimal string.
+
+        Arguments:
+            string (str):
+                Hexadecimal string.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            >>> memory = Memory.fromhex('')
+            >>> bytes(memory)
+            b''
+
+            ~~~
+
+            >>> memory = Memory.fromhex('48656C6C6F2C20576F726C6421')
+            >>> bytes(memory)
+            b'Hello, World!'
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     def gaps(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        bound: bool = False,
+        bound: bool = False,  # FIXME: force ``True`` as per ``bytesparse``
     ) -> Iterator[OpenInterval]:
         r"""Iterates over block gaps.
 
@@ -7902,9 +8191,14 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Yields:
-            couple of addresses: Block data interval boundaries.
+            pair of addresses: Block data interval boundaries.
 
-        Example:
+        See Also:
+            :meth:`intervals`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -7968,6 +8262,90 @@ cdef class Memory:
         elif not bound_:
             yield None, None
 
+    def get(
+        self,
+        address: Address,
+        default: Optional[Value] = None,
+    ) -> Optional[Value]:
+        r"""Gets the item at an address.
+
+        Returns:
+            int: The item at `address`, `default` if empty.
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory.get(3)  # -> ord('C') = 67
+            67
+            >>> memory.get(6)  # -> ord('$') = 36
+            36
+            >>> memory.get(10)  # -> ord('z') = 122
+            122
+            >>> memory.get(0)  # -> empty -> default = None
+            None
+            >>> memory.get(7)  # -> empty -> default = None
+            None
+            >>> memory.get(11)  # -> empty -> default = None
+            None
+            >>> memory.get(0, 123)  # -> empty -> default = 123
+            123
+            >>> memory.get(7, 123)  # -> empty -> default = 123
+            123
+            >>> memory.get(11, 123)  # -> empty -> default = 123
+            123
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def hex(
+        self,
+        *args: Any,  # see docstring
+    ) -> str:
+        r"""Converts into an hexadecimal string.
+
+        Arguments:
+            sep (str):
+                Separator string between bytes.
+                Defaults to an emoty string if not provided.
+                Available since Python 3.8.
+
+            bytes_per_sep (int):
+                Number of bytes grouped between separators.
+                Defaults to one byte per group.
+                Available since Python 3.8.
+
+        Returns:
+            str: Hexadecimal string representation.
+
+        Raises:
+            :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            >>> Memory().hex() == ''
+            True
+
+            ~~~
+
+            >>> memory = Memory.from_bytes(b'Hello, World!')
+            >>> memory.hex()
+            48656c6c6f2c20576f726c6421
+            >>> memory.hex('.')
+            48.65.6c.6c.6f.2c.20.57.6f.72.6c.64.21
+            >>> memory.hex('.', 4)
+            48.656c6c6f.2c20576f.726c6421
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     def index(
         self: Memory,
         item: Union[AnyBytes, Value],
@@ -8000,7 +8378,7 @@ cdef class Memory:
     def insert(
         self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, Memory],
+        data: Union[AnyBytes, Value, ImmutableMemory],
     ) -> None:
         r"""Inserts data.
 
@@ -8014,7 +8392,13 @@ cdef class Memory:
             data (bytes):
                 Data to insert.
 
-        Example:
+        See Also:
+            :meth:`insert_backup`
+            :meth:`insert_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -8027,15 +8411,11 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.insert(10, b'$')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC'], [6, b'xyz'], [10, b'$']]
             >>> memory.insert(8, b'1')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC'], [6, b'xy1z'], [11, b'$']]
-
-        See Also:
-            :meth:`insert_backup`
-            :meth:`insert_restore`
         """
 
         Memory_Insert(self._, address, data)
@@ -8043,8 +8423,8 @@ cdef class Memory:
     def insert_backup(
         self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, Memory],
-    ) -> Tuple[Address, Memory]:
+        data: Union[AnyBytes, Value, ImmutableMemory],
+    ) -> Tuple[Address, ImmutableMemory]:
         r"""Backups an `insert()` operation.
 
         Arguments:
@@ -8055,7 +8435,7 @@ cdef class Memory:
                 Data to insert.
 
         Returns:
-            (int, :obj:`Memory`): Insertion address, backup memory region.
+            (int, :obj:`ImmutableMemory`): Insertion address, backup memory region.
 
         See Also:
             :meth:`insert`
@@ -8111,9 +8491,15 @@ cdef class Memory:
                 If ``None``, :attr:`endex` is considered.
 
         Yields:
-            couple of addresses: Block data interval boundaries.
+            pair of addresses: Block data interval boundaries.
 
-        Example:
+        See Also:
+            :meth:`blocks`
+            :meth:`gaps`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -8162,9 +8548,9 @@ cdef class Memory:
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
     ) -> Iterator[Tuple[Address, Value]]:
-        r"""Iterates over address and value couples.
+        r"""Iterates over address and value pairs.
 
-        Iterates over address and value couples, from `start` to `endex`.
+        Iterates over address and value pairs, from `start` to `endex`.
         Implemets the interface of :obj:`dict`.
 
         Arguments:
@@ -8181,9 +8567,11 @@ cdef class Memory:
                 Pattern of values to fill emptiness.
 
         Yields:
-            int: Range address and value couples.
+            int: Range address and value pairs.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> from itertools import islice
             >>> memory = Memory()
             >>> list(memory.items(endex=8))
@@ -8238,6 +8626,8 @@ cdef class Memory:
             int: Range address.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> from itertools import islice
             >>> memory = Memory()
             >>> list(memory.keys())
@@ -8323,6 +8713,8 @@ cdef class Memory:
             int: The item at `address`, ``None`` if empty.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -8360,7 +8752,13 @@ cdef class Memory:
             item (int or byte):
                 Item to set, ``None`` to clear the cell.
 
+        See Also:
+            :meth:`poke_backup`
+            :meth:`poke_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -8375,10 +8773,6 @@ cdef class Memory:
             >>> memory.poke(5, b'@')
             >>> memory.peek(5)  # -> ord('@') = 64
             64
-
-        See Also:
-            :meth:`poke_backup`
-            :meth:`poke_restore`
         """
 
         Memory_Poke(self._, address, item)
@@ -8430,6 +8824,7 @@ cdef class Memory:
     def pop(
         self: Memory,
         address: Optional[Address] = None,
+        default: Optional[Value] = None,  # TODO
     ) -> Optional[Value]:
         r"""Takes a value away.
 
@@ -8438,10 +8833,19 @@ cdef class Memory:
                 Address of the byte to pop.
                 If ``None``, the very last byte is popped.
 
-        Return:
-            int: Value at `address`; ``None`` within emptiness.
+            default (int):
+                Value to return if `address` is within emptiness.
 
-        Example:
+        Return:
+            int: Value at `address`; `default` within emptiness.
+
+        See Also:
+            :meth:`pop_backup`
+            :meth:`pop_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -8457,10 +8861,8 @@ cdef class Memory:
             122
             >>> memory.pop(3)  # -> ord('C') = 67
             67
-
-        See Also:
-            :meth:`pop_backup`
-            :meth:`pop_restore`
+            >>> memory.pop(6, 63)  # -> ord('?') = 67
+            63
         """
 
         return Memory_Pop(self._, address)
@@ -8515,6 +8917,182 @@ cdef class Memory:
             value = <byte_t>item
             Memory_InsertRaw_(self._, address, 1, &value)
 
+    def popitem(
+        self,
+    ) -> Tuple[Address, Value]:
+        r"""Pops the last item.
+
+        Return:
+            (int, int): Address and value of the last item.
+
+        See Also:
+            :meth:`popitem_backup`
+            :meth:`popitem_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A]|   |   |   |   |   |   |   |[y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'A'], [9, b'yz']])
+            >>> memory.popitem()  # -> ord('z') = 122
+            (10, 122)
+            >>> memory.popitem()  # -> ord('y') = 121
+            (9, 121)
+            >>> memory.popitem()  # -> ord('A') = 65
+            (1, 65)
+            >>> memory.popitem()
+            Traceback (most recent call last):
+                ...
+            KeyError: empty
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def popitem_backup(
+        self,
+    ) -> Tuple[Address, Value]:
+        r"""Backups a `popitem()` operation.
+
+        Returns:
+            (int, int): Address and value of the last item.
+
+        See Also:
+            :meth:`popitem`
+            :meth:`popitem_restore`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def popitem_restore(
+        self,
+        address: Address,
+        item: Value,
+    ) -> None:
+        r"""Restores a `popitem()` operation.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+            item (int or byte):
+                Item to restore.
+
+        See Also:
+            :meth:`popitem`
+            :meth:`popitem_backup`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def remove(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+        r"""Removes an item.
+
+        Searches and deletes the first occurrence of an item.
+
+        Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
+            start (int):
+                Inclusive start of the searched range.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end of the searched range.
+                If ``None``, :attr:`endex` is considered.
+
+        Raises:
+            :obj:`ValueError`: Item not found.
+
+        See Also:
+            :meth:`remove_backup`
+            :meth:`remove_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | D]|   |[$]|   |[x | y | z]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[A | D]|   |   |[x | y | z]|   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory.remove(b'BC')
+            >>> memory.to_blocks()
+            [[1, b'AD'], [4, b'$'], [6, b'xyz']]
+            >>> memory.remove(ord('$'))
+            >>> memory.to_blocks()
+            [[1, b'AD'], [5, b'xyz']]
+            >>> memory.remove(b'?')
+            Traceback (most recent call last):
+                ...
+            ValueError: subsection not found
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def remove_backup(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> ImmutableMemory:
+        r"""Backups a `remove()` operation.
+
+        Arguments:
+            item (items):
+                Value to find. Can be either some byte string or an integer.
+
+            start (int):
+                Inclusive start of the searched range.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end of the searched range.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            :obj:`Memory`: Backup memory region.
+
+        See Also:
+            :meth:`remove`
+            :meth:`remove_restore`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def remove_restore(
+        self,
+        backup: ImmutableMemory,
+    ) -> None:
+        r"""Restores a `remove()` operation.
+
+        Arguments:
+            backup (:obj:`Memory`):
+                Backup memory region.
+
+        See Also:
+            :meth:`remove`
+            :meth:`remove_backup`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     def reserve(
         self: Memory,
         address: Address,
@@ -8531,7 +9109,13 @@ cdef class Memory:
             size (int):
                 Size of the emptiness to insert.
 
+        See Also:
+            :meth:`reserve_backup`
+            :meth:`reserve_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -8542,7 +9126,7 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[3, b'ABC'], [7, b'xyz']])
             >>> memory.reserve(4, 2)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[3, b'A'], [6, b'BC'], [9, b'xyz']]
 
             ~~~
@@ -8557,12 +9141,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], endex=12)
             >>> memory.reserve(5, 5)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[10, b'AB']]
-
-        See Also:
-            :meth:`reserve_backup`
-            :meth:`reserve_restore`
         """
 
         Memory_Reserve(self._, address, size)
@@ -8571,7 +9151,7 @@ cdef class Memory:
         self: Memory,
         address: Address,
         size: Address,
-    ) -> Tuple[Address, Memory]:
+    ) -> Tuple[Address, ImmutableMemory]:
         r"""Backups a `reserve()` operation.
 
         Arguments:
@@ -8582,7 +9162,7 @@ cdef class Memory:
                 Size of the emptiness to insert.
 
         Returns:
-            (int, :obj:`Memory`): Reservation address, backup memory region.
+            (int, :obj:`ImmutableMemory`): Reservation address, backup memory region.
 
         See Also:
             :meth:`reserve`
@@ -8594,8 +9174,8 @@ cdef class Memory:
 
     def reserve_restore(
         self: Memory,
-        addr_t address: Address,
-        Memory backup not None: Memory,
+        address: Address,
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores a `reserve()` operation.
 
@@ -8603,7 +9183,7 @@ cdef class Memory:
             address (int):
                 Address of the reservation point.
 
-            backup (:obj:`Memory`):
+            backup (:obj:`ImmutableMemory`):
                 Backup memory region to restore.
 
         See Also:
@@ -8617,6 +9197,47 @@ cdef class Memory:
         CheckAddAddrU(address, size)
         Memory_Delete_(memory, address, address + size)
         Memory_WriteSame_(memory, 0, backup._, True)
+
+    def reverse(
+        self,
+    ) -> None:
+        r"""Reverses the memory in-place.
+
+        Data is reversed within the memory :attr:`span`.
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[z | y | x]|   |[$]|   |[D | C | B | A]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory.reverse()
+            >>> memory.to_blocks()
+            [[1, b'zyx'], [5, b'$'], [7, b'DCBA']]
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |   |[[[|   |[A | B | C]|   |   |   |)))|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |   |[[[|   |   |[C | B | A]|   |   |)))|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_bytes(b'ABCD', 3, start=2, endex=10)
+            >>> memory.reverse()
+            >>> memory.to_blocks()
+            [[5, b'CBA']]
+        """
+
+        raise NotImplementedError('TODO')  # TODO
 
     def rfind(
         self: Memory,
@@ -8726,32 +9347,48 @@ cdef class Memory:
             int: Range values.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |   |   | A | B | C | D | A |   |   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |   |   | 65| 66| 67| 68| 65|   |   |
+            +---+---+---+---+---+---+---+---+---+---+
+
             >>> from itertools import islice
             >>> memory = Memory()
-            >>> list(memory.values(endex=8))
+            >>> list(memory.rvalues(endex=8))
             [None, None, None, None, None, None, None, None]
-            >>> list(memory.values(3, 8))
+            >>> list(memory.rvalues(3, 8))
             [None, None, None, None, None]
-            >>> list(islice(memory.values(3, ...), 7))
+            >>> list(islice(memory.rvalues(..., 8), 7))
             [None, None, None, None, None, None, None]
+            >>> list(memory.rvalues(3, 8, b'ABCD'))
+            [65, 68, 67, 66, 65]
 
             ~~~
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
             +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
+            |   |[A | B | C]|<1 | 2>|[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
             |   | 65| 66| 67|   |   |120|121|122|   |
             +---+---+---+---+---+---+---+---+---+---+
+            |   | 65| 66| 67| 49| 50|120|121|122|   |
+            +---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
-            >>> list(memory.values())
-            [65, 66, 67, None, None, 120, 121, 122]
-            >>> list(memory.values(3, 8))
-            [67, None, None, 120, 121]
-            >>> list(islice(memory.values(3, ...), 7))
-            [67, None, None, 120, 121, 122, None]
+            >>> list(memory.rvalues())
+            [122, 121, 120, None, None, 67, 66, 65]
+            >>> list(memory.rvalues(3, 8))
+            [121, 120, None, None, 67]
+            >>> list(islice(memory.rvalues(..., 8), 7))
+            [121, 120, None, None, 67, 66, 65]
+            >>> list(memory.rvalues(3, 8, b'0123'))
+            [121, 120, 50, 49, 67]
         """
         cdef:
             addr_t start_
@@ -8797,6 +9434,99 @@ cdef class Memory:
         finally:
             Rover_Free(rover)
 
+    def setdefault(
+        self,
+        address: Address,
+        default: Optional[Union[AnyBytes, Value]] = None,
+    ) -> Optional[Value]:
+        r"""Defaults a value.
+
+        Arguments:
+            address (int):
+                Address of the byte to set.
+
+            default (int):
+                Value to set if `address` is within emptiness.
+
+        Return:
+            int: Value at `address`; `default` within emptiness.
+
+        See Also:
+            :meth:`setdefault_backup`
+            :meth:`setdefault_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B | C | D]|   |[$]|   |[x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+            >>> memory.setdefault(3, b'@')  # -> ord('C') = 67
+            67
+            >>> memory.peek(3)  # -> ord('C') = 67
+            67
+            >>> memory.setdefault(5, 64)  # -> ord('@') = 64
+            64
+            >>> memory.peek(5)  # -> ord('@') = 64
+            64
+            >>> memory.setdefault(9) is None
+            False
+            >>> memory.peek(9) is None
+            False
+            >>> memory.setdefault(7) is None
+            True
+            >>> memory.peek(7) is None
+            True
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def setdefault_backup(
+        self,
+        address: Address,
+    ) -> Tuple[Address, Optional[Value]]:
+        r"""Backups a `setdefault()` operation.
+
+        Arguments:
+            address (int):
+                Address of the byte to set.
+
+        Returns:
+            (int, int): `address`, item at `address` (``None`` if empty).
+
+        See Also:
+            :meth:`setdefault`
+            :meth:`setdefault_restore`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+
+    def setdefault_restore(
+        self,
+        address: Address,
+        item: Optional[Value],
+    ) -> None:
+        r"""Restores a `setdefault()` operation.
+
+        Arguments:
+            address (int):
+                Address of the target item.
+
+            item (int or byte):
+                Item to restore, ``None`` if empty.
+
+        See Also:
+            :meth:`setdefault`
+            :meth:`setdefault_backup`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     def shift(
         self: Memory,
         offset: Address,
@@ -8807,7 +9537,13 @@ cdef class Memory:
             offset (int):
                 Signed amount of address shifting.
 
+        See Also:
+            :meth:`shift_backup`
+            :meth:`shift_restore`
+
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+
             | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|
             +===+===+===+===+===+===+===+===+===+===+===+
@@ -8818,7 +9554,7 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']])
             >>> memory.shift(-2)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[3, b'ABC'], [7, b'xyz']]
 
             ~~~
@@ -8833,12 +9569,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[5, b'ABC'], [9, b'xyz']], start=3)
             >>> memory.shift(-8)
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[2, b'yz']]
-
-        See Also:
-            :meth:`shift_backup`
-            :meth:`shift_restore`
         """
 
         Memory_Shift(self._, offset)
@@ -8846,7 +9578,7 @@ cdef class Memory:
     def shift_backup(
         self: Memory,
         offset: Address,
-    ) -> Tuple[Address, Memory]:
+    ) -> Tuple[Address, ImmutableMemory]:
         r"""Backups a `shift()` operation.
 
         Arguments:
@@ -8854,7 +9586,7 @@ cdef class Memory:
                 Signed amount of address shifting.
 
         Returns:
-            (int, :obj:`Memory`): Shifting, backup memory region.
+            (int, :obj:`ImmutableMemory`): Shifting, backup memory region.
 
         See Also:
             :meth:`shift`
@@ -8872,7 +9604,7 @@ cdef class Memory:
     def shift_restore(
         self: Memory,
         offset: Address,
-        Memory backup not None: Memory
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores an `shift()` operation.
 
@@ -8880,7 +9612,7 @@ cdef class Memory:
             offset (int):
                 Signed amount of address shifting.
 
-            backup (:obj:`Memory`):
+            backup (:obj:`ImmutableMemory`):
                 Backup memory region to restore.
 
         See Also:
@@ -8902,6 +9634,8 @@ cdef class Memory:
         A :obj:`tuple` holding both :attr:`start` and :attr:`endex`.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().span
             (0, 0)
             >>> Memory(start=1, endex=8).span
@@ -8937,6 +9671,8 @@ cdef class Memory:
         If the memory has no data and no trimming, 0 is returned.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             >>> Memory().start
             0
 
@@ -8966,6 +9702,106 @@ cdef class Memory:
         """
 
         return Memory_Start(self._)
+
+    def to_blocks(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> BlockList:
+        r"""Exports into blocks.
+
+        Exports data blocks within an address range, converting them into
+        standalone :obj:`bytes` objects.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            list of blocks: Exported data blocks.
+
+        See Also:
+            :meth:`blocks`
+            :meth:`from_blocks`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> memory.to_blocks()
+            [[1, b'AB'], [5, b'x'], [7, b'123']]
+            >>> memory.to_blocks(2, 9)
+            [[2, b'B'], [5, b'x'], [7, b'12']]
+            >>> memory.to_blocks(3, 5)]
+            []
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def to_bytes(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> bytes:
+        r"""Exports into bytes.
+
+        Exports data within an address range, converting into a standalone
+        :obj:`bytes` object.
+
+        Arguments:
+            start (int):
+                Inclusive start address.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            bytes: Exported data bytes.
+
+        See Also:
+            :meth:`from_bytes`
+            :meth:`view`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            >>> memory = Memory.from_bytes(b'')
+            >>> memory.to_bytes()
+            b''
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |   |[A | B | C | x | y | z]|   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_bytes(b'ABCxyz', 2)
+            >>> memory.to_bytes()
+            b'ABCxyz'
+            >>> memory.to_bytes(start=4)
+            b'Cxyz'
+            >>> memory.to_bytes(endex=6)
+            b'ABCx'
+            >>> memory.to_bytes(4, 6)
+            b'Cx'
+        """
+
+        raise NotImplementedError('TODO')  # TODO
 
     @property
     def trim_endex(
@@ -9026,6 +9862,98 @@ cdef class Memory:
 
         Memory_SetTrimStart(self._, trim_start)
 
+    def update(
+        self,
+        data: Union[AddressValueMapping,
+                    Iterable[Tuple[Address, Value]],
+                    Mapping[Address, Union[Value, AnyBytes]],
+                    ImmutableMemory],
+        clear: bool = False,
+        **kwargs: Any,  # string keys cannot become addresses
+    ) -> None:
+        r"""Updates data.
+
+        Arguments:
+            data (iterable):
+                Data to update with.
+                Can be either another memory, an (address, value)
+                mapping, or an iterable of (address, value) pairs.
+
+            clear (bool):
+                Clears the target range before writing data.
+                Useful only if `data` is a :obj:`Memory` with empty spaces.
+
+        See Also:
+            :meth:`update_backup`
+            :meth:`update_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
+            +===+===+===+===+===+===+===+===+===+===+===+===+
+            |   |   |   |   |   |[A | B | C]|   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[x | y]|   |   |[A | B | C]|   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+            |   |[x | y | @]|   |[A | ? | C]|   |   |   |   |
+            +---+---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory()
+            >>> memory.update(Memory.from_bytes(b'ABC', 5))
+            >>> memory.to_blocks()
+            [[5, b'ABC']]
+            >>> memory.update({1: b'x', 2: ord('y')})
+            >>> memory.to_blocks()
+            [[1, b'xy'], [5, b'ABC']]
+            >>> memory.update([(6, b'?'), (3, ord('@'))])
+            >>> memory.to_blocks()
+            [[1, b'xy@'], [5, b'A?C']]
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def update_backup(
+        self,
+        data: Union[AddressValueMapping, Iterable[Tuple[Address, Value]], ImmutableMemory],
+        **kwargs: Any,  # string keys cannot become addresses
+    ) -> Union[AddressValueMapping, ImmutableMemory]:
+        r"""Backups an `update()` operation.
+
+        Arguments:
+            data (iterable):
+                Data to update with.
+                Can be either another memory, an (address, value)
+                mapping, or an iterable of (address, value) pairs.
+
+        Returns:
+            list of :obj:`ImmutableMemory`: Backup memory regions.
+
+        See Also:
+            :meth:`update`
+            :meth:`update_restore`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
+    def update_restore(
+        self,
+        backups: Union[AddressValueMapping, List[ImmutableMemory]],
+    ) -> None:
+        r"""Restores an `update()` operation.
+
+        Arguments:
+            backups (list of :obj:`ImmutableMemory`):
+                Backup memory regions to restore.
+
+        See Also:
+            :meth:`update`
+            :meth:`update_backup`
+        """
+
+        raise NotImplementedError('TODO')  # TODO
+
     def validate(
         self: Memory,
     ) -> None:
@@ -9068,6 +9996,16 @@ cdef class Memory:
             int: Range values.
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+            +===+===+===+===+===+===+===+===+===+===+
+            |   |   |   | A | B | C | D | A |   |   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   |   |   | 65| 66| 67| 68| 65|   |   |
+            +---+---+---+---+---+---+---+---+---+---+
+
             >>> from itertools import islice
             >>> memory = Memory()
             >>> list(memory.values(endex=8))
@@ -9076,15 +10014,19 @@ cdef class Memory:
             [None, None, None, None, None]
             >>> list(islice(memory.values(3, ...), 7))
             [None, None, None, None, None, None, None]
+            >>> list(memory.values(3, 8, b'ABCD'))
+            [65, 66, 67, 68, 65]
 
             ~~~
 
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
             +===+===+===+===+===+===+===+===+===+===+
-            |   |[A | B | C]|   |   |[x | y | z]|   |
+            |   |[A | B | C]|<1 | 2>|[x | y | z]|   |
             +---+---+---+---+---+---+---+---+---+---+
             |   | 65| 66| 67|   |   |120|121|122|   |
+            +---+---+---+---+---+---+---+---+---+---+
+            |   | 65| 66| 67| 49| 50|120|121|122|   |
             +---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
@@ -9094,6 +10036,8 @@ cdef class Memory:
             [67, None, None, 120, 121]
             >>> list(islice(memory.values(3, ...), 7))
             [67, None, None, 120, 121, 122, None]
+            >>> list(memory.values(3, 8, b'0123'))
+            [67, 49, 50, 120, 121]
         """
         cdef:
             addr_t start_
@@ -9163,6 +10107,8 @@ cdef class Memory:
             :obj:`ValueError`: Data not contiguous (see :attr:`contiguous`).
 
         Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11|
             +===+===+===+===+===+===+===+===+===+===+===+===+
@@ -9193,7 +10139,7 @@ cdef class Memory:
     def write(
         self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, Memory],
+        data: Union[AnyBytes, Value, ImmutableMemory],
         clear: bool = False,
     ) -> None:
         r"""Writes data.
@@ -9207,9 +10153,15 @@ cdef class Memory:
 
             clear (bool):
                 Clears the target range before writing data.
-                Useful only if `data` is a :obj:`Memory` with empty spaces.
+                Useful only if `data` is a :obj:`ImmutableMemory` with empty spaces.
 
-        Example:
+        See Also:
+            :meth:`write_backup`
+            :meth:`write_restore`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
             +---+---+---+---+---+---+---+---+---+---+
             | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
             +===+===+===+===+===+===+===+===+===+===+
@@ -9220,12 +10172,8 @@ cdef class Memory:
 
             >>> memory = Memory.from_blocks([[1, b'ABC'], [6, b'xyz']])
             >>> memory.write(5, b'123')
-            >>> memory._blocks
+            >>> memory.to_blocks()
             [[1, b'ABC'], [5, b'123z']]
-
-        See Also:
-            :meth:`write_backup`
-            :meth:`write_restore`
         """
 
         Memory_Write(self._, address, data, clear)
@@ -9233,8 +10181,9 @@ cdef class Memory:
     def write_backup(
         self: Memory,
         address: Address,
-        data: Union[AnyBytes, Value, Memory],
-    ) -> Memory:
+        data: Union[AnyBytes, Value, ImmutableMemory],
+        clear: bool = False,
+    ) -> List[ImmutableMemory]:
         r"""Backups a `write()` operation.
 
         Arguments:
@@ -9244,8 +10193,12 @@ cdef class Memory:
             data (bytes):
                 Data to write.
 
+            clear (bool):
+                Clears the target range before writing data.
+                Useful only if `data` is a :obj:`Memory` with empty spaces.
+
         Returns:
-            :obj:`Memory` list: Backup memory regions.
+            list of :obj:`ImmutableMemory`: Backup memory regions.
 
         See Also:
             :meth:`write`
@@ -9260,13 +10213,13 @@ cdef class Memory:
 
     def write_restore(
         self: Memory,
-        Memory backup not None: Memory,
+        backups: Sequence[ImmutableMemory],
     ) -> None:
         r"""Restores a `write()` operation.
 
         Arguments:
-            backup (:obj:`Memory`):
-                Backup memory region to restore.
+            backups (list of :obj:`ImmutableMemory`):
+                Backup memory regions to restore.
 
         See Also:
             :meth:`write`
@@ -9275,3 +10228,6 @@ cdef class Memory:
 
         Memory_Write(self._, 0, backup, True)
 
+
+ImmutableMemory.register(Memory)
+MutableMemory.register(Memory)
