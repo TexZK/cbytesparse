@@ -42,6 +42,7 @@ from typing import ByteString
 from typing import Iterable
 from typing import Iterator
 from typing import List
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -2189,7 +2190,7 @@ cdef void Rack_Reverse(Rack_* that) nogil:
     if index_start < index_endex:
         index_endin = index_endex - 1
         start = Block_Start(that.blocks[index_start])
-        endex = Block_Endex(thst.blocks[index_endin])
+        endex = Block_Endex(that.blocks[index_endin])
 
         for index in range(index_start, index_endex):
             block = that.blocks[index]
@@ -3983,11 +3984,13 @@ cdef (addr_t, int) Memory_PopItem(Memory_* that) except *:
         size_t block_count = Rack_Length(blocks)
         Block_* block
         size_t length
+        addr_t address
         byte_t backup
 
     if block_count:
         block = Rack_Last_(blocks)
         length = Block_Length(block)
+        address = Block_Start(block) + length - 1
         if length > 1:
             block = Block_Pop__(block, &backup)
             Rack_Set__(blocks, block_count - 1, block)  # update pointer
@@ -4030,12 +4033,12 @@ cdef BlockView Memory_View_(const Memory_* that, addr_t start, addr_t endex):
 
 cdef BlockView Memory_View(const Memory_* that, object start, object endex):
     cdef:
-        Memory_* memory = self._
         addr_t start_
         addr_t endex_
 
-    start_, endex_ = Memory_Bound(memory, start, endex)
-    return Memory_View_(memory, start_, endex_)
+    start_, endex_ = Memory_Bound(that, start, endex)
+    return Memory_View_(that, start_, endex_)
+
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     cdef:
@@ -5732,7 +5735,7 @@ cdef class Memory:
         elif block_count == 1:
             block = Rack_First__(blocks)
             return PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0), <ssize_t>Block_Length(block))
-        else
+        else:
             raise ValueError('non-contiguous data within range')
 
     def __cinit__(self):
@@ -6569,7 +6572,7 @@ cdef class Memory:
             else:
                 return None, None, None  # fully open
     def blocks(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[Tuple[Address, memoryview]]:
@@ -6628,7 +6631,7 @@ cdef class Memory:
         if block_count:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
-                    block = Rack_Get__(block_index)
+                    block = Rack_Get__(blocks, block_index)
                     yield Block_Start(block), Block_View(block)
             else:
                 block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
@@ -6636,7 +6639,7 @@ cdef class Memory:
                 start_, endex_ = Memory_Bound(self._, start, endex)
 
                 for block_index in range(block_index_start, block_index_endex):
-                    block = Rack_Get__(blocks, block_index):
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     block_endex = Block_Endex(block)
                     slice_start = block_start if start_ < block_start else start_
@@ -6759,7 +6762,7 @@ cdef class Memory:
         Memory_Clear(self._, start, endex)
 
     def clear_backup(
-        self: Memory
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> ImmutableMemory:
@@ -6803,7 +6806,7 @@ cdef class Memory:
             :meth:`clear_backup`
         """
 
-        Memory_WriteSame_(self._, 0, backup._, True)
+        Memory_Write(self._, 0, backup, True)
 
     @property
     def content_endex(
@@ -6909,7 +6912,7 @@ cdef class Memory:
         return Memory_ContentEndin(self._)
 
     def content_items(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[Tuple[Address, Value]]:
@@ -6967,7 +6970,7 @@ cdef class Memory:
         if block_count:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
-                    block = Rack_Get__(block_index)
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     for offset in range(Block_Length(block)):
                         yield (block_start + offset), Block_Get__(block, offset)
@@ -6977,7 +6980,7 @@ cdef class Memory:
                 start_, endex_ = Memory_Bound(self._, start, endex)
 
                 for block_index in range(block_index_start, block_index_endex):
-                    block = Rack_Get__(blocks, block_index):
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     block_endex = Block_Endex(block)
                     slice_start = block_start if start_ < block_start else start_
@@ -6987,7 +6990,7 @@ cdef class Memory:
                         yield address, Block_Get__(block, offset)
 
     def content_keys(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[Address]:
@@ -7044,7 +7047,7 @@ cdef class Memory:
         if block_count:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
-                    block = Rack_Get__(block_index)
+                    block = Rack_Get__(blocks, block_index)
                     for address in range(Block_Start(block), Block_Endex(block)):
                         yield address
             else:
@@ -7053,7 +7056,7 @@ cdef class Memory:
                 start_, endex_ = Memory_Bound(self._, start, endex)
 
                 for block_index in range(block_index_start, block_index_endex):
-                    block = Rack_Get__(blocks, block_index):
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     block_endex = Block_Endex(block)
                     slice_start = block_start if start_ < block_start else start_
@@ -7235,7 +7238,7 @@ cdef class Memory:
         return Memory_ContentStart(self._)
 
     def content_values(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[Value]:
@@ -7293,7 +7296,7 @@ cdef class Memory:
         if block_count:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
-                    block = Rack_Get__(block_index)
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     for offset in range(Block_Length(block)):
                         yield Block_Get__(block, offset)
@@ -7303,7 +7306,7 @@ cdef class Memory:
                 start_, endex_ = Memory_Bound(self._, start, endex)
 
                 for block_index in range(block_index_start, block_index_endex):
-                    block = Rack_Get__(blocks, block_index):
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     block_endex = Block_Endex(block)
                     slice_start = block_start if start_ < block_start else start_
@@ -7327,7 +7330,7 @@ cdef class Memory:
         return Memory_Contiguous(self._)
 
     def copy(
-        self,
+        self: Memory,
     ) -> ImmutableMemory:
         r"""Creates a shallow copy.
 
@@ -7574,7 +7577,7 @@ cdef class Memory:
             :meth:`delete_backup`
         """
 
-        Memory_InsertSame_(self._, 0, backup._)
+        Memory_Insert(self._, 0, backup)
 
     @property
     def endex(
@@ -8017,7 +8020,7 @@ cdef class Memory:
             :meth:`fill_backup`
         """
 
-        Memory_WriteSame_(self._, 0, backup._, True)
+        Memory_Write(self._, 0, backup, True)
 
     def find(
         self: Memory,
@@ -8501,7 +8504,7 @@ cdef class Memory:
             yield None, None
 
     def get(
-        self,
+        self: Memory,
         address: Address,
         default: Optional[Value] = None,
     ) -> Optional[Value]:
@@ -8542,7 +8545,7 @@ cdef class Memory:
         cdef:
             addr_t address_ = <addr_t>address
             const Memory_* memory = self._
-            const Rack_* blocks = mmeory.blocks
+            const Rack_* blocks = memory.blocks
             ssize_t block_index = Rack_IndexAt(blocks, address_)
             const Block_* block
 
@@ -8553,7 +8556,7 @@ cdef class Memory:
             return Block_Get__(block, <size_t>(address_ - Block_Start(block)))
 
     def hex(
-        self,
+        self: Memory,
         *args: Any,  # see docstring
     ) -> str:
         r"""Converts into an hexadecimal string.
@@ -9214,7 +9217,7 @@ cdef class Memory:
             Memory_InsertRaw_(self._, address, 1, &value)
 
     def popitem(
-        self,
+        self: Memory,
     ) -> Tuple[Address, Value]:
         r"""Pops the last item.
 
@@ -9254,7 +9257,7 @@ cdef class Memory:
         return address, value
 
     def popitem_backup(
-        self,
+        self: Memory,
     ) -> Tuple[Address, Value]:
         r"""Backups a `popitem()` operation.
 
@@ -9286,7 +9289,7 @@ cdef class Memory:
             raise KeyError('empty')
 
     def popitem_restore(
-        self,
+        self: Memory,
         address: Address,
         item: Value,
     ) -> None:
@@ -9314,7 +9317,7 @@ cdef class Memory:
             Memory_InsertRaw_(memory, address_, 1, &item_)
 
     def remove(
-        self,
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -9376,7 +9379,7 @@ cdef class Memory:
         Memory_Erase__(memory, address, address + size, True)  # delete
 
     def remove_backup(
-        self,
+        self: Memory,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -9408,10 +9411,11 @@ cdef class Memory:
             addr_t address = <addr_t>Memory_Index(memory, item, start, endex)
 
         CheckAddAddrU(address, size)
-        return Memory_Extract__(memory, address, address + size, 0, NULL, 1, True)
+        memory = Memory_Extract__(memory, address, address + size, 0, NULL, 1, True)
+        return Memory_AsObject(memory)
 
     def remove_restore(
-        self,
+        self: Memory,
         backup: ImmutableMemory,
     ) -> None:
         r"""Restores a `remove()` operation.
@@ -9528,15 +9532,25 @@ cdef class Memory:
             :meth:`reserve_backup`
         """
         cdef:
-            addr_t size = Memory_Length(backup._)
+            addr_t address_ = <addr_t>address
+            addr_t size
             Memory_* memory = self._
+            const Memory_* backup_
 
-        CheckAddAddrU(address, size)
-        Memory_Delete_(memory, address, address + size)
-        Memory_WriteSame_(memory, 0, backup._, True)
+        if isinstance(backup, Memory):
+            backup_ = (<Memory>backup)._
+            size = Memory_Length(backup_)
+            CheckAddAddrU(address_, size)
+            Memory_Delete_(memory, address_, address_ + size)
+            Memory_WriteSame_(memory, 0, backup_, True)
+        else:
+            size = <addr_t>len(backup)
+            CheckAddAddrU(address_, size)
+            Memory_Delete_(memory, address_, address_ + size)
+            Memory_Write(memory, 0, backup, True)
 
     def reverse(
-        self,
+        self: Memory,
     ) -> None:
         r"""Reverses the memory in-place.
 
@@ -9772,7 +9786,7 @@ cdef class Memory:
             Rover_Free(rover)
 
     def setdefault(
-        self,
+        self: Memory,
         address: Address,
         default: Optional[Union[AnyBytes, Value]] = None,
     ) -> Optional[Value]:
@@ -9844,7 +9858,7 @@ cdef class Memory:
             return backup
 
     def setdefault_backup(
-        self,
+        self: Memory,
         address: Address,
     ) -> Tuple[Address, Optional[Value]]:
         r"""Backups a `setdefault()` operation.
@@ -9864,7 +9878,7 @@ cdef class Memory:
         return address, Memory_Peek(self._, address)
 
     def setdefault_restore(
-        self,
+        self: Memory,
         address: Address,
         item: Optional[Value],
     ) -> None:
@@ -10061,7 +10075,7 @@ cdef class Memory:
         return Memory_Start(self._)
 
     def to_blocks(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> BlockList:
@@ -10122,9 +10136,10 @@ cdef class Memory:
         if block_count:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
-                    block = Rack_Get__(block_index)
+                    block = Rack_Get__(blocks, block_index)
                     slice_start = Block_Start(block)
-                    slice_data = PyBytes_FromStringAndSize(Block_At__(block, 0), Block_Length(block))
+                    slice_data = PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0),
+                                                           <ssize_t>Block_Length(block))
                     result.append([slice_start, slice_data])
             else:
                 block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
@@ -10132,7 +10147,7 @@ cdef class Memory:
                 start_, endex_ = Memory_Bound(self._, start, endex)
 
                 for block_index in range(block_index_start, block_index_endex):
-                    block = Rack_Get__(blocks, block_index):
+                    block = Rack_Get__(blocks, block_index)
                     block_start = Block_Start(block)
                     block_endex = Block_Endex(block)
                     slice_start = block_start if start_ < block_start else start_
@@ -10140,13 +10155,13 @@ cdef class Memory:
                     if slice_start < slice_endex:
                         slice_start -= block_start
                         slice_endex -= block_start
-                        slice_data = PyBytes_FromStringAndSize(Block_At__(block, <size_t>slice_start),
-                                                               <size_t>(slice_endex - slice_start))
+                        slice_data = PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, <size_t>slice_start),
+                                                               <ssize_t>(slice_endex - slice_start))
                         result.append([slice_start, slice_data])
         return result
 
     def to_bytes(
-        self,
+        self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> bytes:
@@ -10263,7 +10278,7 @@ cdef class Memory:
         Memory_SetTrimStart(self._, trim_start)
 
     def update(
-        self,
+        self: Memory,
         data: Union[AddressValueMapping,
                     Iterable[Tuple[Address, Value]],
                     Mapping[Address, Union[Value, AnyBytes]],
@@ -10326,8 +10341,9 @@ cdef class Memory:
                 Memory_Poke(memory, address, value)
 
     def update_backup(
-        self,
+        self: Memory,
         data: Union[AddressValueMapping, Iterable[Tuple[Address, Value]], ImmutableMemory],
+        clear: bool = False,
         **kwargs: Any,  # string keys cannot become addresses
     ) -> Union[AddressValueMapping, ImmutableMemory]:
         r"""Backups an `update()` operation.
@@ -10337,6 +10353,10 @@ cdef class Memory:
                 Data to update with.
                 Can be either another memory, an (address, value)
                 mapping, or an iterable of (address, value) pairs.
+
+            clear (bool):
+                Clears the target range before writing data.
+                Useful only if `data` is a :obj:`Memory` with empty spaces.
 
         Returns:
             list of :obj:`ImmutableMemory`: Backup memory regions.
@@ -10361,7 +10381,7 @@ cdef class Memory:
             return backups
 
     def update_restore(
-        self,
+        self: Memory,
         backups: Union[AddressValueMapping, List[ImmutableMemory]],
     ) -> None:
         r"""Restores an `update()` operation.
@@ -10653,7 +10673,8 @@ cdef class Memory:
             :meth:`write_backup`
         """
 
-        Memory_Write(self._, 0, backup, True)
+        for backup in backups:
+            Memory_Write(self._, 0, backup, True)
 
 
 ImmutableMemory.register(Memory)
