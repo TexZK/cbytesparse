@@ -228,6 +228,8 @@ cdef Block_* Block_Create(addr_t address, size_t size, const byte_t* buffer) exc
 cdef Block_* Block_Copy(const Block_* that) except NULL
 cdef Block_* Block_FromObject(addr_t address, object obj, bint nonnull) except NULL
 
+cdef void Block_Reverse(Block_* that) nogil
+
 cdef Block_* Block_Acquire(Block_* that) except NULL
 cdef Block_* Block_Release_(Block_* that)
 cdef Block_* Block_Release(Block_* that)
@@ -394,6 +396,8 @@ cdef Rack_* Rack_ShallowCopy(const Rack_* other) except NULL
 cdef Rack_* Rack_Copy(const Rack_* other) except NULL
 cdef Rack_* Rack_FromObject(object obj, saddr_t offset) except NULL
 
+cdef void Rack_Reverse(Rack_* that) nogil
+
 cdef size_t Rack_Length(const Rack_* that) nogil
 cdef (addr_t, addr_t) Rack_BoundSlice(const Rack_* that, addr_t start, addr_t endex) nogil
 
@@ -467,9 +471,12 @@ cdef Rack_* Rack_SetSlice(Rack_* that, ssize_t start, ssize_t endex,
 cdef Rack_* Rack_DelSlice_(Rack_* that, size_t start, size_t endex) except NULL
 cdef Rack_* Rack_DelSlice(Rack_* that, ssize_t start, ssize_t endex) except NULL
 
-cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) except -2
-cdef ssize_t Rack_IndexStart(const Rack_* that, addr_t address) except -2
-cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2
+cdef addr_t Rack_Start(const Rack_* that) nogil
+cdef addr_t Rack_Endex(const Rack_* that) nogil
+
+cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) nogil
+cdef ssize_t Rack_IndexStart(const Rack_* that, addr_t address) nogil
+cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) nogil
 
 
 # =====================================================================================================================
@@ -575,11 +582,16 @@ cdef vint Memory_Extend(Memory_* that, object items, object offset) except -1
 
 cdef int Memory_PopLast_(Memory_* that) except -2
 cdef int Memory_PopAt_(Memory_* that, addr_t address) except -2
-cdef object Memory_Pop(Memory_* that, object address)
+cdef object Memory_Pop(Memory_* that, object address, object default)
 
-cdef BlockView Memory_View(const Memory_* that, addr_t start, addr_t endex)
+cdef (addr_t, int) Memory_PopItem(Memory_* that) except *
+
+cdef BlockView Memory_View_(const Memory_* that, addr_t start, addr_t endex)
+cdef BlockView Memory_View(const Memory_* that, object start, object endex)
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL
+
+cdef void Memory_Reverse(Memory_* that) nogil
 
 cdef bint Memory_Contiguous(const Memory_* that) nogil
 
@@ -608,8 +620,7 @@ cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t en
                                     bint start_, bint endex_) nogil
 cdef (addr_t, addr_t) Memory_Bound(const Memory_* that, object start, object endex) except *
 
-cdef int Memory_Peek_(const Memory_* that, addr_t address) except -2
-
+cdef int Memory_Peek_(const Memory_* that, addr_t address) nogil
 cdef object Memory_Peek(const Memory_* that, object address)
 
 cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1

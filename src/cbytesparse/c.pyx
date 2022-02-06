@@ -554,6 +554,22 @@ cdef Block_* Block_FromObject(addr_t address, object obj, bint nonnull) except N
                 return Block_Alloc(address, 0, False)
 
 
+cdef void Block_Reverse(Block_* that) nogil:
+    cdef:
+        size_t start = that.start
+        size_t endex = that.endex
+        size_t endin
+        byte_t temp
+
+    while start < endex:
+        endin = endex - 1
+        temp = that.data[start]
+        that.data[start] = that.data[endin]
+        that.data[endin] = temp
+        endex = endin
+        start += 1
+
+
 cdef Block_* Block_Acquire(Block_* that) except NULL:
     if that:
         if that.references < SIZE_MAX:
@@ -2160,6 +2176,35 @@ cdef Rack_* Rack_FromObject(object obj, saddr_t offset) except NULL:
         raise
 
 
+cdef void Rack_Reverse(Rack_* that) nogil:
+    cdef:
+        size_t index_start = that.start
+        size_t index_endex = that.endex
+        size_t index_endin
+        size_t index
+        Block_* block
+        addr_t start
+        addr_t endex
+
+    if index_start < index_endex:
+        index_endin = index_endex - 1
+        start = Block_Start(that.blocks[index_start])
+        endex = Block_Endex(thst.blocks[index_endin])
+
+        for index in range(index_start, index_endex):
+            block = that.blocks[index]
+            Block_Reverse(block)
+            block.address = endex - Block_Endex(block) + start
+
+        while index_start < index_endex:
+            index_endin = index_endex - 1
+            block = that.blocks[index_start]
+            that.blocks[index_start] = that.blocks[index_endin]
+            that.blocks[index_endin] = block
+            index_endex = index_endin
+            index_start += 1
+
+
 cdef size_t Rack_Length(const Rack_* that) nogil:
     return that.endex - that.start
 
@@ -2966,7 +3011,15 @@ cdef Rack_* Rack_DelSlice(Rack_* that, ssize_t start, ssize_t endex) except NULL
     return that
 
 
-cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) except -2:
+cdef addr_t Rack_Start(const Rack_* that) nogil:
+    return Block_Start(Rack_First__(that)) if Rack_Length(that) else 0
+
+
+cdef addr_t Rack_Endex(const Rack_* that) nogil:
+    return Block_Endex(Rack_Last__(that)) if Rack_Length(that) else 0
+
+
+cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) nogil:
     cdef:
         ssize_t left = 0
         ssize_t right = <ssize_t>(that.endex - that.start)
@@ -2998,7 +3051,7 @@ cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) except -2:
         return -1
 
 
-cdef ssize_t Rack_IndexStart(const Rack_* that, addr_t address) except -2:
+cdef ssize_t Rack_IndexStart(const Rack_* that, addr_t address) nogil:
     cdef:
         ssize_t left = 0
         ssize_t right = <ssize_t>(that.endex - that.start)
@@ -3030,7 +3083,7 @@ cdef ssize_t Rack_IndexStart(const Rack_* that, addr_t address) except -2:
         return left
 
 
-cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) except -2:
+cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) nogil:
     cdef:
         ssize_t left = 0
         ssize_t right = <ssize_t>(that.endex - that.start)
@@ -3524,7 +3577,7 @@ cdef object Memory_RevFind(const Memory_* that, object item, object start, objec
 
 cdef object Memory_Index(const Memory_* that, object item, object start, object endex):
     offset = Memory_Find(that, item, start, endex)
-    if offset is not -1:
+    if offset != -1:
         return offset
     else:
         raise ValueError('subsection not found')
@@ -3532,7 +3585,7 @@ cdef object Memory_Index(const Memory_* that, object item, object start, object 
 
 cdef object Memory_RevIndex(const Memory_* that, object item, object start, object endex):
     offset = Memory_RevFind(that, item, start, endex)
-    if offset is not -1:
+    if offset != -1:
         return offset
     else:
         raise ValueError('subsection not found')
@@ -3885,16 +3938,20 @@ cdef int Memory_PopLast_(Memory_* that) except -2:
         Rack_* blocks = that.blocks
         size_t block_count = Rack_Length(blocks)
         Block_* block
+        size_t length
         byte_t backup
 
     if block_count:
         block = Rack_Last_(blocks)
-        if Block_Length(block) > 1:
+        length = Block_Length(block)
+        if length > 1:
             block = Block_Pop__(block, &backup)
             Rack_Set__(blocks, block_count - 1, block)  # update pointer
-        else:
+        elif length == 1:
             backup = Block_Get__(block, 0)
-            that.blocks = blocks = Rack_Pop__(blocks, NULL)
+            that.blocks = blocks = Rack_Pop__(blocks, NULL)  # update pointer
+        else:
+            raise RuntimeError('empty block')
         return backup
     else:
         return -1
@@ -3909,7 +3966,7 @@ cdef int Memory_PopAt_(Memory_* that, addr_t address) except -2:
     return backup
 
 
-cdef object Memory_Pop(Memory_* that, object address):
+cdef object Memory_Pop(Memory_* that, object address, object default):
     cdef:
         int value
 
@@ -3917,10 +3974,34 @@ cdef object Memory_Pop(Memory_* that, object address):
         value = Memory_PopLast_(that)
     else:
         value = Memory_PopAt_(that, <addr_t>address)
-    return None if value < 0 else value
+    return default if value < 0 else value
 
 
-cdef BlockView Memory_View(const Memory_* that, addr_t start, addr_t endex):
+cdef (addr_t, int) Memory_PopItem(Memory_* that) except *:
+    cdef:
+        Rack_* blocks = that.blocks
+        size_t block_count = Rack_Length(blocks)
+        Block_* block
+        size_t length
+        byte_t backup
+
+    if block_count:
+        block = Rack_Last_(blocks)
+        length = Block_Length(block)
+        if length > 1:
+            block = Block_Pop__(block, &backup)
+            Rack_Set__(blocks, block_count - 1, block)  # update pointer
+        elif length == 1:
+            backup = Block_Get__(block, 0)
+            that.blocks = blocks = Rack_Pop__(blocks, NULL)  # update pointer
+        else:
+            raise RuntimeError('empty block')
+        return address, backup
+    else:
+        raise KeyError('empty')
+
+
+cdef BlockView Memory_View_(const Memory_* that, addr_t start, addr_t endex):
     cdef:
         const Rack_* blocks
         Block_* block
@@ -3940,12 +4021,21 @@ cdef BlockView Memory_View(const Memory_* that, addr_t start, addr_t endex):
                 block_start = Block_Start(block)
                 start -= block_start
                 endex -= block_start
-                return Block_ViewSlice_(block, start, endex)
+                return Block_ViewSlice_(block, <size_t>start, <size_t>endex)
 
         raise ValueError('non-contiguous data within range')
     else:
         return Block_ViewSlice_(_empty_block, 0, 0)
 
+
+cdef BlockView Memory_View(const Memory_* that, object start, object endex):
+    cdef:
+        Memory_* memory = self._
+        addr_t start_
+        addr_t endex_
+
+    start_, endex_ = Memory_Bound(memory, start, endex)
+    return Memory_View_(memory, start_, endex_)
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     cdef:
@@ -3963,6 +4053,10 @@ cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     memory.trim_start_ = that.trim_start_
     memory.trim_endex_ = that.trim_endex_
     return memory
+
+
+cdef void Memory_Reverse(Memory_* that) nogil:
+    Rack_Reverse(that.blocks)
 
 
 cdef bint Memory_Contiguous(const Memory_* that) nogil:
@@ -4276,7 +4370,7 @@ cdef (addr_t, addr_t) Memory_Bound(const Memory_* that, object start, object end
     return Memory_Bound_(that, start_, endex_, start__, endex__)
 
 
-cdef int Memory_Peek_(const Memory_* that, addr_t address) except -2:
+cdef int Memory_Peek_(const Memory_* that, addr_t address) nogil:
     cdef:
         const Rack_* blocks = that.blocks
         ssize_t block_index
@@ -5629,14 +5723,17 @@ cdef class Memory:
         """
         cdef:
             const Memory_* memory = self._
-            addr_t start = Memory_Start(memory)
-            addr_t endex = Memory_Endex(memory)
-            BlockView view = Memory_View(memory, start, endex)
-            bytes data
+            const Rack_* blocks = memory.blocks
+            size_t block_count = Rack_Length(blocks)
+            const Block_* block
 
-        data = view.__bytes__()
-        view.dispose()
-        return data
+        if not block_count:
+            return b''
+        elif block_count == 1:
+            block = Rack_First__(blocks)
+            return PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0), <ssize_t>Block_Length(block))
+        else
+            raise ValueError('non-contiguous data within range')
 
     def __cinit__(self):
         r"""Cython constructor."""
@@ -6513,8 +6610,42 @@ cdef class Memory:
             >>> [[s, bytes(d)] for s, d in memory.blocks(3, 5)]
             []
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t slice_start
+            addr_t slice_endex
+            BlockView slice_view
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_count:
+            if start is None and endex is None:  # faster
+                for block_index in range(block_count):
+                    block = Rack_Get__(block_index)
+                    yield Block_Start(block), Block_View(block)
+            else:
+                block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
+                block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
+                start_, endex_ = Memory_Bound(self._, start, endex)
+
+                for block_index in range(block_index_start, block_index_endex):
+                    block = Rack_Get__(blocks, block_index):
+                    block_start = Block_Start(block)
+                    block_endex = Block_Endex(block)
+                    slice_start = block_start if start_ < block_start else start_
+                    slice_endex = endex_ if endex_ < block_endex else block_endex
+                    if slice_start < slice_endex:
+                        slice_start -= block_start
+                        slice_endex -= block_start
+                        slice_view = Block_ViewSlice_(block, <size_t>slice_start, <size_t>slice_endex)
+                        yield slice_start, slice_view
 
     def bound(
         self: Memory,
@@ -6817,8 +6948,43 @@ cdef class Memory:
             >>> dict(memory.content_items(3, 5))
             {}
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t slice_start
+            addr_t slice_endex
+            addr_t address
+            size_t offset
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_count:
+            if start is None and endex is None:  # faster
+                for block_index in range(block_count):
+                    block = Rack_Get__(block_index)
+                    block_start = Block_Start(block)
+                    for offset in range(Block_Length(block)):
+                        yield (block_start + offset), Block_Get__(block, offset)
+            else:
+                block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
+                block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
+                start_, endex_ = Memory_Bound(self._, start, endex)
+
+                for block_index in range(block_index_start, block_index_endex):
+                    block = Rack_Get__(blocks, block_index):
+                    block_start = Block_Start(block)
+                    block_endex = Block_Endex(block)
+                    slice_start = block_start if start_ < block_start else start_
+                    slice_endex = endex_ if endex_ < block_endex else block_endex
+                    for address in range(slice_start, slice_endex):
+                        offset = <size_t>(address - block_start)
+                        yield address, Block_Get__(block, offset)
 
     def content_keys(
         self,
@@ -6860,8 +7026,40 @@ cdef class Memory:
             >>> list(memory.content_keys(3, 5))
             []
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t slice_start
+            addr_t slice_endex
+            addr_t address
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_count:
+            if start is None and endex is None:  # faster
+                for block_index in range(block_count):
+                    block = Rack_Get__(block_index)
+                    for address in range(Block_Start(block), Block_Endex(block)):
+                        yield address
+            else:
+                block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
+                block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
+                start_, endex_ = Memory_Bound(self._, start, endex)
+
+                for block_index in range(block_index_start, block_index_endex):
+                    block = Rack_Get__(blocks, block_index):
+                    block_start = Block_Start(block)
+                    block_endex = Block_Endex(block)
+                    slice_start = block_start if start_ < block_start else start_
+                    slice_endex = endex_ if endex_ < block_endex else block_endex
+                    for address in range(slice_start, slice_endex):
+                        yield address
 
     @property
     def content_parts(
@@ -7076,8 +7274,43 @@ cdef class Memory:
             >>> list(memory.content_values(3, 5))
             []
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t slice_start
+            addr_t slice_endex
+            addr_t address
+            size_t offset
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_count:
+            if start is None and endex is None:  # faster
+                for block_index in range(block_count):
+                    block = Rack_Get__(block_index)
+                    block_start = Block_Start(block)
+                    for offset in range(Block_Length(block)):
+                        yield Block_Get__(block, offset)
+            else:
+                block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
+                block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
+                start_, endex_ = Memory_Bound(self._, start, endex)
+
+                for block_index in range(block_index_start, block_index_endex):
+                    block = Rack_Get__(blocks, block_index):
+                    block_start = Block_Start(block)
+                    block_endex = Block_Endex(block)
+                    slice_start = block_start if start_ < block_start else start_
+                    slice_endex = endex_ if endex_ < block_endex else block_endex
+                    for address in range(slice_start, slice_endex):
+                        offset = <size_t>(address - block_start)
+                        yield Block_Get__(block, offset)
 
     @property
     def contiguous(
@@ -7098,11 +7331,14 @@ cdef class Memory:
     ) -> ImmutableMemory:
         r"""Creates a shallow copy.
 
+        Note:
+            The Cython implementation actually creates a deep copy.
+
         Returns:
             :obj:`ImmutableMemory`: Shallow copy.
         """
 
-        raise NotImplementedError('TODO')  # TODO
+        return self.__copy__()
 
     def count(
         self: Memory,
@@ -8166,14 +8402,18 @@ cdef class Memory:
             >>> bytes(memory)
             b'Hello, World!'
         """
+        cdef:
+            bytes data = bytes.fromhex(string)
+            Memory memory = Memory()
 
-        raise NotImplementedError('TODO')  # TODO
+        memory._ = Memory_Free(memory._)
+        memory._ = Memory_Create(NULL, data, 0, None, None, None, False, False)
+        return memory
 
     def gaps(
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-        bound: bool = False,  # FIXME: force ``True`` as per ``bytesparse``
     ) -> Iterator[OpenInterval]:
         r"""Iterates over block gaps.
 
@@ -8218,7 +8458,6 @@ cdef class Memory:
         cdef:
             addr_t start_
             addr_t endex_
-            bint bound_ = <bint>bound
             const Rack_* blocks = self._.blocks
             size_t block_count = Rack_Length(blocks)
             size_t block_index
@@ -8234,10 +8473,9 @@ cdef class Memory:
             start_, endex_ = Memory_Bound(self._, start, endex)
 
             if start__ is None:
-                if not bound_:
-                    block = Rack_First__(blocks)
-                    start_ = Block_Start(block)  # override trim start
-                    yield None, start_
+                block = Rack_First__(blocks)
+                start_ = Block_Start(block)  # override trim start
+                yield None, start_
                 block_index_start = 0
             else:
                 block_index_start = Rack_IndexStart(blocks, start_)
@@ -8254,12 +8492,12 @@ cdef class Memory:
                     yield start_, block_start
                 start_ = Block_Endex(block)
 
-            if endex__ is None and not bound_:
+            if endex__ is None:
                 yield start_, None
             elif start_ < endex_:
                 yield start_, endex_
 
-        elif not bound_:
+        else:
             yield None, None
 
     def get(
@@ -8301,8 +8539,18 @@ cdef class Memory:
             >>> memory.get(11, 123)  # -> empty -> default = 123
             123
         """
+        cdef:
+            addr_t address_ = <addr_t>address
+            const Memory_* memory = self._
+            const Rack_* blocks = mmeory.blocks
+            ssize_t block_index = Rack_IndexAt(blocks, address_)
+            const Block_* block
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_index < 0:
+            return default
+        else:
+            block = Rack_Get__(blocks, <size_t>block_index)
+            return Block_Get__(block, <size_t>(address_ - Block_Start(block)))
 
     def hex(
         self,
@@ -8343,8 +8591,15 @@ cdef class Memory:
             >>> memory.hex('.', 4)
             48.656c6c6f.2c20576f.726c6421
         """
+        cdef:
+            const Memory_* memory = self._
+            bytes data
 
-        raise NotImplementedError('TODO')  # TODO
+        if not Rack_Length(memory.blocks):
+            return ''
+
+        data = self.__bytes__()
+        return data.hex(*args)
 
     def index(
         self: Memory,
@@ -8547,7 +8802,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
-    ) -> Iterator[Tuple[Address, Value]]:
+    ) -> Iterator[Tuple[Address, Optional[Value]]]:
         r"""Iterates over address and value pairs.
 
         Iterates over address and value pairs, from `start` to `endex`.
@@ -8599,8 +8854,49 @@ cdef class Memory:
             >>> list(islice(memory.items(3, ...), 7))
             [(3, 67), (4, None), (5, None), (6, 120), (7, 121), (8, 122), (9, None)]
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            Rover_* rover = NULL
+            byte_t pattern_value
+            const byte_t[:] pattern_view
+            size_t pattern_size = 0
+            const byte_t* pattern_data = NULL
+            int value
 
-        yield from zip(self.keys(start, endex), self.values(start, endex, pattern))  # TODO: cythonize
+        if start is None:
+            start_ = Memory_Start(self._)
+        else:
+            start_ = <addr_t>start
+
+        if endex is None:
+            endex_ = Memory_Endex(self._)
+        elif endex is Ellipsis:
+            endex_ = ADDR_MAX
+        else:
+            endex_ = <addr_t>endex
+
+        if pattern is not None:
+            if isinstance(pattern, int):
+                pattern_value = <byte_t>pattern
+                pattern_size = 1
+                pattern_data = &pattern_value
+            else:
+                try:
+                    pattern_view = pattern
+                except TypeError:
+                    pattern_view = bytes(pattern)
+                with cython.boundscheck(False):
+                    pattern_size = len(pattern_view)
+                    pattern_data = &pattern_view[0]
+
+        try:
+            rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
+            while Rover_HasNext(rover):
+                value = Rover_Next_(rover)
+                yield Rover_Address(rover), (None if value < 0 else value)
+        finally:
+            rover = Rover_Free(rover)
 
     def keys(
         self: Memory,
@@ -8824,7 +9120,7 @@ cdef class Memory:
     def pop(
         self: Memory,
         address: Optional[Address] = None,
-        default: Optional[Value] = None,  # TODO
+        default: Optional[Value] = None,
     ) -> Optional[Value]:
         r"""Takes a value away.
 
@@ -8865,7 +9161,7 @@ cdef class Memory:
             63
         """
 
-        return Memory_Pop(self._, address)
+        return Memory_Pop(self._, address, default)
 
     def pop_backup(
         self: Memory,
@@ -8950,8 +9246,12 @@ cdef class Memory:
                 ...
             KeyError: empty
         """
+        cdef:
+            addr_t address
+            int value
 
-        raise NotImplementedError('TODO')  # TODO
+        address, value = Memory_PopItem(self._)
+        return address, value
 
     def popitem_backup(
         self,
@@ -8965,8 +9265,25 @@ cdef class Memory:
             :meth:`popitem`
             :meth:`popitem_restore`
         """
+        cdef:
+            const Memory_* memory = self._
+            const Rack_* blocks = memory.blocks
+            const Block_* block
+            size_t offset
+            byte_t backup
 
-        raise NotImplementedError('TODO')  # TODO
+        if Rack_Length(blocks):
+            block = Rack_Last_(blocks)
+            offset = Block_Length(block)
+            if offset:
+                offset -= 1
+                address = Block_Start(block) + offset
+                backup = Block_Get__(block, offset)
+                return address, backup
+            else:
+                raise RuntimeError('empty block')
+        else:
+            raise KeyError('empty')
 
     def popitem_restore(
         self,
@@ -8979,15 +9296,22 @@ cdef class Memory:
             address (int):
                 Address of the target item.
 
-            item (int or byte):
+            item (int):
                 Item to restore.
 
         See Also:
             :meth:`popitem`
             :meth:`popitem_backup`
         """
+        cdef:
+            addr_t address_ = <addr_t>address
+            byte_t item_ = <byte_t>item
+            Memory_* memory = self._
 
-        raise NotImplementedError('TODO')  # TODO
+        if address_ == Memory_ContentEndex(memory):
+            Memory_Append_(memory, item_)
+        else:
+            Memory_InsertRaw_(memory, address_, 1, &item_)
 
     def remove(
         self,
@@ -9043,8 +9367,13 @@ cdef class Memory:
                 ...
             ValueError: subsection not found
         """
+        cdef:
+            Memory_* memory = self._
+            size_t size = 1 if isinstance(item, int) else <size_t>len(item)
+            addr_t address = <addr_t>Memory_Index(memory, item, start, endex)
 
-        raise NotImplementedError('TODO')  # TODO
+        CheckAddAddrU(address, size)
+        Memory_Erase__(memory, address, address + size, True)  # delete
 
     def remove_backup(
         self,
@@ -9073,8 +9402,13 @@ cdef class Memory:
             :meth:`remove`
             :meth:`remove_restore`
         """
+        cdef:
+            Memory_* memory = self._
+            size_t size = 1 if isinstance(item, int) else <size_t>len(item)
+            addr_t address = <addr_t>Memory_Index(memory, item, start, endex)
 
-        raise NotImplementedError('TODO')  # TODO
+        CheckAddAddrU(address, size)
+        return Memory_Extract__(memory, address, address + size, 0, NULL, 1, True)
 
     def remove_restore(
         self,
@@ -9090,8 +9424,11 @@ cdef class Memory:
             :meth:`remove`
             :meth:`remove_backup`
         """
+        cdef:
+            Memory_* memory = self._
 
-        raise NotImplementedError('TODO')  # TODO
+        Memory_Reserve_(memory, <addr_t>backup.start, <size_t>len(backup))
+        Memory_Write(memory, 0, backup, True)
 
     def reserve(
         self: Memory,
@@ -9237,7 +9574,7 @@ cdef class Memory:
             [[5, b'CBA']]
         """
 
-        raise NotImplementedError('TODO')  # TODO
+        Memory_Reverse(self._)
 
     def rfind(
         self: Memory,
@@ -9482,8 +9819,29 @@ cdef class Memory:
             >>> memory.peek(7) is None
             True
         """
+        cdef:
+            addr_t address_ = <addr_t>address
+            Memory_* memory = self._
+            int backup = Memory_Peek_(memory, address_)
+            const byte_t[:] view
+            byte_t value
 
-        raise NotImplementedError('TODO')  # TODO
+        if backup < 0:
+            if default is not None:
+                if isinstance(default, int):
+                    value = <byte_t>default
+                else:
+                    view = default
+                    if len(view) != 1:
+                        raise ValueError('expecting single item')
+                    with cython.boundscheck(False):
+                        value = view[0]
+                Memory_Poke_(memory, address_, value)
+                return value
+            else:
+                return None
+        else:
+            return backup
 
     def setdefault_backup(
         self,
@@ -9503,8 +9861,7 @@ cdef class Memory:
             :meth:`setdefault_restore`
         """
 
-        raise NotImplementedError('TODO')  # TODO
-
+        return address, Memory_Peek(self._, address)
 
     def setdefault_restore(
         self,
@@ -9525,7 +9882,7 @@ cdef class Memory:
             :meth:`setdefault_backup`
         """
 
-        raise NotImplementedError('TODO')  # TODO
+        Memory_Poke(self._, address, item)
 
     def shift(
         self: Memory,
@@ -9746,8 +10103,47 @@ cdef class Memory:
             >>> memory.to_blocks(3, 5)]
             []
         """
+        cdef:
+            addr_t start_
+            addr_t endex_
+            const Rack_* blocks = self._.blocks
+            size_t block_count = Rack_Length(blocks)
+            size_t block_index
+            size_t block_index_start
+            size_t block_index_endex
+            const Block_* block
+            addr_t block_start
+            addr_t block_endex
+            addr_t slice_start
+            addr_t slice_endex
+            bytes slice_data
+            list result = []
 
-        raise NotImplementedError('TODO')  # TODO
+        if block_count:
+            if start is None and endex is None:  # faster
+                for block_index in range(block_count):
+                    block = Rack_Get__(block_index)
+                    slice_start = Block_Start(block)
+                    slice_data = PyBytes_FromStringAndSize(Block_At__(block, 0), Block_Length(block))
+                    result.append([slice_start, slice_data])
+            else:
+                block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
+                block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
+                start_, endex_ = Memory_Bound(self._, start, endex)
+
+                for block_index in range(block_index_start, block_index_endex):
+                    block = Rack_Get__(blocks, block_index):
+                    block_start = Block_Start(block)
+                    block_endex = Block_Endex(block)
+                    slice_start = block_start if start_ < block_start else start_
+                    slice_endex = endex_ if endex_ < block_endex else block_endex
+                    if slice_start < slice_endex:
+                        slice_start -= block_start
+                        slice_endex -= block_start
+                        slice_data = PyBytes_FromStringAndSize(Block_At__(block, <size_t>slice_start),
+                                                               <size_t>(slice_endex - slice_start))
+                        result.append([slice_start, slice_data])
+        return result
 
     def to_bytes(
         self,
@@ -9800,8 +10196,12 @@ cdef class Memory:
             >>> memory.to_bytes(4, 6)
             b'Cx'
         """
+        cdef:
+            BlockView view = Memory_View(self._, start, endex)
+            bytes data = view.__bytes__()
 
-        raise NotImplementedError('TODO')  # TODO
+        view.dispose_()
+        return data
 
     @property
     def trim_endex(
@@ -9911,8 +10311,19 @@ cdef class Memory:
             >>> memory.to_blocks()
             [[1, b'xy@'], [5, b'A?C']]
         """
+        cdef:
+            Memory_* memory = self._
 
-        raise NotImplementedError('TODO')  # TODO
+        if kwargs:
+            raise KeyError('cannot convert kwargs.keys() into addresses')
+
+        if isinstance(data, ImmutableMemory):
+            Memory_Write(memory, 0, data, clear)
+        else:
+            if isinstance(data, Mapping):
+                data = data.items()
+            for address, value in data:
+                Memory_Poke(memory, address, value)
 
     def update_backup(
         self,
@@ -9934,8 +10345,20 @@ cdef class Memory:
             :meth:`update`
             :meth:`update_restore`
         """
+        cdef:
+            Memory_* memory = self._
 
-        raise NotImplementedError('TODO')  # TODO
+        if kwargs:
+            raise KeyError('cannot convert kwargs.keys() into addresses')
+
+        if isinstance(data, ImmutableMemory):
+            return self.write_backup(0, data, clear=clear)
+        else:
+            if isinstance(data, Mapping):
+                backups = {address: Memory_Peek(memory, address) for address in data.keys()}
+            else:
+                backups = {address: Memory_Peek(memory, address) for address, _ in data}
+            return backups
 
     def update_restore(
         self,
@@ -9952,7 +10375,11 @@ cdef class Memory:
             :meth:`update_backup`
         """
 
-        raise NotImplementedError('TODO')  # TODO
+        if isinstance(backups, list):
+            for backup in backups:
+                self.write(0, backup, clear=True)
+        else:
+            self.update(backups)
 
     def validate(
         self: Memory,
@@ -10134,7 +10561,7 @@ cdef class Memory:
             addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
             addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
 
-        return Memory_View(memory, start_, endex_)
+        return Memory_View_(memory, start_, endex_)
 
     def write(
         self: Memory,
