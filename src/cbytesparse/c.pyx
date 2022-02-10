@@ -140,13 +140,21 @@ def collapse_blocks(
 
     cdef:
         Memory_* memory = Memory_Alloc()
-        list collapsed = None
+        list collapsed = []
+        size_t block_index
+        const Rack_* blocks2
+        const Block_* block
 
     try:
         for block_start, block_data in blocks:
             Memory_Write(memory, block_start, block_data, True)
+        blocks2 = memory.blocks
 
-        collapsed = Memory_ToBlocks(memory)
+        for block_index in range(Rack_Length(blocks2)):
+            block = Rack_Get__(blocks2, block_index)
+            collapsed.append([Block_Start(block),
+                              PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0),
+                                                        <ssize_t>Block_Length(block))])
     finally:
         Memory_Free(memory)
 
@@ -1870,11 +1878,11 @@ cdef class BlockView:
     protocol API.
     """
 
-    cdef vint check_(self: BlockView) except -1:
+    cdef vint check_(BlockView self) except -1:
         if self._block == NULL:
             raise RuntimeError('null internal data pointer')
 
-    cdef vint dispose_(self: BlockView) except -1:
+    cdef vint release_(BlockView self):
         self._memview = None
 
         if self._block:
@@ -1917,13 +1925,28 @@ cdef class BlockView:
         self._block = NULL
 
     def __dealloc__(self: BlockView):
-        self.dispose_()
+        self.release_()
+
+    def __eq__(
+        self: BlockView,
+        other: Any,
+    ) -> bool:
+
+        self.check_()
+        if other is None:
+            return False
+
+        if isinstance(other, BlockView):
+            return Block_Eq(self._block, (<BlockView>other)._block)
+        else:
+            return self.memview == other
 
     def __getattr__(
         self: BlockView,
         attr: str,
     ) -> Any:
 
+        self.check_()
         return getattr(self.memview, attr)
 
     def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
@@ -2009,7 +2032,7 @@ cdef class BlockView:
 
         self.check_()
 
-    def dispose(
+    def release(
         self: BlockView,
     ) -> None:
         r"""Forces object disposal.
@@ -2020,7 +2043,7 @@ cdef class BlockView:
         Any access to the object after calling this function could raise exceptions.
         """
 
-        self.dispose_()
+        self.release_()
 
     @property
     def endex(
@@ -5464,42 +5487,6 @@ cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern
                 raise
 
 
-cdef list Memory_AsViews(const Memory_* that):
-    cdef:
-        const Rack_* blocks1 = that.blocks
-        size_t block_count = Rack_Length(blocks1)
-        size_t block_index
-        Block_* block = NULL
-        size_t size
-        const byte_t[:] view
-        list blocks2 = []
-
-    for block_index in range(block_count):
-        block = Rack_Get__(blocks1, block_index)
-        size = Block_Length(block)
-        view = <const byte_t[:size]>Block_At__(block, 0)
-        blocks2.append([Block_Start(block), view])
-    return blocks2
-
-
-cdef list Memory_ToBlocks(const Memory_* that):
-    cdef:
-        const Rack_* blocks1 = that.blocks
-        size_t block_count = Rack_Length(blocks1)
-        size_t block_index
-        Block_* block = NULL
-        size_t size
-        const byte_t[:] view
-        list blocks2 = []
-
-    for block_index in range(block_count):
-        block = Rack_Get__(blocks1, block_index)
-        size = Block_Length(block)
-        view = <const byte_t[:size]>Block_At__(block, 0)
-        blocks2.append([Block_Start(block), bytearray(view)])
-    return blocks2
-
-
 # =====================================================================================================================
 
 cdef Rover_* Rover_Alloc() except NULL:
@@ -5513,7 +5500,7 @@ cdef Rover_* Rover_Alloc() except NULL:
 
 cdef Rover_* Rover_Free(Rover_* that) except? NULL:
     if that:
-        Rover_Dispose(that)
+        Rover_Release(that)
         PyMem_Free(that)
     return NULL
 
@@ -5737,7 +5724,7 @@ cdef object Rover_Next(Rover_* that):
     return None if value < 0 else <object>value
 
 
-cdef vint Rover_Dispose(Rover_* that) except -1:
+cdef vint Rover_Release(Rover_* that) except -1:
     that.address = that.endex if that.forward else that.start
     that.block = Block_Release(that.block)
     that.memory = NULL
@@ -5780,9 +5767,6 @@ cdef class Memory:
     type ``uint_fast64_t``.
 
     Attributes:
-        _blocks (list of blocks):
-            A sequence of spaced blocks, sorted by address.
-
         _trim_start (int):
             Memory trimming start address. Any data before this address is
             automatically discarded; disabled if ``None``.
@@ -5857,17 +5841,13 @@ cdef class Memory:
         """
         cdef:
             const Memory_* memory = self._
-            const Rack_* blocks = memory.blocks
-            size_t block_count = Rack_Length(blocks)
-            const Block_* block
+            BlockView view = Memory_View_(memory, Memory_Start(memory), Memory_Endex(memory))
 
-        if not block_count:
-            return b''
-        elif block_count == 1:
-            block = Rack_First__(blocks)
-            return PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0), <ssize_t>Block_Length(block))
-        else:
-            raise ValueError('non-contiguous data within range')
+        try:
+            data = view.__bytes__()
+        finally:
+            view.release()
+        return data
 
     def __cinit__(self):
         r"""Cython constructor."""
@@ -6417,14 +6397,6 @@ cdef class Memory:
 
         return Rack_IndexStart(self._.blocks, address)
 
-    @property
-    def _blocks(
-        self: Memory,
-    ) -> BlockList:
-        r"""list of blocks: A sequence of spaced blocks, sorted by address."""
-
-        return Memory_ToBlocks(self._)
-
     def _pretrim_endex(
         self: Memory,
         start_min: Optional[Address],
@@ -6779,7 +6751,7 @@ cdef class Memory:
                         slice_start -= block_start
                         slice_endex -= block_start
                         slice_view = Block_ViewSlice_(block, <size_t>slice_start, <size_t>slice_endex)
-                        yield slice_start, slice_view
+                        yield (block_start + slice_start), slice_view
 
     def bound(
         self: Memory,
@@ -7992,6 +7964,8 @@ cdef class Memory:
             :meth:`extend_restore`
         """
 
+        if offset < 0:
+            raise ValueError('negative extension offset')
         return Memory_ContentEndex(self._) + <addr_t>offset
 
     def extend_restore(
@@ -10317,7 +10291,7 @@ cdef class Memory:
                         slice_endex -= block_start
                         slice_data = PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, <size_t>slice_start),
                                                                <ssize_t>(slice_endex - slice_start))
-                        result.append([slice_start, slice_data])
+                        result.append([block_start + slice_start, slice_data])
         return result
 
     def to_bytes(
@@ -10375,7 +10349,7 @@ cdef class Memory:
             BlockView view = Memory_View(self._, start, endex)
             bytes data = view.__bytes__()
 
-        view.dispose_()
+        view.release_()
         return data
 
     @property
@@ -10785,7 +10759,7 @@ cdef class Memory:
 
         Memory_Write(self._, address, data, clear)
 
-    def write_backup(
+    def write_backup(  # TODO: align to ``bytesparse``
         self: Memory,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
@@ -10816,7 +10790,7 @@ cdef class Memory:
             addr_t size = 1 if isinstance(data, int) else <addr_t>len(data)
 
         CheckAddAddrU(address, size)
-        return Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)
+        return [Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)]
 
     def write_restore(
         self: Memory,

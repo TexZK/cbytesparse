@@ -1905,6 +1905,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test___copy___template(self):
@@ -1916,6 +1917,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test_copy_empty(self):
@@ -1926,6 +1928,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test_copy_template(self):
@@ -1937,6 +1940,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test___deepcopy___doctest(self):
@@ -1950,6 +1954,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test___deepcopy___template(self):
@@ -1961,6 +1966,7 @@ class BaseMemorySuite:
         assert memory1.span == memory2.span
         assert memory1.trim_span == memory2.trim_span
         assert memory1.content_span == memory2.content_span
+        assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
 
     def test_contiguous_doctest(self):
@@ -3072,7 +3078,7 @@ class BaseMemorySuite:
             memory = Memory.from_blocks(blocks)
             memory_backup = memory.__deepcopy__()
 
-            backup_address, backup_value = memory.setdefault_backup(start, start)
+            backup_address, backup_value = memory.setdefault_backup(start)
             assert backup_address == start
             assert backup_value == values[start]
 

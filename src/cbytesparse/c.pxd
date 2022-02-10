@@ -356,8 +356,8 @@ cdef class BlockView:
         size_t _endex  # data slice endex
         object _memview  # shadow memoryview
 
-    cdef vint check_(self) except -1
-    cdef vint dispose_(self) except -1
+    cdef vint check_(BlockView self) except -1
+    cdef vint release_(BlockView self)
 
 
 # =====================================================================================================================
@@ -684,10 +684,6 @@ cdef vint Memory_Fill(Memory_* that, object start, object endex, object pattern)
 cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** pattern) except -1
 cdef vint Memory_Flood(Memory_* that, object start, object endex, object pattern) except -1
 
-cdef list Memory_AsViews(const Memory_* that)
-
-cdef list Memory_ToBlocks(const Memory_* that)
-
 
 # =====================================================================================================================
 
@@ -761,7 +757,7 @@ cdef bint Rover_HasNext(const Rover_* that) nogil
 cdef int Rover_Next_(Rover_* that) except -2
 cdef object Rover_Next(Rover_* that)
 
-cdef vint Rover_Dispose(Rover_* that) except -1
+cdef vint Rover_Release(Rover_* that) except -1
 
 cdef bint Rover_Forward(const Rover_* that) nogil
 cdef bint Rover_Infinite(const Rover_* that) nogil
