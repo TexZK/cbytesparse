@@ -51,6 +51,7 @@ from typing import Union
 
 from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
+from bytesparse.base import AddressValueMapping
 from bytesparse.base import AnyBytes
 from bytesparse.base import BlockIndex
 from bytesparse.base import BlockIterable
@@ -604,6 +605,10 @@ cdef Block_* Block_Release(Block_* that):
             PyMem_Free(that)
 
     return NULL
+
+
+cdef bint Block_Bool(const Block_* that) nogil:
+    return that.start < that.endex
 
 
 cdef size_t Block_Length(const Block_* that) nogil:
@@ -2206,6 +2211,10 @@ cdef void Rack_Reverse(Rack_* that) nogil:
             index_start += 1
 
 
+cdef bint Rack_Bool(const Rack_* that) nogil:
+    return that.start < that.endex
+
+
 cdef size_t Rack_Length(const Rack_* that) nogil:
     return that.endex - that.start
 
@@ -2284,7 +2293,6 @@ cdef bint Rack_Eq(const Rack_* that, const Rack_* other) except -1:
     cdef:
         size_t block_count = that.endex - that.start
         size_t block_index
-        size_t block_length
         const Block_* block1
         const Block_* block2
 
@@ -2294,7 +2302,6 @@ cdef bint Rack_Eq(const Rack_* that, const Rack_* other) except -1:
     for block_index in range(block_count):
         block1 = Rack_Get__(that, block_index)
         block2 = Rack_Get__(other, block_index)
-        block_length = Block_Length(block1)
 
         if block1.address != block2.address:
             return False
@@ -3013,11 +3020,11 @@ cdef Rack_* Rack_DelSlice(Rack_* that, ssize_t start, ssize_t endex) except NULL
 
 
 cdef addr_t Rack_Start(const Rack_* that) nogil:
-    return Block_Start(Rack_First__(that)) if Rack_Length(that) else 0
+    return Block_Start(Rack_First__(that)) if Rack_Bool(that) else 0
 
 
 cdef addr_t Rack_Endex(const Rack_* that) nogil:
-    return Block_Endex(Rack_Last__(that)) if Rack_Length(that) else 0
+    return Block_Endex(Rack_Last__(that)) if Rack_Bool(that) else 0
 
 
 cdef ssize_t Rack_IndexAt(const Rack_* that, addr_t address) nogil:
@@ -3341,7 +3348,7 @@ cdef Memory_* Memory_Mul(const Memory_* that, addr_t times) except NULL:
         addr_t size
         addr_t time
 
-    if times and Rack_Length(that.blocks):
+    if times and Rack_Bool(that.blocks):
         start = Memory_Start(that)
         size = Memory_Endex(that) - start
         offset = size  # adjust first write
@@ -3368,7 +3375,7 @@ cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL:
     if times < 0:
         times = 0
 
-    if times and Rack_Length(that.blocks):
+    if times and Rack_Bool(that.blocks):
         start = Memory_Start(that)
         size = Memory_Endex(that) - start
         offset = size
@@ -3384,12 +3391,16 @@ cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL:
     return that
 
 
+cdef bint Memory_Bool(const Memory_* that) nogil:
+    return Memory_Start(that) < Memory_Endex(that)
+
+
 cdef addr_t Memory_Length(const Memory_* that) nogil:
     return Memory_Endex(that) - Memory_Start(that)
 
 
 cdef bint Memory_IsEmpty(const Memory_* that) nogil:
-    return Rack_Length(that.blocks) == 0
+    return not Rack_Bool(that.blocks)
 
 
 cdef object Memory_ObjFind(const Memory_* that, object item, object start, object endex):
@@ -3836,7 +3847,7 @@ cdef vint Memory_DelItem(Memory_* that, object key) except -1:
         addr_t step
         addr_t address
 
-    if Rack_Length(that.blocks):
+    if Rack_Bool(that.blocks):
         if isinstance(key, slice):
             key_ = <slice>key
             key_start = key_.start
@@ -4058,6 +4069,107 @@ cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     return memory
 
 
+cdef Memory_* Memory_Cut_(const Memory_* that, addr_t start, addr_t endex, bint bound) except NULL:
+    cdef:
+        const Rack_* blocks = that.blocks
+        size_t block_count
+        size_t block_index
+        size_t block_index_start
+        size_t block_index_endex
+        Memory_* memory = Memory_Alloc()
+        Rack_* memory_blocks
+        Block_* block1
+        Block_* block2
+        addr_t block_start
+        addr_t block_endex
+
+    if endex < start:
+        endex = start
+
+    if start < endex and Rack_Bool(blocks):
+        # Copy all the blocks except those completely outside selection
+        block_index_start = Rack_IndexStart(blocks, start)
+        block_index_endex = Rack_IndexEndex(blocks, endex)
+        block_count = block_index_endex - block_index_start
+
+        if block_count:
+            memory_blocks = memory.blocks
+            block_count = block_index_endex - block_index_start
+            try:
+                memory.blocks = memory_blocks = Rack_Reserve_(memory_blocks, 0, block_count)
+            except:
+                memory = Memory_Free(memory)  # orphan
+                raise
+            else:
+                for block_index in range(block_count):
+                    block1 = Rack_Get_(blocks, block_index_start + block_index)
+                    block1 = Block_Acquire(block1)
+                    Rack_Set__(memory_blocks, block_index, block1)
+            try:
+                # Trim cloned data before the selection start address
+                block_index = 0
+                block1 = Rack_Get_(memory_blocks, block_index)
+                block_start = Block_Start(block1)
+                if block_start < start:
+                    try:
+                        block2 = NULL
+                        block2 = Block_Copy(block1)
+                        block2 = Block_DelSlice_(block2, 0, <size_t>(start - block_start))
+                        block2.address = start
+                    except:
+                        block2 = Block_Free(block2)  # orphan
+                        raise
+                    else:
+                        Rack_Set__(memory_blocks, block_index, block2)
+                        Block_Release(block1)
+
+                # Trim cloned data after the selection end address
+                block_index = block_count - 1
+                block1 = Rack_Get_(memory_blocks, block_index)
+                block_endex = Block_Endex(block1)
+                if endex < block_endex:
+                    block_start = Block_Start(block1)
+                    if block_start < endex:
+                        try:
+                            block2 = NULL
+                            block2 = Block_Copy(block1)
+                            block2 = Block_DelSlice_(block2, <size_t>(endex - block_start), Block_Length(block2))
+                            block2.address = block_start
+                        except:
+                            block2 = Block_Free(block2)  # orphan
+                            raise
+                        else:
+                            Rack_Set__(memory_blocks, block_index, block2)
+                            Block_Release(block1)
+                    else:
+                        memory.blocks = memory_blocks = Rack_Pop__(memory_blocks, &block2)
+                        block2 = Block_Release(block2)  # orphan
+
+                Memory_Erase__(that, start, endex, False)  # clear
+
+            except:
+                memory = Memory_Free(memory)  # orphan
+                raise
+
+    if bound:
+        memory.trim_start = start
+        memory.trim_endex = endex
+        memory.trim_start_ = True
+        memory.trim_endex_ = True
+
+    return memory
+
+
+cdef object Memory_Cut(const Memory_* that, object start, object endex, bint bound):
+    cdef:
+        addr_t start_ = Memory_Start(that) if start is None else <addr_t>start
+        addr_t endex_ = Memory_Endex(that) if endex is None else <addr_t>endex
+        Memory_* memory = Memory_Cut_(that, start_, endex_, bound)
+
+    return Memory_AsObject(memory)
+
+
+
 cdef void Memory_Reverse(Memory_* that) nogil:
     Rack_Reverse(that.blocks)
 
@@ -4178,7 +4290,7 @@ cdef addr_t Memory_Start(const Memory_* that) nogil:
     if not that.trim_start_:
         # Return actual
         blocks = that.blocks
-        if Rack_Length(blocks):
+        if Rack_Bool(blocks):
             return Block_Start(Rack_First__(blocks))
         else:
             return 0
@@ -4193,7 +4305,7 @@ cdef addr_t Memory_Endex(const Memory_* that) nogil:
     if not that.trim_endex_:
         # Return actual
         blocks = that.blocks
-        if Rack_Length(blocks):
+        if Rack_Bool(blocks):
             return Block_Endex(Rack_Last__(blocks))
         else:
             return Memory_Start(that)
@@ -4212,7 +4324,7 @@ cdef object Memory_Endin(const Memory_* that):
     if not that.trim_endex_:
         # Return actual
         blocks = that.blocks
-        if Rack_Length(blocks):
+        if Rack_Bool(blocks):
             return <object>Block_Endex(Rack_Last__(blocks)) - 1
         else:
             return <object>Memory_Start(that) - 1
@@ -4224,7 +4336,7 @@ cdef addr_t Memory_ContentStart(const Memory_* that) nogil:
     cdef:
         const Rack_* blocks = that.blocks
 
-    if Rack_Length(blocks):
+    if Rack_Bool(blocks):
         return Block_Start(Rack_First__(blocks))
     elif not that.trim_start_:
         return 0
@@ -4236,7 +4348,7 @@ cdef addr_t Memory_ContentEndex(const Memory_* that) nogil:
     cdef:
         const Rack_* blocks = that.blocks
 
-    if Rack_Length(blocks):
+    if Rack_Bool(blocks):
         return Block_Endex(Rack_Last__(blocks))
     elif not that.trim_start_:
         return 0  # default to start
@@ -4252,7 +4364,7 @@ cdef object Memory_ContentEndin(const Memory_* that):
     cdef:
         const Rack_* blocks = that.blocks
 
-    if Rack_Length(blocks):
+    if Rack_Bool(blocks):
         return <object>Block_Endex(Rack_Last__(blocks)) - 1
     elif not that.trim_start_:  # default to start-1
         return -1
@@ -4331,7 +4443,7 @@ cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t en
 
     if not start_:
         if not that.trim_start_:
-            if Rack_Length(that.blocks):
+            if Rack_Bool(that.blocks):
                 start = Block_Start(Rack_First__(that.blocks))
             else:
                 start = 0
@@ -4347,7 +4459,7 @@ cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t en
 
     if not endex_:
         if not that.trim_endex_:
-            if Rack_Length(that.blocks):
+            if Rack_Bool(that.blocks):
                 endex = Block_Endex(Rack_Last__(that.blocks))
             else:
                 endex = start
@@ -4481,8 +4593,8 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
                                size_t pattern_size, const byte_t* pattern_ptr,
                                saddr_t step, bint bound) except NULL:
     cdef:
-        const Rack_* blocks1 = that.blocks
-        size_t block_count = Rack_Length(blocks1)
+        const Rack_* blocks = that.blocks
+        size_t block_count
         size_t block_index
         size_t block_index_start
         size_t block_index_endex
@@ -4499,37 +4611,57 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
         endex = start
 
     if step == 1:
-        if start < endex and block_count:
-            block_index_start = Rack_IndexStart(blocks1, start)
-            block_index_endex = Rack_IndexEndex(blocks1, endex)
-        else:
-            block_index_start = 0
-            block_index_endex = 0
+        if start < endex and Rack_Bool(blocks):
+            # Copy all the blocks except those completely outside selection
+            block_index_start = Rack_IndexStart(blocks, start)
+            block_index_endex = Rack_IndexEndex(blocks, endex)
+            block_count = block_index_endex - block_index_start
 
-        # Reserve slots to clone blocks
-        blocks2 = memory.blocks
-        block_count = block_index_endex - block_index_start
-        memory.blocks = blocks2 = Rack_Reserve_(blocks2, 0, block_count)
-        try:
-            # Clone blocks into the new memory
-            for block_index in range(block_count):
-                block1 = Rack_Get__(blocks1, block_index_start + block_index)
-                block2 = Block_Copy(block1)
-                Rack_Set__(blocks2, block_index, block2)
-        except:
-            memory.blocks = blocks2 = Rack_Clear(blocks2)  # orphan
-            raise
+            if block_count:
+                memory_blocks = memory.blocks
+                block_count = block_index_endex - block_index_start
+                try:
+                    memory.blocks = memory_blocks = Rack_Reserve_(memory_blocks, 0, block_count)
 
-        # Trim data in excess
-        Memory_Crop_(memory, start, endex)
+                    for block_index in range(block_count):
+                        block2 = Rack_Get_(blocks, block_index_start + block_index)
+                        block2 = Block_Copy(block2)
+                        Rack_Set__(memory_blocks, block_index, block2)  # update pointer
 
-        if pattern_size and pattern_ptr:
-            pattern = Block_Create(0, pattern_size, pattern_ptr)
-            try:
-                Memory_Flood_(memory, start, endex, &pattern)
-            except:
-                Block_Free(pattern)  # orphan
-                raise
+                    # Trim cloned data before the selection start address
+                    block_index = 0
+                    block2 = Rack_Get_(memory_blocks, block_index)
+                    block_start = Block_Start(block2)
+                    if block_start < start:
+                        block2 = Block_DelSlice_(block2, 0, <size_t>(start - block_start))
+                        block2.address = start
+                        Rack_Set__(memory_blocks, block_index, block2)
+
+                    # Trim cloned data after the selection end address
+                    block_index = block_count - 1
+                    block2 = Rack_Get_(memory_blocks, block_index)
+                    block_endex = Block_Endex(block2)
+                    if endex < block_endex:
+                        block_start = Block_Start(block2)
+                        if block_start < endex:
+                            block2 = Block_DelSlice_(block2, <size_t>(endex - block_start), Block_Length(block2))
+                            block2.address = block_start
+                            Rack_Set__(memory_blocks, block_index, block2)  # update pointer
+                        else:
+                            memory.blocks = memory_blocks = Rack_Pop__(memory_blocks, &block2)
+                            block2 = Block_Release(block2)  # orphan
+                except:
+                    memory = Memory_Free(memory)  # orphan
+                    raise
+
+            if pattern_size and pattern_ptr:
+                pattern = Block_Create(0, pattern_size, pattern_ptr)
+                try:
+                    Memory_Flood_(memory, start, endex, &pattern)
+                except:
+                    Block_Free(pattern)  # orphan
+                    memory = Memory_Free(memory)  # orphan
+                    raise
     else:
         if step > 1:
             block2 = NULL
@@ -4561,10 +4693,10 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
             if bound:
                 endex = offset
     if bound:
-        memory.trim_start_ = True
-        memory.trim_endex_ = True
         memory.trim_start = start
         memory.trim_endex = endex
+        memory.trim_start_ = True
+        memory.trim_endex_ = True
 
     return memory
 
@@ -4588,7 +4720,6 @@ cdef object Memory_Extract(const Memory_* that, object start, object endex,
         size_t pattern_size
         const byte_t* pattern_ptr
         saddr_t step_ = <saddr_t>1 if step is None else <saddr_t>step
-        bint bound_ = <bint>bound
 
     if pattern is None:
         pattern_size = 0
@@ -4608,7 +4739,7 @@ cdef object Memory_Extract(const Memory_* that, object start, object endex,
     start_ = Memory_Start(that) if start is None else <addr_t>start
     endex_ = Memory_Endex(that) if endex is None else <addr_t>endex
 
-    return Memory_Extract_(that, start_, endex_, pattern_size, pattern_ptr, step_, bound_)
+    return Memory_Extract_(that, start_, endex_, pattern_size, pattern_ptr, step_, bound)
 
 
 cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset) except -1:
@@ -4617,7 +4748,7 @@ cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset) except -1:
         size_t block_index
         Block_* block
 
-    if offset and Rack_Length(blocks):
+    if offset and Rack_Bool(blocks):
         Memory_PretrimStart_(that, ADDR_MAX, offset)
         blocks = that.blocks
 
@@ -4632,7 +4763,7 @@ cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset) except -1:
         size_t block_index
         Block_* block
 
-    if offset and Rack_Length(blocks):
+    if offset and Rack_Bool(blocks):
         Memory_PretrimEndex_(that, ADDR_MIN, offset)
         blocks = that.blocks
 
@@ -4658,7 +4789,7 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size) except -1:
         addr_t block_start
         Block_* block2
 
-    if size and Rack_Length(blocks):
+    if size and Rack_Bool(blocks):
         Memory_PretrimEndex_(that, address, size)
 
         block_index = Rack_IndexStart(blocks, address)
@@ -5012,14 +5143,14 @@ cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1:
         addr_t block_endex
 
     # Trim blocks exceeding before memory start
-    if Rack_Length(that.blocks):
+    if Rack_Bool(that.blocks):
         block_start = Block_Start(Rack_First_(that.blocks))
 
         if block_start < start:
             Memory_Erase__(that, block_start, start, False)  # clear
 
     # Trim blocks exceeding after memory end
-    if Rack_Length(that.blocks):
+    if Rack_Bool(that.blocks):
         block_endex = Block_Endex(Rack_Last_(that.blocks))
 
         if endex < block_endex:
@@ -5219,7 +5350,7 @@ cdef vint Memory_Fill_(Memory_* that, addr_t start, addr_t endex, Block_** patte
 
     if start < endex:
         CheckAddrToSizeU(endex - start)
-        if not Block_Length(pattern[0]):
+        if not Block_Bool(pattern[0]):
             raise ValueError('non-empty pattern required')
 
         if start > start_:
@@ -5300,7 +5431,7 @@ cdef vint Memory_Flood_(Memory_* that, addr_t start, addr_t endex, Block_** patt
                 endex = block_endex
 
         CheckAddrToSizeU(endex - start)
-        if not Block_Length(pattern[0]):
+        if not Block_Bool(pattern[0]):
             raise ValueError('non-empty pattern required')
 
         size = <size_t>(endex - start)
@@ -5711,7 +5842,7 @@ cdef class Memory:
             True
         """
 
-        return not Memory_IsEmpty(self._)
+        return Memory_Bool(self._)
 
     def __bytes__(
         self: Memory,
@@ -7454,7 +7585,7 @@ cdef class Memory:
             Memory backup_start = None
             Memory backup_endex = None
 
-        if Rack_Length(blocks):
+        if Rack_Bool(blocks):
             if start is not None:
                 start_ = <addr_t>start
                 block_start = Block_Start(Rack_First__(blocks))
@@ -7531,6 +7662,35 @@ cdef class Memory:
         """
 
         Memory_Delete(self._, start, endex)
+
+    def cut(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        bound: bool = True,
+    ) -> ImmutableMemory:
+        r"""Cuts a slice of memory.
+
+        Arguments:
+            start (int):
+                Inclusive start address for cutting.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for cutting.
+                If ``None``, :attr:`endex` is considered.
+
+            bound (bool):
+                The selected address range is applied to the resulting memory
+                as its trimming range. This retains information about any
+                initial and final emptiness of that range, which would be lost
+                otherwise.
+
+        Returns:
+            :obj:`Memory`: A copy of the memory from the selected range.
+        """
+
+        return Memory_Cut(self._, start, endex, bound)
 
     def delete_backup(
         self: Memory,
@@ -8598,7 +8758,7 @@ cdef class Memory:
             const Memory_* memory = self._
             bytes data
 
-        if not Rack_Length(memory.blocks):
+        if not Rack_Bool(memory.blocks):
             return ''
 
         data = self.__bytes__()
@@ -9275,7 +9435,7 @@ cdef class Memory:
             size_t offset
             byte_t backup
 
-        if Rack_Length(blocks):
+        if Rack_Bool(blocks):
             block = Rack_Last_(blocks)
             offset = Block_Length(block)
             if offset:

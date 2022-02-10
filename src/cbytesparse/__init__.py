@@ -116,4 +116,4 @@ __version__ = '0.0.4'
 
 # noinspection PyUnresolvedReferences
 from .c import collapse_blocks  # noqa F401
-from .py import Memory  # noqa F401
+from .c import Memory  # noqa F401

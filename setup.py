@@ -67,7 +67,7 @@ setup(
     keywords=[
     ],
     install_requires=[
-        'bytesparse>=0.0.4',
+		# FIXME 'bytesparse>=0.0.4',
     ],
     extras_require={
         'testing': [

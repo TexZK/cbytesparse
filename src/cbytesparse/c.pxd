@@ -234,6 +234,7 @@ cdef Block_* Block_Acquire(Block_* that) except NULL
 cdef Block_* Block_Release_(Block_* that)
 cdef Block_* Block_Release(Block_* that)
 
+cdef bint Block_Bool(const Block_* that) nogil
 cdef size_t Block_Length(const Block_* that) nogil
 cdef addr_t Block_Start(const Block_* that) nogil
 cdef addr_t Block_Endex(const Block_* that) nogil
@@ -398,6 +399,7 @@ cdef Rack_* Rack_FromObject(object obj, saddr_t offset) except NULL
 
 cdef void Rack_Reverse(Rack_* that) nogil
 
+cdef bint Rack_Bool(const Rack_* that) nogil
 cdef size_t Rack_Length(const Rack_* that) nogil
 cdef (addr_t, addr_t) Rack_BoundSlice(const Rack_* that, addr_t start, addr_t endex) nogil
 
@@ -543,6 +545,7 @@ cdef Memory_* Memory_IAdd(Memory_* that, object value) except NULL
 cdef Memory_* Memory_Mul(const Memory_* that, addr_t times) except NULL
 cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL
 
+cdef bint Memory_Bool(const Memory_* that) nogil
 cdef addr_t Memory_Length(const Memory_* that) nogil
 cdef bint Memory_IsEmpty(const Memory_* that) nogil
 
@@ -590,6 +593,9 @@ cdef BlockView Memory_View_(const Memory_* that, addr_t start, addr_t endex)
 cdef BlockView Memory_View(const Memory_* that, object start, object endex)
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL
+
+cdef Memory_* Memory_Cut_(const Memory_* that, addr_t start, addr_t endex, bint bound) except NULL
+cdef object Memory_Cut(const Memory_* that, object start, object endex, bint bound)
 
 cdef void Memory_Reverse(Memory_* that) nogil
 
