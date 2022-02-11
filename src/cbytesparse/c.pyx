@@ -2210,28 +2210,15 @@ cdef void Rack_Reverse(Rack_* that) nogil:
         size_t index_start = that.start
         size_t index_endex = that.endex
         size_t index_endin
-        size_t index
         Block_* block
-        addr_t start
-        addr_t endex
 
-    if index_start < index_endex:
+    while index_start < index_endex:
         index_endin = index_endex - 1
-        start = Block_Start(that.blocks[index_start])
-        endex = Block_Endex(that.blocks[index_endin])
-
-        for index in range(index_start, index_endex):
-            block = that.blocks[index]
-            Block_Reverse(block)
-            block.address = endex - Block_Endex(block) + start
-
-        while index_start < index_endex:
-            index_endin = index_endex - 1
-            block = that.blocks[index_start]
-            that.blocks[index_start] = that.blocks[index_endin]
-            that.blocks[index_endin] = block
-            index_endex = index_endin
-            index_start += 1
+        block = that.blocks[index_start]
+        that.blocks[index_start] = that.blocks[index_endin]
+        that.blocks[index_endin] = block
+        index_endex = index_endin
+        index_start += 1
 
 
 cdef bint Rack_Bool(const Rack_* that) nogil:
@@ -3415,7 +3402,7 @@ cdef Memory_* Memory_IMul(Memory_* that, addr_t times) except NULL:
 
 
 cdef bint Memory_Bool(const Memory_* that) nogil:
-    return Memory_Start(that) < Memory_Endex(that)
+    return Rack_Bool(that.blocks)
 
 
 cdef addr_t Memory_Length(const Memory_* that) nogil:
@@ -4194,7 +4181,24 @@ cdef object Memory_Cut(const Memory_* that, object start, object endex, bint bou
 
 
 cdef void Memory_Reverse(Memory_* that) nogil:
-    Rack_Reverse(that.blocks)
+    cdef:
+        Rack_* blocks = that.blocks
+        size_t block_count = Rack_Length(blocks)
+        size_t block_index
+        Block_* block
+        addr_t start
+        addr_t endex
+
+    if block_count:
+        start = Memory_Start(that)
+        endex = Memory_Endex(that)
+
+        for block_index in range(block_count):
+            block = Rack_Get__(blocks, block_index)
+            Block_Reverse(block)
+            block.address = endex - Block_Endex(block) + start
+
+        Rack_Reverse(that.blocks)
 
 
 cdef bint Memory_Contiguous(const Memory_* that) nogil:
@@ -5348,9 +5352,25 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) e
         byte_t data_value
         size_t data_size
         const byte_t* data_ptr
+        addr_t data_start
+        addr_t data_endex
 
     if isinstance(data, Memory):
         Memory_WriteSame_(that, address_, (<Memory>data)._, <bint>clear)
+
+    elif isinstance(data, ImmutableMemory):
+        for block_start, block_data in data:
+            data_start = <addr_t>block_start
+            data_view = block_data
+            with cython.boundscheck(False):
+                data_ptr = &data_view[0]
+            data_size = <size_t>len(data_view)
+            CheckAddAddrU(data_start, data_size)
+            data_endex = data_start + data_size
+            CheckAddAddrU(data_start, address_)
+            CheckAddAddrU(data_endex, address_)
+
+            Memory_WriteRaw_(that, data_start + address_, data_size, data_ptr)
 
     else:
         if isinstance(data, int):
@@ -5359,7 +5379,7 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) e
             data_ptr = &data_value
         else:
             data_view = data
-            data_size = len(data_view)
+            data_size = <size_t>len(data_view)
             with cython.boundscheck(False):
                 data_ptr = &data_view[0]
 
@@ -5528,7 +5548,12 @@ cdef Rover_* Rover_Create(
 
     if (not pattern_data) != (not pattern_size):
         raise ValueError('non-empty pattern required')
-    pattern_offset = pattern_size - 1  if pattern_size and not forward else 0
+
+    if pattern_size and not forward:
+        with cython.cdivision(True):
+            pattern_offset = <size_t>((endex - start) % pattern_size)
+    else:
+        pattern_offset = 0
 
     that = Rover_Alloc()
 
@@ -5539,7 +5564,7 @@ cdef Rover_* Rover_Create(
     that.address = start if forward else endex
 
     that.pattern_size = pattern_size
-    that.pattern_data = &pattern_data[pattern_offset]
+    that.pattern_data = pattern_data
     that.pattern_offset = pattern_offset
 
     that.memory = memory
@@ -5563,7 +5588,6 @@ cdef Rover_* Rover_Create(
                     block = Block_Acquire(block)
                     that.block = block
                     that.block_ptr = Block_At__(block, <size_t>offset)
-
             else:
                 that.block_index = Rack_IndexEndex(memory.blocks, endex)
                 if that.block_index:
@@ -5650,7 +5674,19 @@ cdef int Rover_Next_(Rover_* that) except -2:
 
                 else:
                     raise StopIteration()
+
+            if that.pattern_size:
+                if that.pattern_offset < that.pattern_size - 1:
+                    that.pattern_offset += 1
+                else:
+                    that.pattern_offset = 0
         else:
+            if that.pattern_size:
+                if that.pattern_offset > 0:
+                    that.pattern_offset -= 1
+                else:
+                    that.pattern_offset = that.pattern_size - 1
+
             while True:  # loop to move to the next block when necessary
                 if that.address > that.start:
                     if that.block_index:
@@ -5697,18 +5733,6 @@ cdef int Rover_Next_(Rover_* that) except -2:
 
                 else:
                     raise StopIteration()
-
-        if that.pattern_size:
-            if that.forward:
-                if that.pattern_offset < that.pattern_size - 1:
-                    that.pattern_offset += 1
-                else:
-                    that.pattern_offset = 0
-            else:
-                if that.pattern_offset > 0:
-                    that.pattern_offset -= 1
-                else:
-                    that.pattern_offset = that.pattern_size - 1
 
         return value
 
@@ -8999,6 +9023,7 @@ cdef class Memory:
             const byte_t[:] pattern_view
             size_t pattern_size = 0
             const byte_t* pattern_data = NULL
+            addr_t address
             int value
 
         if start is None:
@@ -9030,8 +9055,9 @@ cdef class Memory:
         try:
             rover = Rover_Create(self._, start_, endex_, pattern_size, pattern_data, True, endex is Ellipsis)
             while Rover_HasNext(rover):
+                address = Rover_Address(rover)
                 value = Rover_Next_(rover)
-                yield Rover_Address(rover), (None if value < 0 else value)
+                yield address, (None if value < 0 else value)
         finally:
             rover = Rover_Free(rover)
 
@@ -9918,6 +9944,8 @@ cdef class Memory:
             pass
         finally:
             Rover_Free(rover)
+            if pattern is not None:  # keep
+                pattern = None  # release
 
     def setdefault(
         self: Memory,
@@ -10759,7 +10787,7 @@ cdef class Memory:
 
         Memory_Write(self._, address, data, clear)
 
-    def write_backup(  # TODO: align to ``bytesparse``
+    def write_backup(
         self: Memory,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
@@ -10787,10 +10815,56 @@ cdef class Memory:
         """
         cdef:
             addr_t address_ = <addr_t>address
-            addr_t size = 1 if isinstance(data, int) else <addr_t>len(data)
+            Memory memory
+            addr_t start
+            addr_t endex
+            list backups
 
-        CheckAddAddrU(address, size)
-        return [Memory_Extract_(self._, address, address + size, 0, NULL, 1, True)]
+        if isinstance(data, Memory):
+            memory = <Memory>data
+            start = Memory_Start(memory._)
+            endex = Memory_Endex(memory._)
+            CheckAddAddrU(start, address_)
+            CheckAddAddrU(endex, address_)
+            start += address
+            endex += address
+            if endex <= start:
+                backups = []
+            elif clear:
+                backups = [Memory_Extract_(self._, start, endex, 0, NULL, 1, True)]
+            else:
+                backups = [Memory_Extract_(self._, <addr_t>block_start, <addr_t>block_endex, 0, NULL, 1, True)
+                           for block_start, block_endex in memory.intervals(start=start, endex=endex)]
+
+        elif isinstance(data, ImmutableMemory):
+            start = <addr_t>data.start
+            endex = <addr_t>data.endex
+            CheckAddAddrU(start, address_)
+            CheckAddAddrU(endex, address_)
+            start += address
+            endex += address
+            if endex <= start:
+                backups = []
+            elif clear:
+                backups = [Memory_Extract_(self._, start, endex, 0, NULL, 1, True)]
+            else:
+                backups = [Memory_Extract_(self._, <addr_t>block_start, <addr_t>block_endex, 0, NULL, 1, True)
+                           for block_start, block_endex in data.intervals(start=start, endex=endex)]
+
+        else:
+            if isinstance(data, int):
+                start = address_
+                endex = start + 1
+                backups = [Memory_Extract_(self._, start, endex, 0, NULL, 1, True)]
+            else:
+                start = address_
+                endex = start + <size_t>len(data)
+                if start < endex:
+                    backups = [Memory_Extract_(self._, start, endex, 0, NULL, 1, True)]
+                else:
+                    backups = []
+
+        return backups
 
     def write_restore(
         self: Memory,
