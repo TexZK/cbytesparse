@@ -5116,6 +5116,7 @@ cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1:
 
 cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) except -1:
     cdef:
+        addr_t content_start
         addr_t trim_start
         addr_t endex
 
@@ -5129,7 +5130,8 @@ cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) exc
         if endex > endex_max:
             endex = endex_max
 
-        Memory_Erase__(that, ADDR_MIN, endex, False)  # clear
+        content_start = Memory_ContentStart(that)
+        Memory_Erase__(that, content_start, endex, False)  # clear
 
 
 cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) except -1:
@@ -5141,6 +5143,7 @@ cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) exce
 
 cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) except -1:
     cdef:
+        addr_t content_endex
         addr_t trim_endex
         addr_t start
 
@@ -5154,7 +5157,8 @@ cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) exc
         if start < start_min:
             start = start_min
 
-        Memory_Erase__(that, start, ADDR_MAX, False)  # clear
+        content_endex = Memory_ContentEndex(that)
+        Memory_Erase__(that, start, content_endex, False)  # clear
 
 
 cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size) except -1:
@@ -5266,12 +5270,16 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
         # Trim before memory
         if trim_start_ and block_start < trim_start:
             offset = trim_start - block_start
+            CheckAddrToSizeU(offset)
+            block_start += <size_t>offset
             block_size -= <size_t>offset
             block_offset = <size_t>offset
 
         # Trim after memory
         if trim_endex_ and trim_endex < block_endex:
             offset = block_endex - trim_endex
+            CheckAddrToSizeU(offset)
+            block_endex -= <size_t>offset
             block_size -= <size_t>offset
 
         Memory_Place__(that, block_start, block_size, Block_At__(block, block_offset), False)  # write
@@ -5356,7 +5364,7 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) e
         addr_t data_endex
 
     if isinstance(data, Memory):
-        Memory_WriteSame_(that, address_, (<Memory>data)._, <bint>clear)
+        Memory_WriteSame_(that, address_, (<Memory>data)._, clear)
 
     elif isinstance(data, ImmutableMemory):
         for block_start, block_data in data:
@@ -7616,9 +7624,38 @@ cdef class Memory:
         """
 
         if backup_start is not None:
-            Memory_WriteSame_(self._, 0, (<Memory>backup_start)._, True)
+            Memory_Write(self._, 0, backup_start, True)
         if backup_endex is not None:
-            Memory_WriteSame_(self._, 0, (<Memory>backup_endex)._, True)
+            Memory_Write(self._, 0, backup_endex, True)
+
+    def cut(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        bound: bool = True,
+    ) -> ImmutableMemory:
+        r"""Cuts a slice of memory.
+
+        Arguments:
+            start (int):
+                Inclusive start address for cutting.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for cutting.
+                If ``None``, :attr:`endex` is considered.
+
+            bound (bool):
+                The selected address range is applied to the resulting memory
+                as its trimming range. This retains information about any
+                initial and final emptiness of that range, which would be lost
+                otherwise.
+
+        Returns:
+            :obj:`Memory`: A copy of the memory from the selected range.
+        """
+
+        return Memory_Cut(self._, start, endex, bound)
 
     def delete(
         self: Memory,
@@ -7658,35 +7695,6 @@ cdef class Memory:
         """
 
         Memory_Delete(self._, start, endex)
-
-    def cut(
-        self,
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-        bound: bool = True,
-    ) -> ImmutableMemory:
-        r"""Cuts a slice of memory.
-
-        Arguments:
-            start (int):
-                Inclusive start address for cutting.
-                If ``None``, :attr:`start` is considered.
-
-            endex (int):
-                Exclusive end address for cutting.
-                If ``None``, :attr:`endex` is considered.
-
-            bound (bool):
-                The selected address range is applied to the resulting memory
-                as its trimming range. This retains information about any
-                initial and final emptiness of that range, which would be lost
-                otherwise.
-
-        Returns:
-            :obj:`Memory`: A copy of the memory from the selected range.
-        """
-
-        return Memory_Cut(self._, start, endex, bound)
 
     def delete_backup(
         self: Memory,
@@ -7732,8 +7740,17 @@ cdef class Memory:
             :meth:`delete`
             :meth:`delete_backup`
         """
+        cdef:
+            Memory_* memory = self._
+            const Memory_* backup_
 
-        Memory_Insert(self._, 0, backup)
+        if isinstance(backup, Memory):
+            backup_ = (<Memory>backup)._
+            Memory_Reserve_(memory, Memory_Start(backup_), Memory_Length(backup_))
+            Memory_WriteSame_(memory, 0, backup_, True)
+        else:
+            Memory_Reserve(memory, backup.start, len(backup))
+            Memory_Write(memory, 0, backup, True)
 
     @property
     def endex(
@@ -8864,8 +8881,8 @@ cdef class Memory:
 
     def insert_restore(
         self: Memory,
-        addr_t address: Address,
-        Memory backup not None: Memory,
+        address: Address,
+        backup: ImmutableMemory,
     ) -> None:
         r"""Restores an `insert()` operation.
 
@@ -8882,11 +8899,21 @@ cdef class Memory:
         """
         cdef:
             Memory_* memory = self._
-            addr_t size = Memory_Length(backup._)
+            const Memory_* backup_
+            addr_t address_ = <addr_t>address
+            addr_t size
 
-        CheckAddAddrU(address, size)
-        Memory_Delete_(memory, address, address + size)
-        Memory_WriteSame_(memory, 0, backup._, True)
+        if isinstance(backup, Memory):
+            backup_ = (<Memory>backup)._
+            size = Memory_Length(backup_)
+            CheckAddAddrU(address_, size)
+            Memory_Delete_(memory, address_, address_ + size)
+            Memory_WriteSame_(memory, 0, backup_, True)
+        else:
+            size = <addr_t>len(backup)
+            CheckAddAddrU(address_, size)
+            Memory_Delete_(memory, address_, address_ + size)
+            Memory_Write(memory, 0, backup, True)
 
     def intervals(
         self: Memory,
@@ -9590,9 +9617,15 @@ cdef class Memory:
         """
         cdef:
             Memory_* memory = self._
+            const Memory_* backup_
 
-        Memory_Reserve_(memory, <addr_t>backup.start, <size_t>len(backup))
-        Memory_Write(memory, 0, backup, True)
+        if isinstance(backup, Memory):
+            backup_ = (<Memory>backup)._
+            Memory_Reserve_(memory, Memory_Start(backup_), Memory_Length(backup_))
+            Memory_WriteSame_(memory, 0, backup_, True)
+        else:
+            Memory_Reserve(memory, backup.start, len(backup))
+            Memory_Write(memory, 0, backup, True)
 
     def reserve(
         self: Memory,
@@ -10556,10 +10589,12 @@ cdef class Memory:
             :meth:`update`
             :meth:`update_backup`
         """
+        cdef:
+            Memory_* memory = self._
 
         if isinstance(backups, list):
             for backup in backups:
-                self.write(0, backup, clear=True)
+                Memory_Write(memory, 0, backup, True)
         else:
             self.update(backups)
 
@@ -10880,9 +10915,11 @@ cdef class Memory:
             :meth:`write`
             :meth:`write_backup`
         """
+        cdef:
+            Memory_* memory = self._
 
         for backup in backups:
-            Memory_Write(self._, 0, backup, True)
+            Memory_Write(memory, 0, backup, True)
 
 
 ImmutableMemory.register(Memory)

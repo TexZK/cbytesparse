@@ -2846,14 +2846,14 @@ class BaseMemorySuite:
 
     def test__pretrim_start_unbounded(self):
         Memory = self.Memory
-        data = b'34567'
-        memory = Memory.from_bytes(data, 3)
+        data = b'56789'
+        memory = Memory.from_bytes(data, offset=5)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_start_backup(None, 5)
+        backup = memory._pretrim_start_backup(None, 4)
         assert not backup.to_blocks()
 
-        memory._pretrim_start(None, 5)
+        memory._pretrim_start(None, 4)
         memory.validate()
 
         memory.write(0, backup)
@@ -2862,14 +2862,14 @@ class BaseMemorySuite:
 
     def test__pretrim_start_bounded(self):
         Memory = self.Memory
-        data = b'34567'
-        memory = Memory.from_bytes(data, 3, start=1)
+        data = b'56789'
+        memory = Memory.from_bytes(data, offset=5, start=3)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_start_backup(5, 5)
-        assert backup.to_blocks() == [[3, b'34']]
+        backup = memory._pretrim_start_backup(7, 4)
+        assert backup.to_blocks() == [[5, b'56']]
 
-        memory._pretrim_start(5, 5)
+        memory._pretrim_start(7, 4)
         memory.validate()
 
         memory.write(0, backup)
@@ -2879,13 +2879,13 @@ class BaseMemorySuite:
     def test__pretrim_endex_unbounded(self):
         Memory = self.Memory
         data = b'34567'
-        memory = Memory.from_bytes(data, 3)
+        memory = Memory.from_bytes(data, offset=3)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_endex_backup(None, 5)
+        backup = memory._pretrim_endex_backup(None, 4)
         assert not backup.to_blocks()
 
-        memory._pretrim_endex(None, 5)
+        memory._pretrim_endex(None, 4)
         memory.validate()
 
         memory.write(0, backup)
@@ -2895,13 +2895,13 @@ class BaseMemorySuite:
     def test__pretrim_endex_bounded(self):
         Memory = self.Memory
         data = b'34567'
-        memory = Memory.from_bytes(data, 3, start=1, endex=9)
+        memory = Memory.from_bytes(data, offset=3, endex=9)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_endex_backup(5, 5)
-        assert backup.to_blocks() == [[5, b'567']]
+        backup = memory._pretrim_endex_backup(6, 4)
+        assert backup.to_blocks() == [[6, b'67']]
 
-        memory._pretrim_endex(5, 5)
+        memory._pretrim_endex(6, 4)
         memory.validate()
 
         memory.write(0, backup)
