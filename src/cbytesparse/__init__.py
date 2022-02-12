@@ -112,7 +112,7 @@ True
 
 """
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 # noinspection PyUnresolvedReferences
 from .c import collapse_blocks  # noqa F401

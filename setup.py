@@ -22,9 +22,18 @@ def read(*names, **kwargs):
     ).read()
 
 
+def read_version():
+    path = os.path.join('src', 'cbytesparse', '__init__.py')
+    with open(path, 'rt') as file:
+        for line in file:
+            if line.startswith('__version__'):
+                return eval(line.split('=')[1])
+    raise ValueError(f'cannot find __version__ inside of {path}')
+
+
 setup(
     name='cbytesparse',
-    version='0.0.4',
+    version=read_version(),
     license='BSD 2-Clause License',
     description='Library to handle sparse bytes within a virtual memory space',
     long_description='%s\n%s' % (
@@ -67,7 +76,7 @@ setup(
     keywords=[
     ],
     install_requires=[
-		# FIXME 'bytesparse>=0.0.4',
+        'bytesparse>=0.0.5',
     ],
     extras_require={
         'testing': [

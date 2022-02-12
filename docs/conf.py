@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 import os
 
+
+def read_version():
+    path = os.path.join('..', 'src', 'cbytesparse', '__init__.py')
+    with open(path, 'rt') as file:
+        for line in file:
+            if line.startswith('__version__'):
+                return eval(line.split('=')[1])
+    raise ValueError(f'cannot find __version__ inside of {path}')
+
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -23,8 +33,8 @@ master_doc = 'index'
 project = 'cbytesparse'
 year = '2020-2022'
 author = 'Andrea Zoppi'
-copyright = '{0}, {1}'.format(year, author)
-version = release = '0.0.4'
+copyright = f'{year}, {author}'
+version = release = read_version()
 
 pygments_style = 'trac'
 templates_path = ['_templates']
@@ -44,7 +54,7 @@ html_split_index = False
 html_sidebars = {
    '**': ['searchbox.html', 'globaltoc.html', 'sourcelink.html'],
 }
-html_short_title = '%s-%s' % (project, version)
+html_short_title = f'{project}-{version}'
 html_static_path = ['_static']
 html_style = 'css/my_theme.css'
 
