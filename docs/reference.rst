@@ -8,4 +8,3 @@ Reference
 
     cbytesparse
     cbytesparse.c
-    cbytesparse.py

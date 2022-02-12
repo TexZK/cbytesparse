@@ -18,7 +18,7 @@ cbytesparse.c.BlockView
    
       ~BlockView.__init__
       ~BlockView.check
-      ~BlockView.dispose
+      ~BlockView.release
    
    
 
