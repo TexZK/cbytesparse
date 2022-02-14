@@ -29,7 +29,6 @@ from typing import List
 from typing import Optional
 
 import pytest
-
 from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
 from bytesparse.base import BlockList
