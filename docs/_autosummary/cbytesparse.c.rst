@@ -30,6 +30,7 @@ cbytesparse.c
    
       BlockView
       Memory
+      bytesparse
    
    
 
