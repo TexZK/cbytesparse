@@ -56,6 +56,7 @@ from bytesparse.base import AnyBytes
 from bytesparse.base import BlockIndex
 from bytesparse.base import BlockIterable
 from bytesparse.base import BlockList
+from bytesparse.base import BlockSequence
 from bytesparse.base import ClosedInterval
 from bytesparse.base import EllipsisType
 from bytesparse.base import ImmutableMemory
@@ -6088,9 +6089,9 @@ cdef class Memory:
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
             >>> memory[9]  # -> ord('y') = 121
             121
-            >>> memory[:3]._blocks
+            >>> memory[:3].to_blocks()
             [[1, b'AB']]
-            >>> memory[3:10]._blocks
+            >>> memory[3:10].to_blocks()
             [[3, b'CD'], [6, b'$'], [8, b'xy']]
             >>> bytes(memory[3:10:b'.'])
             b'CD.$.xy'
@@ -6098,7 +6099,7 @@ cdef class Memory:
             None
             >>> bytes(memory[3:10:3])
             b'C$y'
-            >>> memory[3:10:2]._blocks
+            >>> memory[3:10:2].to_blocks()
             [[3, b'C'], [6, b'y']]
             >>> bytes(memory[3:10:2])
             Traceback (most recent call last):
@@ -8074,19 +8075,19 @@ cdef class Memory:
             +---+---+---+---+---+---+---+---+---+---+---+---+
 
             >>> memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-            >>> memory.extract()._blocks
+            >>> memory.extract().to_blocks()
             [[1, b'ABCD'], [6, b'$'], [8, b'xyz']]
-            >>> memory.extract(2, 9)._blocks
+            >>> memory.extract(2, 9).to_blocks()
             [[2, b'BCD'], [6, b'$'], [8, b'x']]
-            >>> memory.extract(start=2)._blocks
+            >>> memory.extract(start=2).to_blocks()
             [[2, b'BCD'], [6, b'$'], [8, b'xyz']]
-            >>> memory.extract(endex=9)._blocks
+            >>> memory.extract(endex=9).to_blocks()
             [[1, b'ABCD'], [6, b'$'], [8, b'x']]
             >>> memory.extract(5, 8).span
             (5, 8)
-            >>> memory.extract(pattern=b'.')._blocks
+            >>> memory.extract(pattern=b'.').to_blocks()
             [[1, b'ABCD.$.xyz']]
-            >>> memory.extract(pattern=b'.', step=3)._blocks
+            >>> memory.extract(pattern=b'.', step=3).to_blocks()
             [[1, b'AD.z']]
         """
 
@@ -8520,20 +8521,20 @@ cdef class Memory:
 
             >>> memory1 = Memory.from_bytes(b'ABC', 5)
             >>> memory2 = Memory.from_memory(memory1)
-            >>> memory2._blocks
+            >>> memory2.to_blocks()
             [[5, b'ABC']]
             >>> memory1 == memory2
             True
             >>> memory1 is memory2
             False
-            >>> memory1._blocks is memory2._blocks
+            >>> memory1.to_blocks() is memory2.to_blocks()
             False
 
             ~~~
 
             >>> memory1 = Memory.from_bytes(b'ABC', 10)
             >>> memory2 = Memory.from_memory(memory1, -3)
-            >>> memory2._blocks
+            >>> memory2.to_blocks()
             [[7, b'ABC']]
             >>> memory1 == memory2
             False
@@ -8543,7 +8544,7 @@ cdef class Memory:
             >>> memory1 = Memory.from_bytes(b'ABC', 10)
             >>> memory2 = Memory.from_memory(memory1, copy=False)
             >>> all((b1[1] is b2[1])  # compare block data
-            ...     for b1, b2 in zip(memory1._blocks, memory2._blocks))
+            ...     for b1, b2 in zip(memory1.to_blocks(), memory2.to_blocks()))
             True
         """
         cdef:
@@ -10924,3 +10925,870 @@ cdef class Memory:
 
 ImmutableMemory.register(Memory)
 MutableMemory.register(Memory)
+
+
+# =====================================================================================================================
+
+cdef class bytesparse(Memory):
+    r"""Wrapper for more `bytearray` compatibility.
+
+    This wrapper class can make :class:`Memory` closer to the actual
+    :class:`bytearray` API.
+
+    For instantiation, please refer to :meth:`bytearray.__init__`.
+
+    With respect to :class:`Memory`, negative addresses are not allowed.
+    Instead, negative addresses are to consider as referred to :attr:`endex`.
+
+    Arguments:
+        source:
+            The optional `source` parameter can be used to initialize the
+            array in a few different ways:
+
+            * If it is a string, you must also give the `encoding` (and
+              optionally, `errors`) parameters; it then converts the string to
+              bytes using :meth:`str.encode`.
+
+            * If it is an integer, the array will have that size and will be
+              initialized with null bytes.
+
+            * If it is an object conforming to the buffer interface, a
+              read-only buffer of the object will be used to initialize the byte
+              array.
+
+            * If it is an iterable, it must be an iterable of integers in the
+              range 0 <= x < 256, which are used as the initial contents of the
+              array.
+
+        encoding (str):
+            Optional string encoding.
+
+        errors (str):
+            Optional string error management.
+
+        start (int):
+            Optional memory start address.
+            Anything before will be trimmed away.
+            If `source` is provided, its data start at this address
+            (0 if `start` is ``None``).
+
+        endex (int):
+            Optional memory exclusive end address.
+            Anything at or after it will be trimmed away.
+    """
+
+    def __init__(
+        self,
+        *args: Any,  # see bytearray.__init__()
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ):
+        cdef:
+            const byte_t[:] view
+            addr_t address
+            size_t size
+            const byte_t *ptr
+
+        super().__init__(start, endex)
+
+        data = bytearray(*args)
+        if data:
+            if start is None:
+                start = 0
+
+            if endex is not None:
+                if endex <= start:
+                    return
+
+                del data[(endex - start):]
+
+            view = data
+            address = <addr_t>start
+            with cython.boundscheck(False):
+                size = <size_t>len(view)
+                ptr = &view[0]
+            Memory_Place__(self._, address, size, ptr, False)
+
+    def __delitem__(
+        self,
+        key: Union[Address, slice],
+    ) -> None:
+
+        if isinstance(key, slice):
+            start, endex = self._rectify_span(key.start, key.stop)
+            key = slice(start, endex, key.step)
+        else:
+            key = self._rectify_address(key)
+
+        super().__delitem__(key)
+
+    def __getitem__(
+        self,
+        key: Union[Address, slice],
+    ) -> Any:
+
+        if isinstance(key, slice):
+            start, endex = self._rectify_span(key.start, key.stop)
+            key = slice(start, endex, key.step)
+        else:
+            key = self._rectify_address(key)
+
+        return super().__getitem__(key)
+
+    def __setitem__(
+        self,
+        key: Union[Address, slice],
+        value: Optional[Union[AnyBytes, Value]],
+    ) -> None:
+
+        if isinstance(key, slice):
+            start, endex = self._rectify_span(key.start, key.stop)
+            key = slice(start, endex, key.step)
+        else:
+            key = self._rectify_address(key)
+
+        super().__setitem__(key, value)
+
+    def _rectify_address(
+        self,
+        address: Address,
+    ) -> Address:
+        r"""Rectifies an address.
+
+        In case the provided `address` is negative, it is recomputed as
+        referred to :attr:`endex`.
+
+        In case the rectified address would still be negative, an
+        exception is raised.
+
+        Arguments:
+            address:
+                Address to be rectified.
+
+        Returns:
+            int: Rectified address.
+
+        Raises:
+            IndexError: The rectified address would still be negative.
+        """
+
+        try:
+            try:
+                return <addr_t>address
+
+            except OverflowError:
+                return <addr_t>(<object>Memory_Endex(self._) + address)
+
+        except OverflowError:
+            raise IndexError('index out of range')
+
+    def _rectify_span(
+        self,
+        start: Optional[Address],
+        endex: Optional[Address],
+    ) -> OpenInterval:
+        r"""Rectifies an address span.
+
+        In case a provided address is negative, it is recomputed as
+        referred to :attr:`endex`.
+
+        In case the rectified address would still be negative, it is
+        clamped to address zero.
+
+        Arguments:
+            start (int):
+                Inclusive start address for rectification.
+                If ``None``, :attr:`start` is considered.
+
+            endex (int):
+                Exclusive end address for rectification.
+                If ``None``, :attr:`endex` is considered.
+
+        Returns:
+            pair of int: Rectified address span.
+        """
+
+        endex_ = None
+
+        if start is not None and start < 0:
+            endex_ = Memory_Endex(self._)
+            start = endex_ + start
+            if start < 0:
+                start = 0
+
+        if endex is not None and endex < 0:
+            if endex_ is None:
+                endex_ = Memory_Endex(self._)
+            endex = endex_ + endex
+            if endex < 0:
+                endex = 0
+
+        return start, endex
+
+    def block_span(
+        self,
+        address: Address,
+    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
+
+        address = self._rectify_address(address)
+        return super().block_span(address)
+
+    def blocks(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[Tuple[Address, memoryview]]:
+
+        start, endex = self._rectify_span(start, endex)
+        yield from super().blocks(start=start, endex=endex)
+
+    def bound(
+        self,
+        start: Optional[Address],
+        endex: Optional[Address],
+    ) -> ClosedInterval:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().bound(start, endex)
+
+    def clear(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+
+        start, endex = self._rectify_span(start=start, endex=endex)
+        super().clear(start, endex)
+
+    def clear_backup(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().clear_backup(start=start, endex=endex)
+
+    def count(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> int:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().count(item, start=start, endex=endex)
+
+    def crop(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+
+        start, endex = self._rectify_span(start, endex)
+        super().crop(start=start, endex=endex)
+
+    def crop_backup(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Tuple[Optional[ImmutableMemory], Optional[ImmutableMemory]]:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().crop_backup(start=start, endex=endex)
+
+    def cut(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        bound: bool = True,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().cut(start=start, endex=endex)
+
+    def delete(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+
+        start, endex = self._rectify_span(start, endex)
+        super().delete(start=start, endex=endex)
+
+    def delete_backup(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().delete_backup(start=start, endex=endex)
+
+    def equal_span(
+        self,
+        address: Address,
+    ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
+
+        address = self._rectify_address(address)
+        return super().equal_span(address)
+
+    def extract(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+        step: Optional[Address] = None,
+        bound: bool = True,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().extract(start=start, endex=endex, pattern=pattern, step=step, bound=bound)
+
+    def fill(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Union[AnyBytes, Value] = 0,
+    ) -> None:
+
+        start, endex = self._rectify_span(start, endex)
+        super().fill(start=start, endex=endex, pattern=pattern)
+
+    def fill_backup(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().fill_backup(start=start, endex=endex)
+
+    def find(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Address:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().find(item, start=start, endex=endex)
+
+    def flood(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        pattern: Union[AnyBytes, Value] = 0,
+    ) -> None:
+
+        start, endex = self._rectify_span(start, endex)
+        super().flood(start=start, endex=endex, pattern=pattern)
+
+    def flood_backup(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> List[OpenInterval]:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().flood_backup(start=start, endex=endex)
+
+    @classmethod
+    def from_blocks(
+        cls,
+        blocks: BlockSequence,
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        copy: bool = True,
+        validate: bool = True,
+    ) -> bytesparse:
+        cdef:
+            Memory memory1
+            bytesparse memory2
+            Memory_* memory1_
+            Memory_* memory2_
+
+        if blocks:
+            block_start = blocks[0][0]
+            if block_start + offset < 0:
+                raise ValueError('negative offseted start')
+
+        if start is not None and start < 0:
+            raise ValueError('negative start')
+        if endex is not None and endex < 0:
+            raise ValueError('negative endex')
+
+        memory1 = super().from_blocks(blocks, offset=offset, start=start, endex=endex, copy=copy, validate=validate)
+        memory2 = cls()
+        memory1_ = memory1._
+        memory2_ = memory2._
+
+        memory2_.blocks = Rack_Free(memory2_.blocks)
+        memory2_.blocks = memory1_.blocks
+        memory1_.blocks = NULL
+
+        memory2_.trim_start = memory1_.trim_start
+        memory2_.trim_endex = memory1_.trim_endex
+        memory2_.trim_start_ = memory1_.trim_start_
+        memory2_.trim_endex_ = memory1_.trim_endex_
+        return memory2
+
+    @classmethod
+    def from_bytes(
+        cls,
+        data: AnyBytes,
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        copy: bool = True,
+        validate: bool = True,
+    ) -> bytesparse:
+        cdef:
+            Memory memory1
+            bytesparse memory2
+            Memory_* memory1_
+            Memory_* memory2_
+
+        if offset < 0:
+            raise ValueError('negative offset')
+        if start is not None and start < 0:
+            raise ValueError('negative start')
+        if endex is not None and endex < 0:
+            raise ValueError('negative endex')
+
+        memory1 = super().from_bytes(data, offset=offset, start=start, endex=endex, copy=copy, validate=validate)
+        memory2 = cls()
+        memory1_ = memory1._
+        memory2_ = memory2._
+
+        memory2_.blocks = Rack_Free(memory2_.blocks)
+        memory2_.blocks = memory1_.blocks
+        memory1_.blocks = NULL
+
+        memory2_.trim_start = memory1_.trim_start
+        memory2_.trim_endex = memory1_.trim_endex
+        memory2_.trim_start_ = memory1_.trim_start_
+        memory2_.trim_endex_ = memory1_.trim_endex_
+        return memory2
+
+    @classmethod
+    def from_memory(
+        cls,
+        memory: ImmutableMemory,
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        copy: bool = True,
+        validate: bool = True,
+    ) -> bytesparse:
+        cdef:
+            const Memory_* memory_
+            Memory memory1
+            bytesparse memory2
+            Memory_* memory1_
+            Memory_* memory2_
+            addr_t block_start
+
+        if isinstance(memory, Memory):
+            memory_ = (<Memory>memory)._
+            if Memory_Bool(memory_):
+                if Memory_Start(memory_) + offset < 0:
+                    raise ValueError('negative offseted start')
+        else:
+            if memory:
+                if memory.start + offset < 0:
+                    raise ValueError('negative offseted start')
+
+        if start is not None and start < 0:
+            raise ValueError('negative start')
+        if endex is not None and endex < 0:
+            raise ValueError('negative endex')
+
+        memory1 = super().from_memory(memory, offset=offset, start=start, endex=endex, copy=copy, validate=validate)
+        memory2 = cls()
+        memory1_ = memory1._
+        memory2_ = memory2._
+
+        memory2_.blocks = Rack_Free(memory2_.blocks)
+        memory2_.blocks = memory1_.blocks
+        memory1_.blocks = NULL
+
+        memory2_.trim_start = memory1_.trim_start
+        memory2_.trim_endex = memory1_.trim_endex
+        memory2_.trim_start_ = memory1_.trim_start_
+        memory2_.trim_endex_ = memory1_.trim_endex_
+        return memory2
+
+    def gaps(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[OpenInterval]:
+
+        start, endex = self._rectify_span(start, endex)
+        yield from super().gaps(start=start, endex=endex)
+
+    def get(
+        self,
+        address: Address,
+        default: Optional[Value] = None,
+    ) -> Optional[Value]:
+
+        address = self._rectify_address(address)
+        return super().get(address, default=default)
+
+    def index(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Address:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().index(item, start=start, endex=endex)
+
+    def insert(
+        self,
+        address: Address,
+        data: Union[AnyBytes, Value, ImmutableMemory],
+    ) -> None:
+
+        address = self._rectify_address(address)
+        super().insert(address, data)
+
+    def insert_backup(
+        self,
+        address: Address,
+        data: Union[AnyBytes, Value, ImmutableMemory],
+    ) -> Tuple[Address, ImmutableMemory]:
+
+        address = self._rectify_address(address)
+        return super().insert_backup(address, data)
+
+    def intervals(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Iterator[ClosedInterval]:
+
+        start, endex = self._rectify_span(start, endex)
+        yield from super().intervals(start=start, endex=endex)
+
+    def items(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Union[Address, EllipsisType]] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+    ) -> Iterator[Tuple[Address, Optional[Value]]]:
+
+        endex_ = endex  # backup
+        if endex is Ellipsis:
+            endex = None
+        start, endex = self._rectify_span(start, endex)
+        if endex_ is Ellipsis:
+            endex = endex_  # restore
+        yield from super().items(start=start, endex=endex, pattern=pattern)
+
+    def keys(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Union[Address, EllipsisType]] = None,
+    ) -> Iterator[Address]:
+
+        endex_ = endex  # backup
+        if endex is Ellipsis:
+            endex = None
+        start, endex = self._rectify_span(start, endex)
+        if endex_ is Ellipsis:
+            endex = endex_  # restore
+        yield from super().keys(start=start, endex=endex)
+
+    def ofind(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Optional[Address]:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().ofind(item, start=start, endex=endex)
+
+    def peek(
+        self,
+        address: Address,
+    ) -> Optional[Value]:
+
+        address = self._rectify_address(address)
+        return super().peek(address)
+
+    def poke(
+        self,
+        address: Address,
+        item: Optional[Union[AnyBytes, Value]],
+    ) -> None:
+
+        address = self._rectify_address(address)
+        super().poke(address, item)
+
+    def poke_backup(
+        self,
+        address: Address,
+    ) -> Tuple[Address, Optional[Value]]:
+
+        address = self._rectify_address(address)
+        return super().poke_backup(address)
+
+    def pop(
+        self,
+        address: Optional[Address] = None,
+        default: Optional[Value] = None,
+    ) -> Optional[Value]:
+
+        if address is not None:
+            address = self._rectify_address(address)
+        return super().pop(address=address, default=default)
+
+    def pop_backup(
+        self,
+        address: Optional[Address] = None,
+    ) -> Tuple[Address, Optional[Value]]:
+
+        if address is not None:
+            address = self._rectify_address(address)
+        return super().pop_backup(address=address)
+
+    def remove(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> None:
+
+        start, endex = self._rectify_span(start, endex)
+        super().remove(item, start=start, endex=endex)
+
+    def remove_backup(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> ImmutableMemory:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().remove_backup(item, start=start, endex=endex)
+
+    def reserve(
+        self,
+        address: Address,
+        size: Address,
+    ) -> None:
+
+        address = self._rectify_address(address)
+        super().reserve(address, size)
+
+    def reserve_backup(
+        self,
+        address: Address,
+        size: Address,
+    ) -> Tuple[Address, ImmutableMemory]:
+
+        address = self._rectify_address(address)
+        return super().reserve_backup(address, size)
+
+    def rfind(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Address:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().rfind(item, start=start, endex=endex)
+
+    def rindex(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Address:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().rindex(item, start=start, endex=endex)
+
+    def rofind(
+        self,
+        item: Union[AnyBytes, Value],
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> Optional[Address]:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().rofind(item, start=start, endex=endex)
+
+    def rvalues(
+        self,
+        start: Optional[Union[Address, EllipsisType]] = None,
+        endex: Optional[Address] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+    ) -> Iterator[Optional[Value]]:
+
+        start_ = start  # backup
+        if start is Ellipsis:
+            start = None
+        start, endex = self._rectify_span(start, endex)
+        if start_ is Ellipsis:
+            start = start_  # restore
+        yield from super().rvalues(start=start, endex=endex, pattern=pattern)
+
+    def setdefault(
+        self,
+        address: Address,
+        default: Optional[Value] = None,
+    ) -> Optional[Value]:
+
+        address = self._rectify_address(address)
+        return super().setdefault(address, default=default)
+
+    def setdefault_backup(
+        self,
+        address: Address,
+    ) -> Tuple[Address, Optional[Value]]:
+
+        address = self._rectify_address(address)
+        return super().setdefault_backup(address)
+
+    def shift(
+        self,
+        offset: Address,
+    ) -> None:
+        cdef:
+            const Memory_* memory = self._
+
+        if not memory.trim_start_ and offset < 0:
+            if Memory_Bool(memory):
+                if Memory_Start(memory) + offset < 0:
+                    raise ValueError('negative offseted start')
+
+        super().shift(offset)
+
+    def shift_backup(
+        self,
+        offset: Address,
+    ) -> Tuple[Address, ImmutableMemory]:
+        cdef:
+            const Memory_* memory = self._
+
+        if not memory.trim_start_ and offset < 0:
+            if Memory_Bool(memory):
+                if Memory_Start(memory) + offset < 0:
+                    raise ValueError('negative offseted start')
+
+        return super().shift_backup(offset)
+
+    @property
+    def trim_endex(
+        self,
+    ) -> Optional[Address]:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetTrimEndex(self._)
+
+    @trim_endex.setter
+    def trim_endex(
+        self,
+        trim_endex: Optional[Address],
+    ) -> None:
+
+        if trim_endex is not None and trim_endex < 0:
+            raise ValueError('negative endex')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetTrimEndex(self._, trim_endex)
+
+    @property
+    def trim_span(
+        self,
+    ) -> OpenInterval:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetTrimSpan(self._)
+
+    @trim_span.setter
+    def trim_span(
+        self,
+        trim_span: OpenInterval,
+    ) -> None:
+
+        trim_start, trim_endex = trim_span
+        if trim_start is not None and trim_start < 0:
+            raise ValueError('negative start')
+        if trim_endex is not None and trim_endex < 0:
+            raise ValueError('negative endex')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetTrimSpan(self._, trim_span)
+
+    @property
+    def trim_start(
+        self,
+    ) -> Optional[Address]:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetTrimStart(self._)
+
+    @trim_start.setter
+    def trim_start(
+        self,
+        trim_start: Optional[Address],
+    ) -> None:
+
+        if trim_start is not None and trim_start < 0:
+            raise ValueError('negative start')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetTrimStart(self._, trim_start)
+
+    def values(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Union[Address, EllipsisType]] = None,
+        pattern: Optional[Union[AnyBytes, Value]] = None,
+    ) -> Iterator[Optional[Value]]:
+
+        endex_ = endex  # backup
+        if endex is Ellipsis:
+            endex = None
+        start, endex = self._rectify_span(start, endex)
+        if endex_ is Ellipsis:
+            endex = endex_  # restore
+        yield from super().values(start=start, endex=endex, pattern=pattern)
+
+    def view(
+        self,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+    ) -> memoryview:
+
+        start, endex = self._rectify_span(start, endex)
+        return super().view(start=start, endex=endex)
+
+    def write(
+        self,
+        address: Address,
+        data: Union[AnyBytes, Value, ImmutableMemory],
+        clear: bool = False,
+    ) -> None:
+
+        address = self._rectify_address(address)
+        super().write(address, data, clear=clear)
+
+    def write_backup(
+        self,
+        address: Address,
+        data: Union[AnyBytes, Value, ImmutableMemory],
+        clear: bool = False,
+    ) -> List[ImmutableMemory]:
+
+        address = self._rectify_address(address)
+        return super().write_backup(address, data, clear=clear)

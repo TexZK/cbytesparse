@@ -775,3 +775,7 @@ cdef class Memory:
         addr_t _trim_endex
         bint _trim_start_
         bint _trim_endex_
+
+
+cdef class bytesparse(Memory):
+    pass

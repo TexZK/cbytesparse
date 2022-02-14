@@ -26,12 +26,14 @@
 import importlib
 import inspect
 import sys
+from typing import Type
 
 import pytest
 from _common import *
 
 # noinspection PyUnresolvedReferences
 from cbytesparse.c import Memory as _Memory
+from cbytesparse.c import bytesparse as _bytesparse
 
 
 # Patch inspect.isfunction() to allow Cython functions to be discovered
@@ -75,4 +77,12 @@ _load_cython_tests()
 
 class TestMemory(BaseMemorySuite):
     Memory: type = _Memory
+    ADDR_NEG: bool = False
+
+
+class TestBytesparse(BaseBytearraySuite, BaseMemorySuite):
+    bytesparse: Type['_bytesparse'] = _bytesparse
+
+    # Reuse some of BaseMemorySuite methods
+    Memory: Type['_Memory'] = _bytesparse
     ADDR_NEG: bool = False
