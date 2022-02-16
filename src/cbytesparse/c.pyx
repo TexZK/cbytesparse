@@ -153,9 +153,7 @@ def collapse_blocks(
 
         for block_index in range(Rack_Length(blocks2)):
             block = Rack_Get__(blocks2, block_index)
-            collapsed.append([Block_Start(block),
-                              PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0),
-                                                        <ssize_t>Block_Length(block))])
+            collapsed.append([Block_Start(block), Block_Bytes(block)])
     finally:
         Memory_Free(memory)
 
@@ -1910,17 +1908,14 @@ cdef class BlockView:
             bytes: :class:`bytes` clone of the viewed slice.
         """
         cdef:
-            byte_t *data
-            size_t size
+            char* ptr
+            ssize_t size
+            Block_* block = self._block
 
         self.check_()
-
-        data = &self._block.data[self._start]
-        size = self._endex - self._start
-        if size > SIZE_HMAX:
-            raise OverflowError()
-
-        return PyBytes_FromStringAndSize(<char*><void*>data, <ssize_t>size)
+        ptr = <char*><void*>&block.data[self._start]
+        size = <ssize_t>(self._endex - self._start)
+        return PyBytes_FromStringAndSize(ptr, size)
 
     def __cinit__(self: BlockView):
         self._block = NULL
@@ -2069,7 +2064,7 @@ cdef class BlockView:
     ) -> memoryview:
         r"""memoryview: Python :class:`memoryview` wrapper."""
         cdef:
-            byte_t *data
+            byte_t* data
             size_t size
             byte_t[:] view
 
@@ -4240,7 +4235,7 @@ cdef vint Memory_SetTrimStart(Memory_* that, object trim_start) except -1:
         addr_t trim_endex_
 
     if trim_start is None:
-        trim_start_ = 0
+        trim_start_ = ADDR_MIN
         that.trim_start_ = False
     else:
         trim_start_ = <addr_t>trim_start
@@ -4536,14 +4531,20 @@ cdef object Memory_Peek(const Memory_* that, object address):
 
 
 cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1:
+    if that.trim_start_ and address < that.trim_start:
+        return 0
+    if that.trim_endex_ and address >= that.trim_endex:
+        return 0
+
     # Standard clear method
     Memory_Erase__(that, address, address + 1, False)  # clear
+    return 0
 
 
 cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
     cdef:
-        Rack_* blocks = that.blocks
-        size_t block_count = Rack_Length(blocks)
+        Rack_* blocks
+        size_t block_count
         size_t block_index
         Block_* block
         addr_t block_start
@@ -4551,7 +4552,14 @@ cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
         Block_* block2
         addr_t block_start2
 
+    if that.trim_start_ and address < that.trim_start:
+        return 0
+    if that.trim_endex_ and address >= that.trim_endex:
+        return 0
+
+    blocks = that.blocks
     block_index = Rack_IndexEndex(blocks, address) - 1
+    block_count = Rack_Length(blocks)
 
     if block_index < block_count:
         block = Rack_Get__(blocks, block_index)
@@ -8477,6 +8485,93 @@ cdef class Memory:
         return memory
 
     @classmethod
+    def from_items(
+        cls: Type[Memory],
+        items: Union[AddressValueMapping,
+                     Iterable[Tuple[Address, Optional[Value]]],
+                     Mapping[Address, Optional[Union[Value, AnyBytes]]],
+                     ImmutableMemory],
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        validate: bool = True,
+    ) -> Memory:
+        r"""Creates a virtual memory from a iterable address/byte mapping.
+
+        Arguments:
+            items (iterable address/byte mapping):
+                An iterable mapping of address to byte values.
+                Values of ``None`` are translated as gaps.
+                When an address is stated multiple times, the last is kept.
+
+            offset (int):
+                An address offset applied to all the values.
+
+            start (int):
+                Optional memory start address.
+                Anything before will be trimmed away.
+
+            endex (int):
+                Optional memory exclusive end address.
+                Anything at or after it will be trimmed away.
+
+            validate (bool):
+                Validates the resulting :obj:`ImmutableMemory` object.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
+
+        Raises:
+            :obj:`ValueError`: Some requirements are not satisfied.
+
+        See Also:
+            :meth:`to_bytes`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            >>> memory = Memory.from_values({})
+            >>> memory.to_blocks()
+            []
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |   |[A | Z]|   |[x]|   |   |   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> items = [
+            ...     (0, ord('A')),
+            ...     (1, ord('B')),
+            ...     (3, ord('x')),
+            ...     (1, ord('Z')),
+            ... ]
+            >>> memory = Memory.from_items(items, offset=2)
+            >>> memory.to_blocks()
+            [[2, b'AZ'], [5, b'x']]
+        """
+        cdef:
+            Memory memory = Memory(start=start, endex=endex)
+            Memory_* memory_ = memory._
+
+        if isinstance(items, ImmutableMemory):
+            Memory_Write(memory_, 0, items, True)
+
+        else:
+            if isinstance(items, Mapping):
+                items = items.items()
+
+            for address, value in items:
+                Memory_Poke(memory_, address + offset, value)
+
+        if validate:
+            Memory_Validate(memory_)
+
+        return memory
+
+    @classmethod
     def from_memory(
         cls: Type[Memory],
         memory: Memory,
@@ -8553,6 +8648,103 @@ cdef class Memory:
         memory_._ = Memory_Free(memory_._)
         memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate)
         return memory_
+
+    @classmethod
+    def from_values(
+        cls: Type[Memory],
+        values: Iterable[Optional[Value]],
+        offset: Address = 0,
+        start: Optional[Address] = None,
+        endex: Optional[Address] = None,
+        validate: bool = True,
+    ) -> Memory:
+        r"""Creates a virtual memory from a byte-like sequence.
+
+        Arguments:
+            values (iterable byte-like sequence):
+                An iterable sequence of byte values.
+                Values of ``None`` are translated as gaps.
+
+            offset (int):
+                An address offset applied to all the values.
+
+            start (int):
+                Optional memory start address.
+                Anything before will be trimmed away.
+
+            endex (int):
+                Optional memory exclusive end address.
+                Anything at or after it will be trimmed away.
+
+            validate (bool):
+                Validates the resulting :obj:`ImmutableMemory` object.
+
+        Returns:
+            :obj:`ImmutableMemory`: The resulting memory object.
+
+        Raises:
+            :obj:`ValueError`: Some requirements are not satisfied.
+
+        See Also:
+            :meth:`to_bytes`
+
+        Examples:
+            >>> from bytesparse.inplace import Memory
+
+            >>> memory = Memory.from_values(range(0))
+            >>> memory.to_blocks()
+            []
+
+            ~~~
+
+            +---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+            +===+===+===+===+===+===+===+===+===+
+            |   |   |[A | B | C | D | E]|   |   |
+            +---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_values(range(ord('A'), ord('F')), offset=2)
+            >>> memory.to_blocks()
+            [[2, b'ABCDE']]
+        """
+        cdef:
+            addr_t offset_ = <addr_t>offset
+            Memory memory = Memory(start=start, endex=endex)
+            Memory_* memory_ = memory._
+            addr_t start_ = memory_.trim_start
+            addr_t endex_ = memory_.trim_endex
+            Rack_* blocks = memory_.blocks
+            Block_* block = Block_Alloc(offset_, 0, False)
+
+        try:
+            for value in values:
+                offset_ += 1
+                if offset_ <= start_:
+                    continue
+                if offset_ > endex_:
+                    break
+
+                if value is None:
+                    if Block_Bool(block):
+                        memory_.blocks = blocks = Rack_Append(blocks, block)
+                        block = NULL
+                        block = Block_Alloc(offset_, 0, False)
+                    else:
+                        block.address = offset_
+                else:
+                    block = Block_Append(block, <byte_t>value)
+
+            if Block_Bool(block):
+                memory_.blocks = blocks = Rack_Append(blocks, block)
+                block = NULL
+
+        finally:
+            block = Block_Release(block)
+
+        if validate:
+            Memory_Validate(memory_)
+
+        return memory
 
     @classmethod
     def fromhex(
@@ -10333,10 +10525,7 @@ cdef class Memory:
             if start is None and endex is None:  # faster
                 for block_index in range(block_count):
                     block = Rack_Get__(blocks, block_index)
-                    slice_start = Block_Start(block)
-                    slice_data = PyBytes_FromStringAndSize(<char*><void*>Block_At__(block, 0),
-                                                           <ssize_t>Block_Length(block))
-                    result.append([slice_start, slice_data])
+                    result.append([Block_Start(block), Block_Bytes(block)])
             else:
                 block_index_start = 0 if start is None else Rack_IndexStart(blocks, start)
                 block_index_endex = block_count if endex is None else Rack_IndexEndex(blocks, endex)
@@ -10987,7 +11176,7 @@ cdef class bytesparse(Memory):
             const byte_t[:] view
             addr_t address
             size_t size
-            const byte_t *ptr
+            const byte_t* ptr
 
         super().__init__(start, endex)
 

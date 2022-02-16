@@ -388,9 +388,24 @@ class BaseMemorySuite:
 
         memory = Memory.from_bytes(b'ABCxyz', 2)
         assert memory.to_bytes() == b'ABCxyz'
-        assert memory.to_bytes(start=4) == b'Cxyz'
+        assert memory.to_bytes(start=4) == b'Cxyz'                                 ,memory.to_bytes(start=4) #FIXME
         assert memory.to_bytes(endex=6) == b'ABCx'
         assert memory.to_bytes(4, 6) == b'Cx'
+
+    def test_from_items_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_items({})
+        assert memory.to_blocks() == []
+
+        items = [
+            (0, ord('A')),
+            (1, ord('B')),
+            (3, ord('x')),
+            (1, ord('Z')),
+        ]
+        memory = Memory.from_items(items, offset=2)
+        assert memory.to_blocks() == [[2, b'AZ'], [5, b'x']]
 
     def test_from_memory_doctest(self):
         Memory = self.Memory
@@ -405,6 +420,15 @@ class BaseMemorySuite:
         memory2 = Memory.from_memory(memory1, -3)
         assert memory2.to_blocks() == [[7, b'ABC']]
         assert (memory1 == memory2) is False
+
+    def test_from_values_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_values(range(0))
+        assert memory.to_blocks() == []
+
+        memory = Memory.from_values(range(ord('A'), ord('F')), offset=2)
+        assert memory.to_blocks() == [[2, b'ABCDE']]
 
     def test_fromhex_doctest(self):
         Memory = self.Memory
@@ -3368,7 +3392,7 @@ class BaseMemorySuite:
     def test_view_doctest(self):
         Memory = self.Memory
         memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
-        assert bytes(memory.view(2, 5)) == b'BCD'
+        assert bytes(memory.view(2, 5)) == b'BCD'                                       ,bytes(memory.view(2, 5))  # FIXME
         assert bytes(memory.view(9, 10)) == b'y'
         match = 'non-contiguous data within range'
 
@@ -4356,15 +4380,15 @@ class BaseMemorySuite:
 
         ans_out = [[s, bytes(d)] for s, d in memory.blocks()]
         ans_ref = [[1, b'AB'], [5, b'x'], [7, b'123']]
-        assert ans_out == ans_ref
+        assert ans_out == ans_ref                                               ,(ans_out, ans_ref)  # FIXME
 
         ans_out = [[s, bytes(d)] for s, d in memory.blocks(2, 9)]
         ans_ref = [[2, b'B'], [5, b'x'], [7, b'12']]
-        assert ans_out == ans_ref
+        assert ans_out == ans_ref                                               ,(ans_out, ans_ref)  # FIXME
 
         ans_out = [[s, bytes(d)] for s, d in memory.blocks(3, 5)]
         ans_ref = []
-        assert ans_out == ans_ref
+        assert ans_out == ans_ref                                               ,(ans_out, ans_ref)  # FIXME
 
     def test_intervals_doctest(self):
         Memory = self.Memory
