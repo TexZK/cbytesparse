@@ -3134,14 +3134,9 @@ cdef ssize_t Rack_IndexEndex(const Rack_* that, addr_t address) nogil:
 cdef Memory Memory_AsObject(Memory_* that):
     cdef:
         Memory memory = Memory()
-        Memory_* memory_ = memory._
 
-    memory_.blocks = Rack_Free(memory_.blocks)
-    memory_.blocks = Rack_ShallowCopy(that.blocks)
-    memory_.trim_start = that.trim_start
-    memory_.trim_endex = that.trim_endex
-    memory_.trim_start_ = that.trim_start_
-    memory_.trim_endex_ = that.trim_endex_
+    memory._ = Memory_Free(memory._)
+    memory._ = that
     return memory
 
 
@@ -3171,86 +3166,346 @@ cdef Memory_* Memory_Free(Memory_* that) except? NULL:
 
 
 cdef Memory_* Memory_Create(
-    Memory_* memory,
-    const byte_t[:] data,
-    object offset,
-    object blocks,
     object start,
     object endex,
-    bint copy,
+) except NULL:
+    cdef:
+        Memory_* that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1)
+
+    if that == NULL:
+        raise MemoryError()
+    try:
+        if start is None:
+            that.trim_start = ADDR_MIN
+            that.trim_start_ = False
+        else:
+            that.trim_start = <addr_t>start
+            that.trim_start_ = True
+
+        if endex is None:
+            that.trim_endex = ADDR_MAX
+            that.trim_endex_ = False
+        else:
+            that.trim_endex = <addr_t>endex
+            that.trim_endex_ = True
+
+        if that.trim_endex < that.trim_start:
+            that.trim_endex = that.trim_start
+
+        that.blocks = Rack_Alloc(0)
+
+    except:
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromBlocks_(
+    const Rack_* blocks,
+    object offset,
+    object start,
+    object endex,
     bint validate,
 ) except NULL:
     cdef:
-        addr_t start_
-        addr_t endex_
-        addr_t address
-        size_t size
-        const byte_t* ptr = NULL
-        Block_* block = NULL
-        Rack_* blocks_ = NULL
         Memory_* that = NULL
-        bint validate_ = validate
+        Rack_* blocks_
+        size_t block_index
+        Block_* block
+        addr_t offset_abs = 0
+        bint offset_neg = offset < 0
 
-    if (memory != NULL) + (data is not None) + (blocks is not None) > 1:
-        raise ValueError('only one of [memory, data, blocks] is allowed')
+    if blocks == NULL:
+        raise ValueError('null blocks')
 
-    that = <Memory_*>PyMem_Calloc(Memory_HEADING, 1)
-    if that == NULL:
-        raise MemoryError()
+    if Rack_Bool(blocks):
+        if offset_neg:
+            offset_abs = <addr_t>-offset
+            CheckSubAddrU(Block_Start(Rack_First__(that.blocks)), offset_abs)
+        else:
+            offset_abs = <addr_t>offset
+            CheckAddAddrU(Block_Endex(Rack_Last__(that.blocks)), offset_abs)
 
     try:
-        start_ = ADDR_MIN if start is None else <addr_t>start
-        endex_ = ADDR_MAX if endex is None else <addr_t>endex
-        if endex_ < start_:
-            endex_ = start_  # clamp negative length
+        that = Memory_Create(start, endex)
+        that.blocks = Rack_Free(that.blocks)
+        that.blocks = Rack_Copy(blocks)
+        blocks_ = that.blocks
 
-        if memory != NULL:
-            if copy or offset:
-                blocks_ = Rack_Copy(memory.blocks)
-                blocks_ = Rack_Shift(blocks_, <saddr_t>offset)
-            else:
-                blocks_ = Rack_ShallowCopy(memory.blocks)
-
-        elif data is not None:
-            if offset < 0:
-                raise ValueError('negative offset')
-
-            address = <addr_t>offset
-            size = <size_t>len(data)
-            blocks_ = Rack_Alloc(0)
-
-            if size:
-                with cython.boundscheck(False):
-                    ptr = &data[0]
-                block = Block_Create(address, size, ptr)
-                try:
-                    blocks_ = Rack_Append(blocks_, block)
-                except:
-                    block = Block_Free(block)
-                    raise
-
-        elif blocks:
-            blocks_ = Rack_FromObject(blocks, <saddr_t>offset)
-
+        if offset_neg:
+            for block_index in range(Rack_Length(blocks)):
+                block = Rack_Get_(blocks, block_index)
+                block.address -= offset_abs
         else:
-            blocks_ = Rack_Alloc(0)
+            for block_index in range(Rack_Length(blocks)):
+                block = Rack_Get_(blocks, block_index)
+                block.address += offset_abs
 
-        that.blocks = blocks_
-        blocks_ = NULL
-
-        that.trim_start = start_
-        that.trim_endex = endex_
-        that.trim_start_ = start is not None
-        that.trim_endex_ = endex is not None
-
-        if (that.trim_start_ or that.trim_endex_) and validate_:  # fast check
-            Memory_Crop_(that, start_, endex_)
-
-        if validate_:
+        if validate:
             Memory_Validate(that)
 
     except:
-        Rack_Free(blocks_)
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromBlocks(
+    object blocks,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL:
+    cdef:
+        bint offset_ = <bint>offset
+        Memory_* that = Memory_Create(start, endex)
+        addr_t delta
+        const byte_t[:] block_view
+        const byte_t* block_data
+        size_t block_size
+        addr_t block_start
+        addr_t block_endex
+        size_t block_offset
+        Block_* block = NULL
+
+    try:
+        for block_start_, block_data_ in blocks:
+            block_offset = 0
+            block_start = <addr_t>(block_start_ + offset) if offset_ else <addr_t>block_start_
+            if that.trim_endex <= block_start:
+                break
+
+            block_view = block_data_
+            block_size = <size_t>len(block_view)
+            CheckAddAddrU(block_start, block_size)
+            block_endex = block_start + block_size
+            if block_endex <= that.trim_start:
+                continue
+
+            # Trim before memory
+            if block_start < that.trim_start:
+                delta = that.trim_start - block_start
+                CheckAddrToSizeU(delta)
+                block_start += <size_t>delta
+                block_size  -= <size_t>delta
+                block_offset = <size_t>delta
+
+            # Trim after memory
+            if that.trim_endex < block_endex:
+                delta = block_endex - that.trim_endex
+                CheckAddrToSizeU(delta)
+                block_endex -= <size_t>delta
+                block_size  -= <size_t>delta
+
+            if block_size:
+                with cython.boundscheck(False):
+                    block_data = &block_view[block_offset]
+                block = Block_Create(block_start, block_size, block_data)
+                that.blocks = Rack_Append(that.blocks, block)
+                block = NULL
+            else:
+                if not that.trim_start_ and not that.trim_endex_:
+                    raise ValueError('invalid block data size')
+
+        if validate:
+            Memory_Validate(that)
+
+    except:
+        block = Block_Release(block)
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromBytes_(
+    size_t data_size,
+    const byte_t* data_ptr,
+    object offset,
+    object start,
+    object endex,
+) except NULL:
+    cdef:
+        bint offset_ = <bint>offset
+        Memory_* that = Memory_Create(start, endex)
+        addr_t delta
+        const byte_t* block_data
+        size_t block_size = data_size
+        addr_t block_start = <addr_t>offset
+        addr_t block_endex
+        size_t block_offset = 0
+        Block_* block = NULL
+
+    try:
+        if that.trim_endex <= block_start:
+            return that
+
+        CheckAddAddrU(block_start, block_size)
+        block_endex = block_start + block_size
+        if block_endex <= that.trim_start:
+            return that
+
+        # Trim before memory
+        if block_start < that.trim_start:
+            delta = that.trim_start - block_start
+            CheckAddrToSizeU(delta)
+            block_start += <size_t>delta
+            block_size  -= <size_t>delta
+            block_offset = <size_t>delta
+
+        # Trim after memory
+        if that.trim_endex < block_endex:
+            delta = block_endex - that.trim_endex
+            CheckAddrToSizeU(delta)
+            block_endex -= <size_t>delta
+            block_size  -= <size_t>delta
+
+        if block_size:
+            with cython.boundscheck(False):
+                block_data = &data_ptr[block_offset]
+            block = Block_Create(block_start, block_size, block_data)
+            that.blocks = Rack_Append(that.blocks, block)
+            block = NULL
+
+    except:
+        block = Block_Release(block)
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromBytes(
+    object data,
+    object offset,
+    object start,
+    object endex,
+) except NULL:
+    cdef:
+        const byte_t[:] data_view = data
+        const byte_t* data_ptr
+        size_t data_size
+
+    with cython.boundscheck(False):
+        data_ptr = &data_view[0]
+        data_size = len(data_view)
+
+    return Memory_FromBytes_(data_size, data_ptr, offset, start, endex)
+
+
+cdef Memory_* Memory_FromItems(
+    object items,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL:
+    cdef:
+        Memory_* that = Memory_Create(start, endex)
+
+    try:
+        if isinstance(items, Mapping):
+            items = items.items()
+
+        for address, value in items:
+            Memory_Poke(that, address + offset, value)
+
+        if validate:
+            Memory_Validate(that)
+
+    except:
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromMemory_(
+    const Memory_* memory,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL:
+    cdef:
+        Memory_* that = Memory_Copy(memory)
+
+    try:
+        that.trim_start = ADDR_MIN
+        that.trim_endex = ADDR_MAX
+        that.trim_start_ = False
+        that.trim_endex_ = False
+
+        Memory_Shift(that, offset)
+
+        Memory_SetTrimStart(that, start)
+        Memory_SetTrimEndex(that, endex)
+
+        if validate:
+            Memory_Validate(that)
+
+    except:
+        that = Memory_Free(that)
+        raise
+
+    return that
+
+
+cdef Memory_* Memory_FromMemory(
+    object memory,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL:
+
+    if isinstance(memory, Memory):
+        return Memory_FromMemory_((<Memory>memory)._, offset, start, endex, validate)
+    else:
+        return Memory_FromBlocks(memory.blocks(), offset, start, endex, validate)
+
+
+cdef Memory_* Memory_FromValues(
+    object values,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL:
+    cdef:
+        addr_t start_ = ADDR_MIN if start is None else <addr_t>start
+        addr_t endex_ = ADDR_MAX if endex is None else <addr_t>endex
+        Memory_* that = Memory_Create(start, endex)
+        addr_t address = <addr_t>offset
+        bint append = False
+        byte_t value_
+
+    if endex_ < start_:
+        endex_ = start_
+
+    try:
+        for value in values:
+            if endex_ <= address:
+                break
+            if start_ <= address:
+                if value is not None:
+                    value_ = <byte_t>value
+                    if append:
+                        Memory_Append_(that, value_)
+                    else:
+                        Memory_Poke_(that, address, value_)
+                    append = True
+                else:
+                    append = False
+            address += 1
+
+        if validate:
+            Memory_Validate(that)
+
+    except:
         that = Memory_Free(that)
         raise
 
@@ -3316,12 +3571,43 @@ cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1:
     return equal
 
 
+cdef bint Memory_EqMemory_(const Memory_* that, object memory) except -1:
+    cdef:
+        const Rack_* blocks = that.blocks
+        size_t block_index = 0
+        const Block_* block
+        size_t block_size
+        const byte_t[:] view
+
+    if Memory_ContentParts(that) != memory.content_parts:
+        return False
+
+    for block_start, block_data in memory.blocks():
+        block = Rack_Get__(blocks, block_index)
+
+        if Block_Start(block) != block_start:
+            return False
+
+        with cython.boundscheck(False):
+            view = block_data
+            if not Block_Eq_(block, len(view), &view[0]):
+                return False
+
+        block_index += 1
+
+    return True
+
+
 cdef bint Memory_Eq(const Memory_* that, object other) except -1:
     cdef:
         const byte_t[:] view
 
     if isinstance(other, Memory):
         return Memory_EqSame_(that, (<Memory>other)._)
+
+    elif isinstance(other, ImmutableMemory):
+        return Memory_EqMemory_(that, other)
+
     else:
         try:
             view = other
@@ -4531,9 +4817,9 @@ cdef object Memory_Peek(const Memory_* that, object address):
 
 
 cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1:
-    if that.trim_start_ and address < that.trim_start:
+    if address < that.trim_start:
         return 0
-    if that.trim_endex_ and address >= that.trim_endex:
+    if address >= that.trim_endex:
         return 0
 
     # Standard clear method
@@ -4552,9 +4838,9 @@ cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
         Block_* block2
         addr_t block_start2
 
-    if that.trim_start_ and address < that.trim_start:
+    if address < that.trim_start:
         return 0
-    if that.trim_endex_ and address >= that.trim_endex:
+    if address >= that.trim_endex:
         return 0
 
     blocks = that.blocks
@@ -4809,10 +5095,11 @@ cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset) except -1:
 
 
 cdef vint Memory_Shift(Memory_* that, object offset) except -1:
-    if offset < 0:
-        return Memory_ShiftLeft_(that, <addr_t>-offset)
-    else:
-        return Memory_ShiftRight_(that, <addr_t>offset)
+    if offset:
+        if offset < 0:
+            Memory_ShiftLeft_(that, <addr_t>-offset)
+        else:
+            Memory_ShiftRight_(that, <addr_t>offset)
 
 
 cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size) except -1:
@@ -4982,7 +5269,7 @@ cdef vint Memory_Erase__(Memory_* that, addr_t start, addr_t endex, bint shift_a
         Block_* block2 = NULL
         addr_t block_start2
 
-    if endex > start:
+    if Rack_Bool(blocks) and endex > start:
         size = endex - start
         block_index = Rack_IndexStart(blocks, start)
 
@@ -5211,7 +5498,7 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
         addr_t start = Memory_Start(data)
         addr_t endex = Memory_Endex(data)
         addr_t size = endex - start
-        addr_t offset
+        addr_t delta
 
         addr_t trim_start
         addr_t trim_endex
@@ -5278,18 +5565,18 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
 
         # Trim before memory
         if trim_start_ and block_start < trim_start:
-            offset = trim_start - block_start
-            CheckAddrToSizeU(offset)
-            block_start += <size_t>offset
-            block_size -= <size_t>offset
-            block_offset = <size_t>offset
+            delta = trim_start - block_start
+            CheckAddrToSizeU(delta)
+            block_start += <size_t>delta
+            block_size  -= <size_t>delta
+            block_offset = <size_t>delta
 
         # Trim after memory
         if trim_endex_ and trim_endex < block_endex:
-            offset = block_endex - trim_endex
-            CheckAddrToSizeU(offset)
-            block_endex -= <size_t>offset
-            block_size -= <size_t>offset
+            delta = block_endex - trim_endex
+            CheckAddrToSizeU(delta)
+            block_endex -= <size_t>delta
+            block_size  -= <size_t>delta
 
         Memory_Place__(that, block_start, block_size, Block_At__(block, block_offset), False)  # write
 
@@ -6141,7 +6428,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
     ):
 
-        self._ = Memory_Create(NULL, None, None, None, start, endex, False, False)
+        self._ = Memory_Create(start, endex)
 
     def __iter__(
         self: Memory,
@@ -8408,11 +8695,9 @@ cdef class Memory:
                 ...
         """
         cdef:
-            Memory memory = Memory()
+            Memory_* memory_ = Memory_FromBlocks(blocks, offset, start, endex, validate)
 
-        memory._ = Memory_Free(memory._)
-        memory._ = Memory_Create(NULL, None, offset, blocks, start, endex, copy, validate)
-        return memory
+        return Memory_AsObject(memory_)
 
     @classmethod
     def from_bytes(
@@ -8478,11 +8763,9 @@ cdef class Memory:
             [[2, b'ABCxyz']]
         """
         cdef:
-            Memory memory = Memory()
+            Memory_* memory_ = Memory_FromBytes(data, offset, start, endex)
 
-        memory._ = Memory_Free(memory._)
-        memory._ = Memory_Create(NULL, data, offset, None, start, endex, copy, validate)
-        return memory
+        return Memory_AsObject(memory_)
 
     @classmethod
     def from_items(
@@ -8553,28 +8836,14 @@ cdef class Memory:
             [[2, b'AZ'], [5, b'x']]
         """
         cdef:
-            Memory memory = Memory(start=start, endex=endex)
-            Memory_* memory_ = memory._
+            Memory_* memory_ = Memory_FromItems(items, offset, start, endex, validate)
 
-        if isinstance(items, ImmutableMemory):
-            Memory_Write(memory_, 0, items, True)
-
-        else:
-            if isinstance(items, Mapping):
-                items = items.items()
-
-            for address, value in items:
-                Memory_Poke(memory_, address + offset, value)
-
-        if validate:
-            Memory_Validate(memory_)
-
-        return memory
+        return Memory_AsObject(memory_)
 
     @classmethod
     def from_memory(
         cls: Type[Memory],
-        memory: Memory,
+        memory: ImmutableMemory,
         offset: Address = 0,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -8643,11 +8912,9 @@ cdef class Memory:
             True
         """
         cdef:
-            Memory memory_ = Memory()
+            Memory_* memory_ = Memory_FromMemory(memory, offset, start, endex, validate)
 
-        memory_._ = Memory_Free(memory_._)
-        memory_._ = Memory_Create(memory._, None, offset, None, start, endex, copy, validate)
-        return memory_
+        return Memory_AsObject(memory_)
 
     @classmethod
     def from_values(
@@ -8708,43 +8975,9 @@ cdef class Memory:
             [[2, b'ABCDE']]
         """
         cdef:
-            addr_t offset_ = <addr_t>offset
-            Memory memory = Memory(start=start, endex=endex)
-            Memory_* memory_ = memory._
-            addr_t start_ = memory_.trim_start
-            addr_t endex_ = memory_.trim_endex
-            Rack_* blocks = memory_.blocks
-            Block_* block = Block_Alloc(offset_, 0, False)
+            Memory_* memory_ = Memory_FromValues(values, offset, start, endex, validate)
 
-        try:
-            for value in values:
-                offset_ += 1
-                if offset_ <= start_:
-                    continue
-                if offset_ > endex_:
-                    break
-
-                if value is None:
-                    if Block_Bool(block):
-                        memory_.blocks = blocks = Rack_Append(blocks, block)
-                        block = NULL
-                        block = Block_Alloc(offset_, 0, False)
-                    else:
-                        block.address = offset_
-                else:
-                    block = Block_Append(block, <byte_t>value)
-
-            if Block_Bool(block):
-                memory_.blocks = blocks = Rack_Append(blocks, block)
-                block = NULL
-
-        finally:
-            block = Block_Release(block)
-
-        if validate:
-            Memory_Validate(memory_)
-
-        return memory
+        return Memory_AsObject(memory_)
 
     @classmethod
     def fromhex(
@@ -8774,12 +9007,9 @@ cdef class Memory:
             b'Hello, World!'
         """
         cdef:
-            bytes data = bytes.fromhex(string)
-            Memory memory = Memory()
+            Memory_* memory_ = Memory_FromBytes(bytes.fromhex(string), 0, None, None)
 
-        memory._ = Memory_Free(memory._)
-        memory._ = Memory_Create(NULL, data, 0, None, None, None, False, False)
-        return memory
+        return Memory_AsObject(memory_)
 
     def gaps(
         self: Memory,

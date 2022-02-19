@@ -32,8 +32,10 @@ import pytest
 from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
 from bytesparse.base import BlockList
+from bytesparse.base import ImmutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
+from bytesparse.inplace import Memory as _InplaceMemory
 
 MAX_START: Address = 22
 MAX_SIZE: Address = 26
@@ -229,6 +231,13 @@ def test_create_bitmask_values():
     assert create_bitmask_values(15, 4) == [0, 1, 2, 3]
 
 
+# Create a fake ImmutableMemory, by just cloning an existing common class.
+# This allows to check against sub-classing with all the features available.
+FakeMemory = type('FakeMemory', (), dict(_InplaceMemory.__dict__))
+ImmutableMemory.register(FakeMemory)
+assert issubclass(FakeMemory, ImmutableMemory)
+
+
 class BaseMemorySuite:
 
     Memory: Any = None  # replace by subclassing 'Memory'
@@ -392,6 +401,62 @@ class BaseMemorySuite:
         assert memory.to_bytes(endex=6) == b'ABCx'
         assert memory.to_bytes(4, 6) == b'Cx'
 
+    def test_from_items_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_items({})
+        assert memory.to_blocks() == []
+
+        items = [
+            (0, ord('A')),
+            (1, ord('B')),
+            (3, ord('x')),
+            (1, ord('Z')),
+        ]
+        memory = Memory.from_items(items, offset=2)
+        assert memory.to_blocks() == [[2, b'AZ'], [5, b'x']]
+
+    def test_from_items_bounded(self):
+        Memory = self.Memory
+
+        memory = Memory.from_items({}, start=2, endex=9)
+        assert memory.to_blocks() == []
+
+        items = [
+            (2, ord('A')),
+            (3, ord('B')),
+            (5, ord('x')),
+            (6, ord('y')),
+            (3, None),
+            (9, None),
+        ]
+        memory = Memory.from_items(items, offset=2, start=2, endex=9)
+        assert memory.to_blocks() == [[4, b'A'], [7, b'xy']]
+
+        memory = Memory.from_items(items, offset=2, start=6, endex=8)
+        assert memory.to_blocks() == [[7, b'x']]
+
+    def test_from_items_memory_immutable(self):
+        Memory = self.Memory
+
+        memory = Memory.from_items({})
+        assert memory.to_blocks() == []
+
+        items = FakeMemory.from_blocks([[0, b'AZ'], [3, b'x']])
+        memory = Memory.from_items(items, offset=2)
+        assert memory.to_blocks() == [[2, b'AZ'], [5, b'x']]
+
+    def test_from_items_template(self):
+        Memory = self.Memory
+        blocks = create_template_blocks()
+        values = blocks_to_values(blocks)
+
+        memory = Memory.from_items(list(enumerate(values)))
+        assert memory.to_blocks() == blocks
+
+        memory = Memory.from_items(enumerate(values))
+        assert memory.to_blocks() == blocks
+
     def test_from_memory_doctest(self):
         Memory = self.Memory
 
@@ -405,6 +470,52 @@ class BaseMemorySuite:
         memory2 = Memory.from_memory(memory1, -3)
         assert memory2.to_blocks() == [[7, b'ABC']]
         assert (memory1 == memory2) is False
+
+    def test_from_memory_immutable(self):
+        Memory = self.Memory
+
+        blocks = []
+        memory1 = FakeMemory.from_blocks(blocks)
+        memory2 = Memory.from_memory(memory1)
+        assert memory2.to_blocks() == blocks
+
+        blocks = create_template_blocks()
+        memory1 = FakeMemory.from_blocks(blocks)
+        memory2 = Memory.from_memory(memory1)
+        assert memory2.to_blocks() == blocks
+
+    def test_from_values_doctest(self):
+        Memory = self.Memory
+
+        memory = Memory.from_values(range(0))
+        assert memory.to_blocks() == []
+
+        memory = Memory.from_values(range(ord('A'), ord('F')), offset=2)
+        assert memory.to_blocks() == [[2, b'ABCDE']]
+
+    def test_from_values_template(self):
+        Memory = self.Memory
+        blocks = create_template_blocks()
+        values = blocks_to_values(blocks)
+
+        memory = Memory.from_values(values)
+        assert memory.to_blocks() == blocks
+
+        memory = Memory.from_values(x for x in values)
+        assert memory.to_blocks() == blocks
+
+    def test_from_values_bounded_template(self):
+        Memory = self.Memory
+        blocks = create_template_blocks()
+        values = blocks_to_values(blocks)
+
+        for start in range(MAX_START):
+            for size in range(MAX_SIZE):
+                endex = start + size
+                memory = Memory.from_values(values, start=start, endex=endex)
+                blocks_out = memory.to_blocks()
+                blocks_ref = values_to_blocks(values[start:endex], start)
+                assert blocks_out == blocks_ref
 
     def test_fromhex_doctest(self):
         Memory = self.Memory
@@ -559,6 +670,12 @@ class BaseMemorySuite:
         memory1.pop()
         memory1.shift(1)
         assert memory1 != memory2
+
+    def test___eq___memory_immutable(self):
+        Memory = self.Memory
+        memory1 = Memory.from_blocks(create_template_blocks())
+        memory2 = FakeMemory.from_blocks(create_template_blocks())
+        assert memory1 == memory2
 
     def test___eq___multi_bytes(self):
         Memory = self.Memory
@@ -2570,27 +2687,6 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks, validate=False)
 
         with pytest.raises(ValueError, match='invalid block interleaving'):
-            memory.validate()
-
-    def test_validate_invalid_block_bounds(self):
-        Memory = self.Memory
-
-        blocks = [[1, b'ABC']]
-        memory = Memory.from_blocks(blocks, start=3, endex=6, validate=False)
-
-        with pytest.raises(ValueError, match='invalid block bounds'):
-            memory.validate()
-
-        blocks = [[5, b'xyz']]
-        memory = Memory.from_blocks(blocks, start=3, endex=6, validate=False)
-
-        with pytest.raises(ValueError, match='invalid block bounds'):
-            memory.validate()
-
-        blocks = [[0, b'123'], [10, b'ABC'], [5, b'xyz']]
-        memory = Memory.from_blocks(blocks, validate=False)
-
-        with pytest.raises(ValueError, match='invalid block bounds'):
             memory.validate()
 
     def test_bound_doctest(self):
@@ -4641,7 +4737,6 @@ class BaseBytearraySuite:
     def test__rectify_span(self):
         bytesparse = self.bytesparse
         memory = bytesparse.from_blocks(create_template_blocks())
-        start_ = memory.start
         endex_ = memory.endex
 
         for start in range(-1, -len(memory), -1):
@@ -4660,7 +4755,6 @@ class BaseBytearraySuite:
     def test__rectify_span_overflow(self):
         bytesparse = self.bytesparse
         memory = bytesparse.from_blocks(create_template_blocks())
-        start_ = memory.start
         endex_ = memory.endex
         assert memory._rectify_span(-endex_, -endex_) == (0, 0)
         assert memory._rectify_span(-endex_ - 1, -endex_ - 1) == (0, 0)
@@ -4685,6 +4779,10 @@ class BaseBytearraySuite:
 
     def test_from_memory_negative(self):
         bytesparse = self.bytesparse
+
+        memory = bytesparse()
+        bytesparse.from_memory(memory, offset=-1)
+
         memory = bytesparse(b'ABC')
         with pytest.raises(ValueError, match='negative offset'):
             bytesparse.from_memory(memory, offset=-1)
@@ -4692,6 +4790,13 @@ class BaseBytearraySuite:
             bytesparse.from_memory(memory, start=-1)
         with pytest.raises(ValueError, match='negative endex'):
             bytesparse.from_memory(memory, endex=-1)
+
+        memory = FakeMemory.from_blocks([])
+        bytesparse.from_memory(memory, offset=-1)
+
+        memory = FakeMemory.from_blocks([[0, b'ABC']])
+        with pytest.raises(ValueError, match='negative offset'):
+            bytesparse.from_memory(memory, offset=-1)
 
     def test_shift_negative(self):
         bytesparse = self.bytesparse

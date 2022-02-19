@@ -523,13 +523,70 @@ cdef Memory_* Memory_Alloc() except NULL
 cdef Memory_* Memory_Free(Memory_* that) except? NULL
 
 cdef Memory_* Memory_Create(
-    Memory_* memory,
-    const byte_t[:] data,
-    object offset,
-    object blocks,
     object start,
     object endex,
-    bint copy,
+) except NULL
+
+cdef Memory_* Memory_FromBlocks_(
+    const Rack_* blocks,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL
+
+cdef Memory_* Memory_FromBlocks(
+    object blocks,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL
+
+cdef Memory_* Memory_FromBytes_(
+    size_t data_size,
+    const byte_t* data_ptr,
+    object offset,
+    object start,
+    object endex,
+) except NULL
+
+cdef Memory_* Memory_FromBytes(
+    object data,
+    object offset,
+    object start,
+    object endex,
+) except NULL
+
+cdef Memory_* Memory_FromItems(
+    object items,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL
+
+cdef Memory_* Memory_FromMemory_(
+    const Memory_* memory,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL
+
+cdef Memory_* Memory_FromMemory(
+    object memory,
+    object offset,
+    object start,
+    object endex,
+    bint validate,
+) except NULL
+
+cdef Memory_* Memory_FromValues(
+    object values,
+    object offset,
+    object start,
+    object endex,
     bint validate,
 ) except NULL
 
@@ -537,6 +594,7 @@ cdef bint Memory_EqSame_(const Memory_* that, const Memory_* other) except -1
 cdef bint Memory_EqRaw_(const Memory_* that, size_t data_size, const byte_t* data_ptr) except -1
 cdef bint Memory_EqView_(const Memory_* that, const byte_t[:] view) except -1
 cdef bint Memory_EqIter_(const Memory_* that, object iterable) except -1
+cdef bint Memory_EqMemory_(const Memory_* that, object memory) except -1
 cdef bint Memory_Eq(const Memory_* that, object other) except -1
 
 cdef Memory_* Memory_Add(const Memory_* that, object value) except NULL
