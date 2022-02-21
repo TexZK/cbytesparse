@@ -80,6 +80,7 @@ setup(
     ],
     extras_require={
         'testing': [
+            'Cython',
             'pytest',
         ],
         'scripts': [
