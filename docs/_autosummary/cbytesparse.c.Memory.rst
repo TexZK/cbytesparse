@@ -1,4 +1,4 @@
-cbytesparse.c.Memory
+﻿cbytesparse.c.Memory
 ====================
 
 .. currentmodule:: cbytesparse.c
@@ -52,7 +52,9 @@ cbytesparse.c.Memory
       ~Memory.flood_restore
       ~Memory.from_blocks
       ~Memory.from_bytes
+      ~Memory.from_items
       ~Memory.from_memory
+      ~Memory.from_values
       ~Memory.fromhex
       ~Memory.gaps
       ~Memory.get
