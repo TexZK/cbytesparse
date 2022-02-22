@@ -76,7 +76,8 @@ setup(
     keywords=[
     ],
     install_requires=[
-        'bytesparse @ git+https://github.com/TexZK/bytesparse.git',  # TODO 'bytesparse>=0.0.5',
+        'bytesparse>=0.0.5',  # comment out and use the one below for development instead
+        # 'bytesparse @ git+https://github.com/TexZK/bytesparse.git',  # only for development
     ],
     extras_require={
         'testing': [
