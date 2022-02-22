@@ -1,10 +1,18 @@
 Changelog
 =========
 
-0.0.5 (TBD)
------------
+0.0.5 (2022-02-22)
+------------------
 
-TODO
+* Following the ``bytesparse`` Python package, version ``0.0.5``.
+* Added ``bytesparse`` class, closer to ``bytearray`` than ``Memory``.
+* Added registration to the abstract base classes.
+* Added missing abstract and ported methods.
+* Added cut feature.
+* Added more helper methods.
+* Fixed values iteration.
+* Improved extraction performance.
+* Improved testing.
 
 
 0.0.4 (2022-01-09)
