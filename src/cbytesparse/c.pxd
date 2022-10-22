@@ -58,6 +58,11 @@ cdef extern from *:
     #include <stddef.h>
     #include <stdint.h>
 
+    // Workaround for MSVC: https://stackoverflow.com/a/22268031
+    #ifdef _MSC_VER
+        typedef Py_ssize_t ssize_t;
+    #endif
+
     #define SIZE_MIN  ((size_t)0)
     #define SIZE_HMAX ((size_t)(SIZE_MAX >> 1))
     #ifndef SSIZE_MAX
