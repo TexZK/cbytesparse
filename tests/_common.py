@@ -245,7 +245,6 @@ assert issubclass(FakeMemory, ImmutableMemory)
 class BaseMemorySuite:
 
     Memory: Any = None  # replace by subclassing 'Memory'
-    ADDR_NEG: bool = True
 
     def test___init___doctest(self):
         Memory = self.Memory
@@ -265,14 +264,9 @@ class BaseMemorySuite:
 
         Memory(start=0, endex=0)
         Memory(start=0, endex=1)
-        if self.ADDR_NEG:
-            Memory(start=-1, endex=0)
 
         Memory(start=1, endex=0)
         Memory(start=2, endex=0)
-        if self.ADDR_NEG:
-            Memory(start=0, endex=-1)
-            Memory(start=0, endex=-2)
 
     def test___init___bounds_invalid(self):
         Memory = self.Memory
@@ -286,15 +280,10 @@ class BaseMemorySuite:
             Memory.from_blocks([[3, b'345'], [0, b'012']])
         with pytest.raises(ValueError, match=match):
             Memory.from_blocks([[7, b'789'], [0, b'012']])
-        if self.ADDR_NEG:
-            with pytest.raises(ValueError, match=match):
-                Memory.from_blocks([[0, b'0'], [-1, b'1']])
-            with pytest.raises(ValueError, match=match):
-                Memory.from_blocks([[0, b'0'], [-2, b'2']])
 
     def test___init___offset_template(self):
         Memory = self.Memory
-        for offset in range(-MAX_SIZE if self.ADDR_NEG else 0, MAX_SIZE):
+        for offset in range(0, MAX_SIZE):
             blocks_ref = create_template_blocks()
             for block in blocks_ref:
                 block[0] += offset
@@ -329,11 +318,6 @@ class BaseMemorySuite:
             Memory.from_blocks([[3, b'345'], [0, b'012'], [15, b'F']])
         with pytest.raises(ValueError, match=match):
             Memory.from_blocks([[7, b'789'], [0, b'012'], [15, b'F']])
-        if self.ADDR_NEG:
-            with pytest.raises(ValueError, match=match):
-                Memory.from_blocks([[0, b'0'], [-1, b'1'], [15, b'F']])
-            with pytest.raises(ValueError, match=match):
-                Memory.from_blocks([[0, b'0'], [-2, b'2'], [15, b'F']])
 
     def test___init___offset(self):
         Memory = self.Memory
@@ -3499,7 +3483,7 @@ class BaseMemorySuite:
 
     def test_shift_template(self):
         Memory = self.Memory
-        for offset in range(-MAX_SIZE if self.ADDR_NEG else 0, MAX_SIZE):
+        for offset in range(0, MAX_SIZE):
             memory = Memory.from_blocks(create_template_blocks())
             blocks_ref = create_template_blocks()
             for block in blocks_ref:
@@ -3512,7 +3496,7 @@ class BaseMemorySuite:
 
     def test_shift_bounded_template(self):
         Memory = self.Memory
-        for offset in range(-MAX_SIZE if self.ADDR_NEG else 0, MAX_SIZE):
+        for offset in range(0, MAX_SIZE):
             blocks = create_template_blocks()
             memory = Memory.from_blocks(blocks, 0, 1, MAX_SIZE - 1)
             values = blocks_to_values(blocks, MAX_SIZE)
@@ -4343,7 +4327,7 @@ class BaseMemorySuite:
     def test_rvalues_template(self):
         Memory = self.Memory
         for endex in range(MAX_START):
-            for size in range(MAX_SIZE if self.ADDR_NEG else endex + 1):
+            for size in range(endex + 1):
                 start = endex - size
                 blocks = create_template_blocks()
                 values = blocks_to_values(blocks, MAX_SIZE)
