@@ -37,8 +37,7 @@ from cbytesparse.c import bytesparse as _bytesparse
 
 
 # Patch inspect.isfunction() to allow Cython functions to be discovered
-@pytest.mark.skip
-def _patch_inspect_isfunction():
+def _patch_inspect_isfunction():  # pragma: no cover
     isfunction_ = inspect.isfunction
 
     def isfunction(obj):
@@ -52,8 +51,7 @@ def _patch_inspect_isfunction():
 _patch_inspect_isfunction()
 
 
-@pytest.mark.skip
-def _load_cython_tests():
+def _load_cython_tests():  # pragma: no cover
     # List of Cython modules containing tests
     cython_test_modules = ['_test_c']
 
