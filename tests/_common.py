@@ -4333,11 +4333,7 @@ class BaseMemorySuite:
                 for _ in range(size):
                     rvalues_out.append(next(iterator))
 
-                if start < 0:
-                    rvalues_ref = list(islice(values, 0, endex))[::-1]
-                    rvalues_ref += [None] * -start
-                else:
-                    rvalues_ref = list(islice(values, start, endex))[::-1]
+                rvalues_ref = list(islice(values, start, endex))[::-1]
                 assert rvalues_out == rvalues_ref
 
     def test_rvalues_pattern_template(self):
