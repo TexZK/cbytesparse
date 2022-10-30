@@ -1,4 +1,4 @@
-﻿cbytesparse.c.Memory
+cbytesparse.c.Memory
 ====================
 
 .. currentmodule:: cbytesparse.c

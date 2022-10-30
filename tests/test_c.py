@@ -52,6 +52,7 @@ def _patch_inspect_isfunction():
 _patch_inspect_isfunction()
 
 
+@pytest.mark.skip
 def _load_cython_tests():
     # List of Cython modules containing tests
     cython_test_modules = ['_test_c']

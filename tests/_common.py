@@ -29,7 +29,7 @@ from typing import List
 from typing import Optional
 
 import pytest
-
+# no empty line here
 from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
 from bytesparse.base import BlockList
@@ -988,12 +988,10 @@ class BaseMemorySuite:
 
                     if expected is None:
                         with pytest.raises(ValueError, match=match):
-                            index = memory.index(c, start, endex)
-                            assert index
+                            memory.index(c, start, endex)
 
                         with pytest.raises(ValueError, match=match):
-                            index = memory.index(bytes([c]), start, endex)
-                            assert index
+                            memory.index(bytes([c]), start, endex)
                     else:
                         index = memory.index(c, start, endex)
                         assert index == expected
@@ -1010,12 +1008,10 @@ class BaseMemorySuite:
 
             if expected is None:
                 with pytest.raises(ValueError, match=match):
-                    index = memory.index(c)
-                    assert index
+                    memory.index(c)
 
                 with pytest.raises(ValueError, match=match):
-                    index = memory.index(bytes([c]))
-                    assert index
+                    memory.index(bytes([c]))
             else:
                 index = memory.index(c)
                 assert index == expected
@@ -1046,12 +1042,10 @@ class BaseMemorySuite:
 
                     if expected is None:
                         with pytest.raises(ValueError, match=match):
-                            index = memory.rindex(c, start, endex)
-                            assert index
+                            memory.rindex(c, start, endex)
 
                         with pytest.raises(ValueError, match=match):
-                            index = memory.rindex(bytes([c]), start, endex)
-                            assert index
+                            memory.rindex(bytes([c]), start, endex)
                     else:
                         index = memory.rindex(c, start, endex)
                         assert index == expected
@@ -1068,12 +1062,10 @@ class BaseMemorySuite:
 
             if expected is None:
                 with pytest.raises(ValueError, match=match):
-                    index = memory.rindex(c)
-                    assert index
+                    memory.rindex(c)
 
                 with pytest.raises(ValueError, match=match):
-                    index = memory.rindex(bytes([c]))
-                    assert index
+                    memory.rindex(bytes([c]))
             else:
                 index = memory.rindex(c)
                 assert index == expected
