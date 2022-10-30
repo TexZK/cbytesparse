@@ -3509,14 +3509,9 @@ class BaseMemorySuite:
             memory.validate()
             blocks_out = memory.to_blocks()
 
-            if offset < 0:
-                values_ref = values[-offset:]
-                values_ref += [None] * (MAX_SIZE + offset)
-                values_ref[0] = None
-            else:
-                values_ref = values[:(MAX_SIZE - offset)]
-                values_ref[0:0] = [None] * offset
-                values_ref[-1] = None
+            values_ref = values[:(MAX_SIZE - offset)]
+            values_ref[0:0] = [None] * offset
+            values_ref[-1] = None
             blocks_ref = values_to_blocks(values_ref)
 
             assert blocks_out == blocks_ref
