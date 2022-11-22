@@ -78,6 +78,12 @@ class TestMemory(BaseMemorySuite):
     Memory: type = _Memory
     ADDR_NEG: bool = False
 
+    def test___sizeof__(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+        assert memory.__sizeof__() > 0
+        assert memory.__sizeof__() > 6
+
 
 class TestBytesparse(BaseBytearraySuite, BaseMemorySuite):
     bytesparse: Type['_bytesparse'] = _bytesparse

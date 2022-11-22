@@ -228,6 +228,7 @@ cdef extern from *:
 
 cdef Block_* Block_Alloc(addr_t address, size_t size, bint zero) except NULL
 cdef Block_* Block_Free(Block_* that)
+cdef size_t Block_Sizeof(const Block_* that)
 
 cdef Block_* Block_Create(addr_t address, size_t size, const byte_t* buffer) except NULL
 cdef Block_* Block_Copy(const Block_* that) except NULL
@@ -397,6 +398,7 @@ cdef extern from *:
 
 cdef Rack_* Rack_Alloc(size_t size) except NULL
 cdef Rack_* Rack_Free(Rack_* that)
+cdef size_t Rack_Sizeof(const Rack_* that)
 
 cdef Rack_* Rack_ShallowCopy(const Rack_* other) except NULL
 cdef Rack_* Rack_Copy(const Rack_* other) except NULL
@@ -526,6 +528,7 @@ cdef Memory Memory_AsObject(Memory_* that)
 
 cdef Memory_* Memory_Alloc() except NULL
 cdef Memory_* Memory_Free(Memory_* that) except? NULL
+cdef size_t Memory_Sizeof(const Memory_* that)
 
 cdef Memory_* Memory_Create(
     object start,
@@ -803,6 +806,7 @@ cdef extern from *:
 
 cdef Rover_* Rover_Alloc() except NULL
 cdef Rover_* Rover_Free(Rover_* that) except? NULL
+cdef size_t Rover_Sizeof(const Rover_* that)
 
 cdef Rover_* Rover_Create(
     const Memory_* memory,

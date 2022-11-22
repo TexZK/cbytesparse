@@ -509,6 +509,12 @@ cdef Block_* Block_Free(Block_* that):
     return NULL
 
 
+cdef size_t Block_Sizeof(const Block_* that):
+    if that:
+        return Block_HEADING + (that.allocated * sizeof(byte_t))
+    return 0
+
+
 cdef Block_* Block_Create(addr_t address, size_t size, const byte_t* buffer) except NULL:
     if not size or buffer:
         that = Block_Alloc(address, size, False)
@@ -1994,6 +2000,13 @@ cdef class BlockView:
 
         return repr(self.__str__())
 
+    def __sizeof__(
+        self: BlockView,
+    ) -> int:
+        r"""int: Allocated byte size."""
+
+        return sizeof(BlockView)
+
     def __str__(
         self: BlockView,
     ) -> str:
@@ -2128,6 +2141,19 @@ cdef Rack_* Rack_Free(Rack_* that):
             that.blocks[index] = Block_Release(that.blocks[index])
         PyMem_Free(that)
     return NULL
+
+
+cdef size_t Rack_Sizeof(const Rack_* that):
+    cdef:
+        size_t index
+        size_t size
+
+    if that:
+        size = Rack_HEADING
+        for index in range(that.start, that.endex):
+            size += Block_Sizeof(that.blocks[index])
+        return size
+    return 0
 
 
 cdef Rack_* Rack_ShallowCopy(const Rack_* other) except NULL:
@@ -3163,6 +3189,12 @@ cdef Memory_* Memory_Free(Memory_* that) except? NULL:
         that.blocks = Rack_Free(that.blocks)
         PyMem_Free(that)
     return NULL
+
+
+cdef size_t Memory_Sizeof(const Memory_* that):
+    if that:
+        return Memory_HEADING + Rack_Sizeof(that.blocks)
+    return 0
 
 
 cdef Memory_* Memory_Create(
@@ -5829,6 +5861,12 @@ cdef Rover_* Rover_Free(Rover_* that) except? NULL:
     return NULL
 
 
+cdef size_t Rover_Sizeof(const Rover_* that):
+    if that:
+        return Rover_HEADING
+    return 0
+
+
 cdef Rover_* Rover_Create(
     const Memory_* memory,
     addr_t start,
@@ -6563,6 +6601,19 @@ cdef class Memory:
         """
 
         Memory_SetItem(self._, key, value)
+
+    def __sizeof__(
+        self: Memory,
+    ) -> int:
+        r"""Allocated byte size.
+
+        Computes the total allocated size for the instance and its blocks.
+
+        Returns:
+            int: Allocated byte size.
+        """
+
+        return sizeof(Memory) + Memory_Sizeof(self._)
 
     def __str__(
         self: Memory,

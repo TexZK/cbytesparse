@@ -508,6 +508,31 @@ def test_Block_Alloc_Free():
         block = Block_Free(block)
 
 
+def test_Block_Sizeof():
+    cdef:
+        Block_* block = NULL
+        bytes data = DATA1
+        size_t size = SIZE1
+
+    try:
+        assert Block_Sizeof(block) == 0
+
+        block = Block_Create(0x1234, 0, NULL)
+        assert block != NULL
+        assert Block_Sizeof(block) >= sizeof(Block_)
+        assert Block_Sizeof(block) == sizeof(Block_) + block.allocated
+        block = Block_Free(block)
+
+        block = Block_Create(0x1234, size, data)
+        assert block != NULL
+        assert Block_Sizeof(block) >= sizeof(Block_) + size
+        assert Block_Sizeof(block) == sizeof(Block_) + block.allocated
+        block = Block_Free(block)
+
+    finally:
+        block = Block_Free(block)
+
+
 def test_Block_Create():
     cdef:
         Block_* block = NULL
@@ -3515,6 +3540,37 @@ def test_Rack_Alloc_Free():
         assert Rack_Length(blocks) == 0x100
         for block_index in range(0x100):
             assert Rack_Get__(blocks, block_index) == NULL
+        blocks = Rack_Free(blocks)
+
+    finally:
+        blocks = Rack_Free(blocks)
+
+
+def test_Rack_Sizeof():
+    cdef:
+        Rack_* blocks = NULL
+        size_t block_index
+        size_t total = 0
+
+    try:
+        assert Rack_Sizeof(blocks) == 0
+
+        blocks = Rack_Alloc(0)
+        assert blocks != NULL
+        assert Rack_Sizeof(blocks) == sizeof(Rack_)
+        blocks = Rack_Free(blocks)
+
+        blocks = Rack_Alloc(0x100)
+        assert blocks != NULL
+        assert Rack_Sizeof(blocks) == sizeof(Rack_)
+        blocks = Rack_Free(blocks)
+
+        blocks = create_template_rack()
+        assert blocks != NULL
+        assert Rack_Sizeof(blocks) > sizeof(Rack_)
+        for block_index in range(Rack_Length(blocks)):
+            total += Block_Sizeof(Rack_Get__(blocks, block_index))
+        assert Rack_Sizeof(blocks) == sizeof(Rack_) + total
         blocks = Rack_Free(blocks)
 
     finally:
