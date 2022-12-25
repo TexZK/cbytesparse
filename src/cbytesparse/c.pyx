@@ -53,6 +53,7 @@ from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
 from bytesparse.base import AddressValueMapping
 from bytesparse.base import AnyBytes
+from bytesparse.base import Block
 from bytesparse.base import BlockIndex
 from bytesparse.base import BlockIterable
 from bytesparse.base import BlockList
@@ -1887,11 +1888,12 @@ cdef class BlockView:
         if self._block == NULL:
             raise RuntimeError('null internal data pointer')
 
-    cdef vint release_(BlockView self):
-        self._memview = None
+    cdef vint release_(BlockView self) except -1:
+        if self._memview is not None:
+            self._memview = None
+            self._block = Block_Release_(self._block)
 
-        if self._block:
-            self._block = Block_Release(self._block)
+        self._block = Block_Release(self._block)
 
     def __bool__(
         self: BlockView,
@@ -2084,6 +2086,7 @@ cdef class BlockView:
         self.check_()
 
         if self._memview is None:
+            self._block = Block_Acquire(self._block)
             data = &self._block.data[self._start]
             size = self._endex - self._start
 
@@ -7289,6 +7292,101 @@ cdef class Memory:
         """
 
         Memory_Write(self._, 0, backup, True)
+
+    def content_blocks(
+        self,
+        block_index_start: Optional[BlockIndex] = None,
+        block_index_endex: Optional[BlockIndex] = None,
+        block_index_step: Optional[BlockIndex] = None,
+    ) -> Iterator[Union[Tuple[Address, Union[memoryview, bytearray]], Block]]:
+        r"""Iterates over blocks.
+
+        Iterates over data blocks within a block index range.
+
+        Arguments:
+            block_index_start (int):
+                Inclusive block start index.
+                A negative index is referred to :attr:`content_parts`.
+                If ``None``, ``0`` is considered.
+
+            block_index_endex (int):
+                Exclusive block end index.
+                A negative index is referred to :attr:`content_parts`.
+                If ``None``, :attr:`content_parts` is considered.
+
+            block_index_step (int):
+                Block index step, which can be negative.
+                If ``None``, ``1`` is considered.
+
+        Yields:
+            (start, memoryview): Start and data view of each block/slice.
+
+        See Also:
+            :attr:`content_parts`
+
+        Examples:
+            >>> from cbytesparse.c import Memory
+
+            +---+---+---+---+---+---+---+---+---+---+---+
+            | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10|
+            +===+===+===+===+===+===+===+===+===+===+===+
+            |   |[A | B]|   |   |[x]|   |[1 | 2 | 3]|   |
+            +---+---+---+---+---+---+---+---+---+---+---+
+
+            >>> memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks()]
+            [[1, b'AB'], [5, b'x'], [7, b'123']]
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks(1, 2)]
+            [[5, b'x']]
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks(3, 5)]
+            []
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks(block_index_start=-2)]
+            [[5, b'x'], [7, b'123']]
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks(block_index_endex=-1)]
+            [[1, b'AB'], [5, b'x']]
+            >>> [[s, bytes(d)] for s, d in memory.content_blocks(block_index_step=2)]
+            [[1, b'AB'], [7, b'123']]
+        """
+        cdef:
+            const Rack_* blocks = self._.blocks
+            ssize_t block_count = <ssize_t>Rack_Length(blocks)
+            ssize_t block_index
+            ssize_t block_index_start_
+            ssize_t block_index_endex_
+            ssize_t block_index_step_
+            const Block_* block
+
+        if block_count:
+            if block_index_start is None:
+                block_index_start_ = 0
+            else:
+                if block_index_start < 0:
+                    block_index_start += block_count
+                    if block_index_start < 0:
+                        block_index_start = 0
+                block_index_start_ = <ssize_t>block_index_start
+                if block_index_start_ > block_count:
+                    block_index_start_ = block_count
+
+            if block_index_endex is None:
+                block_index_endex_ = block_count
+            else:
+                if block_index_endex < 0:
+                    block_index_endex += block_count
+                    if block_index_endex < 0:
+                        block_index_endex = 0
+                block_index_endex_ = <ssize_t>block_index_endex
+                if block_index_endex_ > block_count:
+                    block_index_endex_ = block_count
+
+            if block_index_step is None:
+                block_index_step_ = 1
+            else:
+                block_index_step_ = <ssize_t>block_index_step
+
+            for block_index in range(block_index_start_, block_index_endex_, block_index_step_):
+                block = Rack_Get__(blocks, <size_t>block_index)
+                yield Block_Start(block), Block_View(block)
 
     @property
     def content_endex(

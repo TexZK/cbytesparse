@@ -363,7 +363,7 @@ cdef class BlockView:
         object _memview  # shadow memoryview
 
     cdef vint check_(BlockView self) except -1
-    cdef vint release_(BlockView self)
+    cdef vint release_(BlockView self) except -1
 
 
 # =====================================================================================================================

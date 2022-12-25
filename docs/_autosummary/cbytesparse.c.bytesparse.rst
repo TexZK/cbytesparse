@@ -1,4 +1,4 @@
-cbytesparse.c.bytesparse
+﻿cbytesparse.c.bytesparse
 ========================
 
 .. currentmodule:: cbytesparse.c
@@ -26,6 +26,7 @@ cbytesparse.c.bytesparse
       ~bytesparse.clear
       ~bytesparse.clear_backup
       ~bytesparse.clear_restore
+      ~bytesparse.content_blocks
       ~bytesparse.content_items
       ~bytesparse.content_keys
       ~bytesparse.content_values

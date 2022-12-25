@@ -1,4 +1,4 @@
-cbytesparse.c.Memory
+﻿cbytesparse.c.Memory
 ====================
 
 .. currentmodule:: cbytesparse.c
@@ -26,6 +26,7 @@ cbytesparse.c.Memory
       ~Memory.clear
       ~Memory.clear_backup
       ~Memory.clear_restore
+      ~Memory.content_blocks
       ~Memory.content_items
       ~Memory.content_keys
       ~Memory.content_values
