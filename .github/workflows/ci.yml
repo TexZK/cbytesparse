@@ -16,13 +16,14 @@ jobs:
         platform:
           - ubuntu-22.04
           - macos-12
-          - windows-2022  # FIXME (TBV: still present?): ModuleNotFoundError: No module named 'cbytesparse._c'
+          - windows-2022
 
         python-version:
           - 3.7
           - 3.8
           - 3.9
           - '3.10'
+          - 3.11
 
     steps:
       - uses: actions/checkout@v2
