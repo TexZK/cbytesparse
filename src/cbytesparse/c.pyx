@@ -8960,7 +8960,7 @@ cdef class Memory:
             :meth:`to_bytes`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory.from_values({})
             >>> memory.to_blocks()
@@ -9105,7 +9105,7 @@ cdef class Memory:
             :meth:`to_bytes`
 
         Examples:
-            >>> from bytesparse.inplace import Memory
+            >>> from cbytesparse.c import Memory
 
             >>> memory = Memory.from_values(range(0))
             >>> memory.to_blocks()
