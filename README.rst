@@ -160,4 +160,4 @@ or alternatively:
 
 .. code-block:: sh
 
-	$ tox -e cythonize
+    $ tox -e cythonize
