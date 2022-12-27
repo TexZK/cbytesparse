@@ -167,11 +167,8 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install SDist
-        env:
-          SKBUILD_CONFIGURE_OPTIONS: "-DBUILD_CMAKE_FROM_SOURCE:BOOL=OFF"
         run: |
           pip install dist/*.tar.gz
-          pip install tox
           rm -rf dist
       - name: Test installed SDist
         run: tox
