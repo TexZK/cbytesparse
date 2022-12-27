@@ -71,8 +71,8 @@ jobs:
         env:
           CIBW_ARCHS: "${{ matrix.arch }}"
           CIBW_BUILD: "cp39-${{ matrix.build }}*"
-          CIBW_TEST_REQUIRES = tox
-          CIBW_TEST_COMMAND = tox {package}/tests
+          CIBW_TEST_REQUIRES: tox
+          CIBW_TEST_COMMAND: tox {package}/tests
           
 
       - uses: actions/upload-artifact@v3
