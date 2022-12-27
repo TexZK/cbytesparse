@@ -139,7 +139,7 @@ jobs:
 
       - name: Install SDist
         run: |
-          pip install dist/*.tar.gz
+          pip install dist/{package}.tar.gz
           rm -rf dist
       - name: Test installed SDist
         run: tox
