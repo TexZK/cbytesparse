@@ -1,4 +1,4 @@
-name: Build Wheels
+name: CI
 
 on:
   workflow_dispatch:
@@ -166,24 +166,15 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libssl-dev
-          pip install -r requirements-dev.txt
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
-
       - name: Install SDist
         env:
           SKBUILD_CONFIGURE_OPTIONS: "-DBUILD_CMAKE_FROM_SOURCE:BOOL=OFF"
         run: |
           pip install dist/*.tar.gz
+          pip install tox
           rm -rf dist
       - name: Test installed SDist
-        run: pytest ./tests
+        run: tox
 
   check_dist:
     name: Check dist
