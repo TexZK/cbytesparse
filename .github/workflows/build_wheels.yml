@@ -2,109 +2,109 @@ name: Build Wheels
 
 on:
   workflow_dispatch:
-  pull_request:
-  push:
-    branches:
-      - master
-      - main
-    tags:
-      - "*.*.*"
+  # pull_request:
+  # push:
+    # branches:
+      # - master
+      # - main
+    # tags:
+      # - "*.*.*"
 
 jobs:
-  build_wheels:
-    name: Build ${{ matrix.build }}${{ matrix.arch }} wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            arch: "x86_64"
-            build: "manylinux_"
-          - os: ubuntu-22.04
-            arch: "x86_64"
-            build: "musllinux_"
-          - os: ubuntu-22.04
-            arch: "i686"
-            build: "manylinux_"
-          - os: ubuntu-22.04
-            arch: "i686"
-            build: "musllinux_"
-          - os: ubuntu-22.04
-            arch: "aarch64"
-            build: "manylinux_"
-          - os: ubuntu-22.04
-            arch: "aarch64"
-            build: "musllinux_"
-          - os: ubuntu-22.04
-            arch: "ppc64le"
-            build: "manylinux_"
-          - os: ubuntu-22.04
-            arch: "ppc64le"
-            build: "musllinux_"
-          - os: ubuntu-22.04
-            arch: "s390x"
-            build: "manylinux_"
-          - os: ubuntu-22.04
-            arch: "s390x"
-            build: "musllinux_"
-          - os: windows-2019
-            arch: "AMD64"
-            build: ""
-          - os: windows-2022
-            arch: "ARM64"
-            build: ""
-          - os: windows-2019
-            arch: "x86"
-            build: ""
-          - os: macos-11
-            arch: "x86_64"
-            build: ""
+  # build_wheels:
+    # name: Build ${{ matrix.build }}${{ matrix.arch }} wheels on ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+      # fail-fast: false
+      # matrix:
+        # include:
+          # - os: ubuntu-22.04
+            # arch: "x86_64"
+            # build: "manylinux_"
+          # - os: ubuntu-22.04
+            # arch: "x86_64"
+            # build: "musllinux_"
+          # - os: ubuntu-22.04
+            # arch: "i686"
+            # build: "manylinux_"
+          # - os: ubuntu-22.04
+            # arch: "i686"
+            # build: "musllinux_"
+          # - os: ubuntu-22.04
+            # arch: "aarch64"
+            # build: "manylinux_"
+          # - os: ubuntu-22.04
+            # arch: "aarch64"
+            # build: "musllinux_"
+          # - os: ubuntu-22.04
+            # arch: "ppc64le"
+            # build: "manylinux_"
+          # - os: ubuntu-22.04
+            # arch: "ppc64le"
+            # build: "musllinux_"
+          # - os: ubuntu-22.04
+            # arch: "s390x"
+            # build: "manylinux_"
+          # - os: ubuntu-22.04
+            # arch: "s390x"
+            # build: "musllinux_"
+          # - os: windows-2019
+            # arch: "AMD64"
+            # build: ""
+          # - os: windows-2022
+            # arch: "ARM64"
+            # build: ""
+          # - os: windows-2019
+            # arch: "x86"
+            # build: ""
+          # - os: macos-11
+            # arch: "x86_64"
+            # build: ""
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # required for versioneer to find tags
+    # steps:
+      # - uses: actions/checkout@v3
+        # with:
+          # fetch-depth: 0  # required for versioneer to find tags
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.4
-        env:
-          CIBW_ARCHS: "${{ matrix.arch }}"
-          CIBW_BUILD: "cp39-${{ matrix.build }}*"
-          CIBW_TEST_REQUIRES: tox
-          CIBW_TEST_COMMAND: tox {package}/tests
+      # - name: Build wheels
+        # uses: pypa/cibuildwheel@v2.11.4
+        # env:
+          # CIBW_ARCHS: "${{ matrix.arch }}"
+          # CIBW_BUILD: "cp39-${{ matrix.build }}*"
+          # CIBW_TEST_REQUIRES: tox
+          # CIBW_TEST_COMMAND: tox {package}/tests
           
 
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
+      # - uses: actions/upload-artifact@v3
+        # with:
+          # path: ./wheelhouse/*.whl
 
-  build_manylinux2010_wheels:
-    name: Build ${{ matrix.arch }} manylinux2010 wheels
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: "x86_64"
-          - arch: "i686"
+  # build_manylinux2010_wheels:
+    # name: Build ${{ matrix.arch }} manylinux2010 wheels
+    # runs-on: ubuntu-22.04
+    # strategy:
+      # fail-fast: false
+      # matrix:
+        # include:
+          # - arch: "x86_64"
+          # - arch: "i686"
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # required for versioneer to find tags
+    # steps:
+      # - uses: actions/checkout@v3
+        # with:
+          # fetch-depth: 0  # required for versioneer to find tags
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.4
-        env:
-          CIBW_ARCHS: "${{ matrix.arch }}"
-          CIBW_BUILD: "cp39-manylinux_*"
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
+      # - name: Build wheels
+        # uses: pypa/cibuildwheel@v2.11.4
+        # env:
+          # CIBW_ARCHS: "${{ matrix.arch }}"
+          # CIBW_BUILD: "cp39-manylinux_*"
+          # CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
+          # CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
 
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
+      # - uses: actions/upload-artifact@v3
+        # with:
+          # path: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -144,17 +144,17 @@ jobs:
       - name: Test installed SDist
         run: tox
 
-  check_dist:
-    name: Check dist
-    needs: [build_wheels, build_manylinux2010_wheels, build_sdist, test_sdist]
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
+  # check_dist:
+    # name: Check dist
+    # needs: [build_wheels, build_manylinux2010_wheels, build_sdist, test_sdist]
+    # runs-on: ubuntu-22.04
+    # steps:
+      # - uses: actions/download-artifact@v3
+        # with:
+          # name: artifact
+          # path: dist
 
-      - run: pipx run twine check --strict dist/*
+      # - run: pipx run twine check --strict dist/*
 
   # upload_pypi:
     # name: Upload to PyPI
