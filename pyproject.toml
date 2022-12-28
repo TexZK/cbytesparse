@@ -10,7 +10,7 @@ build = "*"
 
 before-test = "python -m pip install --upgrade setuptools pip wheel tox tox-gh-actions"
 
-test-command = "tox -c {project}/tox.ini --workdir {package}/tests"
+test-command = "tox -c {project}/tox.ini"
 test-requires = ["pytest","tox"]
 
 manylinux-x86_64-image = "manylinux2014"
