@@ -5,7 +5,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build ${{ matrix.build }} wheels on ${{ matrix.platform }}
+    name: Build ${{ matrix.python-version }} wheels on ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -15,15 +15,18 @@ jobs:
               - windows-2022
 
           python-version:
-              - 3.7
-              - 3.8
-              - 3.9
-              - 3.10
+#              - 3.7
+#              - 3.8
+#              - 3.9
+#              - 3.10
               - 3.11
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # required for versioneer to find tags
+
+      - name: Compile sources
+        run: python setup.py cython
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.11.4
@@ -45,6 +48,9 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # required for versioneer to find tags
+
+      - name: Compile sources
+        run: python setup.py cython
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.11.4
