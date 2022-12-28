@@ -56,8 +56,10 @@ jobs:
           CIBW_ARCHS: "${{ matrix.arch }}"
           CIBW_BUILD: "cp39-manylinux_*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
-          CIBW_TEST_REQUIRES: pytest
-          CIBW_TEST_COMMAND: "pytest {project}/tests"
+          CIBW_TEST_REQUIRES: pytest,tox
+          CIBW_TEST_COMMAND: > 
+                  pytest {project}/tests &&
+                  tox -c {project}/tox.ini --workdir {package}/tests
 
       - uses: actions/upload-artifact@v3
         with:
