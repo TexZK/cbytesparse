@@ -8,14 +8,12 @@ build-backend = "setuptools.build_meta"
 [tool.cibuildwheel]
 build = "*"
 
-#I think this can be removed...
-#before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
-
-#test-command = "tox -c {project}/tox.ini"
-#test-requires = ["pytest","tox"]
-
+# Disabled use of tox as it was testing all Python versions on every wheel
+# when wheels are generated for each supported version
+# test-command = "tox -c {project}/tox.ini"
+# test-requires = ["pytest","tox"]
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip PyPy and musllinux builds
-skip = ["pp*", "cp36-*"]
+# Skip PyPy, musllinux, and 32-bit builds
+skip = ["pp*", "cp36-*", "*-win32", "*-manylinux_i686", "*-musllinux*"]
