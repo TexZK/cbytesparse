@@ -13,7 +13,7 @@ before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
 #test-command = "tox -c {project}/tox.ini"
 #test-requires = ["pytest","tox"]
 
-test-command = "pytest {project}/tests"
+test-command = "python pytest {project}/tests"
 
 manylinux-x86_64-image = "manylinux2014"
 manylinux-i686-image = "manylinux2014"
