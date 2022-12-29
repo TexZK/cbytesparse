@@ -18,4 +18,4 @@ test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
 # Skip PyPy and musllinux builds
-skip = ["pp*, "cp36-*"]
+skip = ["pp*", "cp36-*"]
