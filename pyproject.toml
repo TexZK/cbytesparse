@@ -8,7 +8,8 @@ build-backend = "setuptools.build_meta"
 [tool.cibuildwheel]
 build = "*"
 
-before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
+#I think this can be removed...
+#before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
 
 #test-command = "tox -c {project}/tox.ini"
 #test-requires = ["pytest","tox"]
@@ -16,5 +17,5 @@ before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip 32-bit builds and PyPy
-skip = ["*-win32", "*-manylinux_i686", "pp*"]
+# Skip PyPy and musllinux builds
+skip = ["pp*, "cp36-*"]
