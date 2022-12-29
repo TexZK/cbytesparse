@@ -16,8 +16,5 @@ before-test = "python -m pip install --upgrade setuptools pip wheel pytest"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip 32-bit builds
-skip = ["*-win32", "*-manylinux_i686"]
-
-# Disable building PyPy wheels on all platforms
-skip = "pp*"
+# Skip 32-bit builds and PyPy
+skip = ["*-win32", "*-manylinux_i686", "pp*"]
