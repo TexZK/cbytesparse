@@ -1,6 +1,16 @@
 Changelog
 =========
 
+0.0.6 (TBD)
+-----------
+
+* Following the ``bytesparse`` Python package, version ``0.0.6``.
+* Added automatic wheel builder within GitHub Actions CI.
+* Added some minor features.
+* Improved testing.
+* Minor fixes.
+
+
 0.0.5 (2022-02-22)
 ------------------
 

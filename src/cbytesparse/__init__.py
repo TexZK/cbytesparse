@@ -112,7 +112,7 @@ True
 
 """
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 from .c import Memory  # noqa F401
 from .c import bytesparse  # noqa F401

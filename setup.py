@@ -55,14 +55,13 @@ setup(
     classifiers=[
         # complete classifier list:
         # http://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Cython',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
@@ -77,10 +76,14 @@ setup(
     keywords=[
     ],
     install_requires=[
-        'bytesparse>=0.0.5',  # comment out and use the one below for development instead
+        'bytesparse >= 0.0.5',  # comment out and use the one below for development instead
         # 'bytesparse @ git+https://github.com/TexZK/bytesparse.git',  # only for development
     ],
     extras_require={
+        'bdist': [
+            'cibuildwheel',
+            'pytest',
+        ],
         'testing': [
             'Cython',
             'pytest',
