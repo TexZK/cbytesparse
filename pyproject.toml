@@ -16,4 +16,4 @@ test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
 # Only building 32-bit and musllinux versions for testing
-skip = ["pp*", "cp36-*","*-manylinux_x86_64", "*-macosx_10_9_x86_64*]
+skip = ["pp*", "cp36-*","*-manylinux_x86_64", "*-macosx_10_9_x86_64", "*-win_amd64"]
