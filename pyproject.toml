@@ -15,5 +15,5 @@ build = "*"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip 32-bit and 3.6 builds only
-skip = ["cp36-*","*-manylinux_i686","*-win32*"]
+# Skip CP 32-bit and all 3.6
+skip = ["cp36-*","cp3*_i686", "*-win32*"]
