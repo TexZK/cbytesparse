@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # required for versioneer to find tags
+          fetch-depth: 0
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.11.4
@@ -44,7 +44,7 @@ jobs:
 
   check_dist:
     name: Check dist
-    needs: [build_wheels]
+    needs: [make_sdist,build_wheels]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v3

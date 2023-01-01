@@ -15,5 +15,5 @@ build = "*"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip PyPy, musllinux, and 32-bit builds
-skip = ["pp*", "cp36-*", "*-win32", "*-manylinux_i686", "*-musllinux*"]
+# Skip CP 32-bit and all 3.6
+skip = ["cp36-*","cp3*_i686", "*-win32*"]
