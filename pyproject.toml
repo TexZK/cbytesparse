@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-build = "*-musllinux_x86_64*"
+build = "*"
 
 # Disabled use of tox as it was testing all Python versions on every wheel
 # when wheels are generated for each supported version
@@ -15,5 +15,5 @@ build = "*-musllinux_x86_64*"
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Only building musllinux versions for testing
-# skip = ["pp*", "cp36-*","*-manylinux_x86_64", "*-macosx_10_9_x86_64", "*-win_amd64", "*-win32*"]
+# Skip 32-bit and 3.6 builds only
+skip = ["cp36-*","*-manylinux_i686","*-win32*"]
