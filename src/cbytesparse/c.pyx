@@ -7912,16 +7912,13 @@ cdef class Memory:
     def copy(
         self: Memory,
     ) -> ImmutableMemory:
-        r"""Creates a shallow copy.
-
-        Note:
-            The Cython implementation actually creates a deep copy.
+        r"""Creates a deep copy.
 
         Returns:
-            :obj:`ImmutableMemory`: Shallow copy.
+            :obj:`ImmutableMemory`: Deep copy.
         """
 
-        return self.__copy__()
+        return self.__deepcopy__()
 
     def count(
         self: Memory,
