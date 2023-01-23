@@ -6257,7 +6257,7 @@ cdef class Memory:
 
     def __copy__(
         self: Memory,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a shallow copy.
 
         Note:
@@ -6278,7 +6278,7 @@ cdef class Memory:
 
     def __deepcopy__(
         self: Memory,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a deep copy.
 
         Returns:
@@ -6448,7 +6448,7 @@ cdef class Memory:
     def __iadd__(
         self: Memory,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> 'MutableMemory':
+    ) -> Memory:
 
         Memory_IAdd(self._, value)
         return self
@@ -6456,7 +6456,7 @@ cdef class Memory:
     def __imul__(
         self: Memory,
         times: int,
-    ) -> 'MutableMemory':
+    ) -> Memory:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
 
@@ -6806,7 +6806,7 @@ cdef class Memory:
         self: Memory,
         start_min: Optional[Address],
         size: Address,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `_pretrim_endex()` operation.
 
         Arguments:
@@ -6868,7 +6868,7 @@ cdef class Memory:
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `_pretrim_start()` operation.
 
         Arguments:
@@ -7250,7 +7250,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `clear()` operation.
 
         Arguments:
@@ -7911,7 +7911,7 @@ cdef class Memory:
 
     def copy(
         self: Memory,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a deep copy.
 
         Returns:
@@ -8075,7 +8075,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Cuts a slice of memory.
 
         Arguments:
@@ -8142,7 +8142,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `delete()` operation.
 
         Arguments:
@@ -8475,7 +8475,7 @@ cdef class Memory:
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Selects items from a range.
 
         Arguments:
@@ -8596,7 +8596,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `fill()` operation.
 
         Arguments:
@@ -8778,7 +8778,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a virtual memory from blocks.
 
         Arguments:
@@ -8854,7 +8854,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a virtual memory from a byte-like chunk.
 
         Arguments:
@@ -8995,7 +8995,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a virtual memory from another one.
 
         Arguments:
@@ -9129,7 +9129,7 @@ cdef class Memory:
     def fromhex(
         cls,
         string: str,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Creates a virtual memory from an hexadecimal string.
 
         Arguments:
@@ -10139,7 +10139,7 @@ cdef class Memory:
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
         r"""Backups a `remove()` operation.
 
         Arguments:
@@ -11729,7 +11729,7 @@ cdef class bytesparse(Memory):
         self,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().clear_backup(start=start, endex=endex)
@@ -11767,7 +11767,7 @@ cdef class bytesparse(Memory):
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().cut(start=start, endex=endex)
@@ -11785,7 +11785,7 @@ cdef class bytesparse(Memory):
         self,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().delete_backup(start=start, endex=endex)
@@ -11805,7 +11805,7 @@ cdef class bytesparse(Memory):
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().extract(start=start, endex=endex, pattern=pattern, step=step, bound=bound)
@@ -11824,7 +11824,7 @@ cdef class bytesparse(Memory):
         self,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().fill_backup(start=start, endex=endex)
@@ -12138,7 +12138,7 @@ cdef class bytesparse(Memory):
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> ImmutableMemory:
+    ) -> Memory:
 
         start, endex = self._rectify_span(start, endex)
         return super().remove_backup(item, start=start, endex=endex)
