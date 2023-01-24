@@ -7207,6 +7207,65 @@ cdef class Memory:
 
         return Memory_Bound(self._, start, endex)
 
+    @property
+    def bound_endex(
+        self: Memory,
+    ) -> Optional[Address]:
+        r"""int: Bounds exclusive end address.
+
+        Any data at or after this address is automatically discarded.
+        Disabled if ``None``.
+        """
+
+        return Memory_GetBoundEndex(self._)
+
+    @bound_endex.setter
+    def bound_endex(
+        self: Memory,
+        bound_endex: Address,
+    ) -> None:
+
+        Memory_SetBoundEndex(self._, bound_endex)
+
+    @property
+    def bound_span(
+        self: Memory,
+    ) -> OpenInterval:
+        r"""tuple of int: Bounds span addresses.
+
+        A :obj:`tuple` holding :attr:`bound_start` and :attr:`bound_endex`.
+        """
+
+        return Memory_GetBoundSpan(self._)
+
+    @bound_span.setter
+    def bound_span(
+        self: Memory,
+        bound_span: OpenInterval,
+    ) -> None:
+
+        Memory_SetBoundSpan(self._, bound_span)
+
+    @property
+    def bound_start(
+        self: Memory,
+    ) -> Optional[Address]:
+        r"""int: Bounds start address.
+
+        Any data before this address is automatically discarded.
+        Disabled if ``None``.
+        """
+
+        return Memory_GetBoundStart(self._)
+
+    @bound_start.setter
+    def bound_start(
+        self: Memory,
+        bound_start: Address,
+    ) -> None:
+
+        Memory_SetBoundStart(self._, bound_start)
+
     def clear(
         self: Memory,
         start: Optional[Address] = None,
@@ -10979,65 +11038,6 @@ cdef class Memory:
         view.release_()
         return data
 
-    @property
-    def bound_endex(
-        self: Memory,
-    ) -> Optional[Address]:
-        r"""int: Bounds exclusive end address.
-
-        Any data at or after this address is automatically discarded.
-        Disabled if ``None``.
-        """
-
-        return Memory_GetBoundEndex(self._)
-
-    @bound_endex.setter
-    def bound_endex(
-        self: Memory,
-        bound_endex: Address,
-    ) -> None:
-
-        Memory_SetBoundEndex(self._, bound_endex)
-
-    @property
-    def bound_span(
-        self: Memory,
-    ) -> OpenInterval:
-        r"""tuple of int: Bounds span addresses.
-
-        A :obj:`tuple` holding :attr:`bound_start` and :attr:`bound_endex`.
-        """
-
-        return Memory_GetBoundSpan(self._)
-
-    @bound_span.setter
-    def bound_span(
-        self: Memory,
-        bound_span: OpenInterval,
-    ) -> None:
-
-        Memory_SetBoundSpan(self._, bound_span)
-
-    @property
-    def bound_start(
-        self: Memory,
-    ) -> Optional[Address]:
-        r"""int: Bounds start address.
-
-        Any data before this address is automatically discarded.
-        Disabled if ``None``.
-        """
-
-        return Memory_GetBoundStart(self._)
-
-    @bound_start.setter
-    def bound_start(
-        self: Memory,
-        bound_start: Address,
-    ) -> None:
-
-        Memory_SetBoundStart(self._, bound_start)
-
     def update(
         self: Memory,
         data: Union[AddressValueMapping,
@@ -11716,6 +11716,69 @@ cdef class bytesparse(Memory):
         start, endex = self._rectify_span(start, endex)
         return super().bound(start, endex)
 
+    @property
+    def bound_endex(
+        self,
+    ) -> Optional[Address]:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetBoundEndex(self._)
+
+    @bound_endex.setter
+    def bound_endex(
+        self,
+        bound_endex: Optional[Address],
+    ) -> None:
+
+        if bound_endex is not None and bound_endex < 0:
+            raise ValueError('negative endex')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetBoundEndex(self._, bound_endex)
+
+    @property
+    def bound_span(
+        self,
+    ) -> OpenInterval:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetBoundSpan(self._)
+
+    @bound_span.setter
+    def bound_span(
+        self,
+        bound_span: OpenInterval,
+    ) -> None:
+
+        bound_start, bound_endex = bound_span
+        if bound_start is not None and bound_start < 0:
+            raise ValueError('negative start')
+        if bound_endex is not None and bound_endex < 0:
+            raise ValueError('negative endex')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetBoundSpan(self._, bound_span)
+
+    @property
+    def bound_start(
+        self,
+    ) -> Optional[Address]:
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        return Memory_GetBoundStart(self._)
+
+    @bound_start.setter
+    def bound_start(
+        self,
+        bound_start: Optional[Address],
+    ) -> None:
+
+        if bound_start is not None and bound_start < 0:
+            raise ValueError('negative start')
+
+        # Copy-pasted from Memory, because I cannot figure out how to override properties
+        Memory_SetBoundStart(self._, bound_start)
+
     def clear(
         self,
         start: Optional[Address] = None,
@@ -12250,69 +12313,6 @@ cdef class bytesparse(Memory):
                     raise ValueError('negative offseted start')
 
         return super().shift_backup(offset)
-
-    @property
-    def bound_endex(
-        self,
-    ) -> Optional[Address]:
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetBoundEndex(self._)
-
-    @bound_endex.setter
-    def bound_endex(
-        self,
-        bound_endex: Optional[Address],
-    ) -> None:
-
-        if bound_endex is not None and bound_endex < 0:
-            raise ValueError('negative endex')
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetBoundEndex(self._, bound_endex)
-
-    @property
-    def bound_span(
-        self,
-    ) -> OpenInterval:
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetBoundSpan(self._)
-
-    @bound_span.setter
-    def bound_span(
-        self,
-        bound_span: OpenInterval,
-    ) -> None:
-
-        bound_start, bound_endex = bound_span
-        if bound_start is not None and bound_start < 0:
-            raise ValueError('negative start')
-        if bound_endex is not None and bound_endex < 0:
-            raise ValueError('negative endex')
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetBoundSpan(self._, bound_span)
-
-    @property
-    def bound_start(
-        self,
-    ) -> Optional[Address]:
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetBoundStart(self._)
-
-    @bound_start.setter
-    def bound_start(
-        self,
-        bound_start: Optional[Address],
-    ) -> None:
-
-        if bound_start is not None and bound_start < 0:
-            raise ValueError('negative start')
-
-        # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetBoundStart(self._, bound_start)
 
     def values(
         self,
