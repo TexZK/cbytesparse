@@ -1999,7 +1999,7 @@ class BaseMemorySuite:
         memory2 = memory1.__copy__()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2011,7 +2011,7 @@ class BaseMemorySuite:
         memory2 = memory1.__copy__()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2022,7 +2022,7 @@ class BaseMemorySuite:
         memory2 = memory1.copy()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2034,7 +2034,7 @@ class BaseMemorySuite:
         memory2 = memory1.copy()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2048,7 +2048,7 @@ class BaseMemorySuite:
         memory2 = memory1.__copy__()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2060,7 +2060,7 @@ class BaseMemorySuite:
         memory2 = memory1.__deepcopy__()
         memory2.validate()
         assert memory1.span == memory2.span
-        assert memory1.trim_span == memory2.trim_span
+        assert memory1.bound_span == memory2.bound_span
         assert memory1.content_span == memory2.content_span
         assert memory1.content_parts == memory2.content_parts
         assert all(b1 == b2 for b1, b2 in zip(memory1.blocks(), memory2.blocks()))
@@ -2098,132 +2098,132 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks)
         assert not memory.contiguous
 
-        memory.trim_endex = MAX_SIZE
+        memory.bound_endex = MAX_SIZE
         assert not memory.contiguous
 
-        memory.trim_endex = None
-        memory.trim_start = 0
+        memory.bound_endex = None
+        memory.bound_start = 0
         assert not memory.contiguous
 
-    def test_trim_start_doctest(self):
+    def test_bound_start_doctest(self):
         pass  # no doctest
 
-    def test_trim_endex_doctest(self):
+    def test_bound_endex_doctest(self):
         pass  # no doctest
 
-    def test_trim_start_bytes(self):
+    def test_bound_start_bytes(self):
         Memory = self.Memory
         data = bytes(range(8))
         memory = Memory.from_bytes(data)
 
         for offset in range(8):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             assert memory.content_start == offset
             assert memory.content_endex == 8
 
         for offset in reversed(range(8)):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             assert memory.content_start == 7
             assert memory.content_endex == 8
 
-        memory.trim_start = 8
+        memory.bound_start = 8
         assert memory.content_start == 8
         assert memory.content_endex == 8
 
         for offset in range(8):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             assert memory.content_start == offset
             assert memory.content_endex == offset
 
         for offset in reversed(range(8)):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             assert memory.content_start == offset
             assert memory.content_endex == offset
 
-        memory.trim_endex = None
+        memory.bound_endex = None
         memory.validate()
-        assert memory.trim_endex is None
-        memory.trim_start = 9
+        assert memory.bound_endex is None
+        memory.bound_start = 9
         memory.validate()
-        assert memory.trim_start == 9
-        assert memory.trim_endex is None
+        assert memory.bound_start == 9
+        assert memory.bound_endex is None
 
-        memory.trim_start = 1
+        memory.bound_start = 1
         memory.validate()
-        memory.trim_endex = 5
+        memory.bound_endex = 5
         memory.validate()
-        assert memory.trim_start == 1
-        assert memory.trim_endex == 5
-        memory.trim_start = 9
+        assert memory.bound_start == 1
+        assert memory.bound_endex == 5
+        memory.bound_start = 9
         memory.validate()
-        assert memory.trim_start == 9
-        assert memory.trim_endex == 9
+        assert memory.bound_start == 9
+        assert memory.bound_endex == 9
 
-    def test_trim_endex_bytes(self):
+    def test_bound_endex_bytes(self):
         Memory = self.Memory
         data = bytes(range(8))
         memory = Memory.from_bytes(data)
 
         for offset in range(8, 0, -1):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             assert memory.content_start == 0
             assert memory.content_endex == offset
 
         for offset in range(1, 8):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             assert memory.content_start == 0
             assert memory.content_endex == 1
 
-        memory.trim_endex = 0
+        memory.bound_endex = 0
         memory.validate()
         assert memory.content_start == 0
         assert memory.content_endex == 0
 
         for offset in range(8, 0, -1):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             assert memory.content_start == 0
             assert memory.content_endex == 0
 
         for offset in range(1, 8):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             assert memory.content_start == 0
             assert memory.content_endex == 0
 
-        memory.trim_start = None
+        memory.bound_start = None
         memory.validate()
-        assert memory.trim_start is None
-        memory.trim_endex = 9
+        assert memory.bound_start is None
+        memory.bound_endex = 9
         memory.validate()
-        assert memory.trim_start is None
-        assert memory.trim_endex == 9
+        assert memory.bound_start is None
+        assert memory.bound_endex == 9
 
-        memory.trim_start = 5
+        memory.bound_start = 5
         memory.validate()
-        memory.trim_endex = 9
+        memory.bound_endex = 9
         memory.validate()
-        assert memory.trim_start == 5
-        assert memory.trim_endex == 9
-        memory.trim_endex = 1
+        assert memory.bound_start == 5
+        assert memory.bound_endex == 9
+        memory.bound_endex = 1
         memory.validate()
-        assert memory.trim_start == 1
-        assert memory.trim_endex == 1
+        assert memory.bound_start == 1
+        assert memory.bound_endex == 1
 
-    def test_trim_start_template(self):
+    def test_bound_start_template(self):
         Memory = self.Memory
         blocks = create_template_blocks()
         values = blocks_to_values(blocks, MAX_SIZE)
         memory = Memory.from_blocks(blocks)
 
         for offset in range(1, MAX_SIZE):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             blocks_out = memory.to_blocks()
             values[offset - 1] = None
@@ -2232,19 +2232,19 @@ class BaseMemorySuite:
 
         blocks_ref = values_to_blocks(values)
         for offset in reversed(range(MAX_SIZE)):
-            memory.trim_start = offset
+            memory.bound_start = offset
             memory.validate()
             blocks_out = memory.to_blocks()
             assert blocks_out == blocks_ref
 
-    def test_trim_endex_template(self):
+    def test_bound_endex_template(self):
         Memory = self.Memory
         blocks = create_template_blocks()
         values = blocks_to_values(blocks, MAX_SIZE)
         memory = Memory.from_blocks(blocks)
 
         for offset in reversed(range(MAX_SIZE)):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             blocks_out = memory.to_blocks()
             values[offset] = None
@@ -2253,24 +2253,24 @@ class BaseMemorySuite:
 
         blocks_ref = values_to_blocks(values)
         for offset in range(MAX_SIZE):
-            memory.trim_endex = offset
+            memory.bound_endex = offset
             memory.validate()
             blocks_out = memory.to_blocks()
             assert blocks_out == blocks_ref
 
-    def test_trim_span_doctest(self):
+    def test_bound_span_doctest(self):
         pass  # no doctest
 
-    def test_trim_span(self):
+    def test_bound_span(self):
         Memory = self.Memory
         memory = Memory()
-        assert memory.trim_span == (None, None)
-        memory.trim_span = (1, 9)
+        assert memory.bound_span == (None, None)
+        memory.bound_span = (1, 9)
         memory.validate()
-        assert memory.trim_span == (1, 9)
-        memory.trim_span = (5, 5)
+        assert memory.bound_span == (1, 9)
+        memory.bound_span = (5, 5)
         memory.validate()
-        assert memory.trim_span == (5, 5)
+        assert memory.bound_span == (5, 5)
 
     def test_start_doctest(self):
         Memory = self.Memory
@@ -2288,7 +2288,7 @@ class BaseMemorySuite:
         memory = Memory()
         assert memory.start == 0
         assert memory.content_start == 0
-        assert memory.trim_start is None
+        assert memory.bound_start is None
 
         start = 123
         memory = Memory(start=start)
@@ -2301,7 +2301,7 @@ class BaseMemorySuite:
         memory = Memory.from_blocks(blocks)
         assert memory.start == blocks[0][0]
         assert memory.content_start == blocks[0][0]
-        assert memory.trim_start is None
+        assert memory.bound_start is None
 
     def test_endex_doctest(self):
         Memory = self.Memory
@@ -2319,7 +2319,7 @@ class BaseMemorySuite:
         memory = Memory()
         assert memory.endex == 0
         assert memory.content_endex == 0
-        assert memory.trim_endex is None
+        assert memory.bound_endex is None
 
     def test_endex(self):
         Memory = self.Memory
@@ -2329,7 +2329,7 @@ class BaseMemorySuite:
         block_endex = block_start + len(block_data)
         assert memory.endex == block_endex
         assert memory.content_endex == block_endex
-        assert memory.trim_endex is None
+        assert memory.bound_endex is None
 
     def test_span_doctest(self):
         Memory = self.Memory
@@ -2345,22 +2345,22 @@ class BaseMemorySuite:
         memory = Memory()
         assert memory.span == (0, 0)
 
-        memory.trim_span = (1, 9)
+        memory.bound_span = (1, 9)
         assert memory.span == (1, 9)
 
-        memory.trim_span = (9, 1)
+        memory.bound_span = (9, 1)
         assert memory.span == (9, 9)
 
-        memory.trim_span = (None, None)
+        memory.bound_span = (None, None)
         assert memory.span == (0, 0)
 
         memory.write(5, b'xyz')
         assert memory.span == (5, 8)
 
-        memory.trim_span = (1, 9)
+        memory.bound_span = (1, 9)
         assert memory.span == (1, 9)
 
-        memory.trim_span = (None, None)
+        memory.bound_span = (None, None)
         assert memory.span == (5, 8)
 
     def test_endin_doctest(self):
@@ -2439,7 +2439,7 @@ class BaseMemorySuite:
         assert memory.content_start == memory.start
         assert memory.content_start == blocks[0][0]
 
-        memory.trim_start = 0
+        memory.bound_start = 0
         assert memory.content_start > memory.start
         assert memory.content_start == blocks[0][0]
 
@@ -2502,7 +2502,7 @@ class BaseMemorySuite:
         assert memory.content_endex == memory.endex
         assert memory.content_endex == endex
 
-        memory.trim_endex = MAX_SIZE
+        memory.bound_endex = MAX_SIZE
         assert memory.content_endex < memory.endex
         assert memory.content_endex == endex
 
@@ -2525,10 +2525,10 @@ class BaseMemorySuite:
         memory.write(5, b'xyz')
         assert memory.content_span == (5, 8)
 
-        memory.trim_span = (1, 9)
+        memory.bound_span = (1, 9)
         assert memory.content_span == (5, 8)
 
-        memory.trim_span = (None, None)
+        memory.bound_span = (None, None)
         assert memory.content_span == (5, 8)
 
     def test_content_span_template(self):
@@ -2539,10 +2539,10 @@ class BaseMemorySuite:
         endex = blocks[-1][0] + len(blocks[-1][1])
         assert memory.content_span == (start, endex)
 
-        memory.trim_span = (0, MAX_SIZE)
+        memory.bound_span = (0, MAX_SIZE)
         assert memory.content_span == (start, endex)
 
-        memory.trim_span = (None, None)
+        memory.bound_span = (None, None)
         assert memory.content_span == (start, endex)
 
     def test_content_endin_doctest(self):
@@ -2576,7 +2576,7 @@ class BaseMemorySuite:
         assert memory.content_endin == memory.endin
         assert memory.content_endin == endin
 
-        memory.trim_endex = MAX_SIZE
+        memory.bound_endex = MAX_SIZE
         assert memory.content_endin < memory.endin
         assert memory.content_endin == endin
 
@@ -2626,7 +2626,7 @@ class BaseMemorySuite:
         assert memory.content_size == len(memory)
         assert memory.content_size == 3
 
-        memory.trim_span = (1, 9)
+        memory.bound_span = (1, 9)
         assert memory.content_size == 3
 
     def test_content_parts_doctest(self):
@@ -2947,64 +2947,64 @@ class BaseMemorySuite:
         blocks_index_out = [memory._block_index_endex(address) for address in range(MAX_SIZE)]
         assert blocks_index_out == blocks_index_ref
 
-    def test__pretrim_start_unbounded(self):
+    def test__prebound_start_unbounded(self):
         Memory = self.Memory
         data = b'56789'
         memory = Memory.from_bytes(data, offset=5)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_start_backup(None, 4)
+        backup = memory._prebound_start_backup(None, 4)
         assert not backup.to_blocks()
 
-        memory._pretrim_start(None, 4)
+        memory._prebound_start(None, 4)
         memory.validate()
 
         memory.write(0, backup)
         memory.validate()
         assert memory == memory_backup
 
-    def test__pretrim_start_bounded(self):
+    def test__prebound_start_bounded(self):
         Memory = self.Memory
         data = b'56789'
         memory = Memory.from_bytes(data, offset=5, start=3)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_start_backup(7, 11)
+        backup = memory._prebound_start_backup(7, 11)
         assert backup.to_blocks() == [[5, b'56']]
 
-        memory._pretrim_start(7, 11)
+        memory._prebound_start(7, 11)
         memory.validate()
 
         memory.write(0, backup)
         memory.validate()
         assert memory == memory_backup
 
-    def test__pretrim_endex_unbounded(self):
+    def test__prebound_endex_unbounded(self):
         Memory = self.Memory
         data = b'34567'
         memory = Memory.from_bytes(data, offset=3)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_endex_backup(None, 4)
+        backup = memory._prebound_endex_backup(None, 4)
         assert not backup.to_blocks()
 
-        memory._pretrim_endex(None, 4)
+        memory._prebound_endex(None, 4)
         memory.validate()
 
         memory.write(0, backup)
         memory.validate()
         assert memory == memory_backup
 
-    def test__pretrim_endex_bounded(self):
+    def test__prebound_endex_bounded(self):
         Memory = self.Memory
         data = b'34567'
         memory = Memory.from_bytes(data, offset=3, endex=9)
 
         memory_backup = memory.__deepcopy__()
-        backup = memory._pretrim_endex_backup(6, 4)
+        backup = memory._prebound_endex_backup(6, 4)
         assert backup.to_blocks() == [[6, b'67']]
 
-        memory._pretrim_endex(6, 4)
+        memory._prebound_endex(6, 4)
         memory.validate()
 
         memory.write(0, backup)
@@ -3880,14 +3880,14 @@ class BaseMemorySuite:
             blocks = create_template_blocks()
             values = blocks_to_values(blocks, MAX_SIZE)
             memory = Memory.from_blocks(blocks)
-            memory.trim_start = memory.content_start - 1
-            memory.trim_endex = memory.content_endex + 1
+            memory.bound_start = memory.content_start - 1
+            memory.bound_endex = memory.content_endex + 1
 
             memory.write(offset, offset)
             memory.validate()
             blocks_out = memory.to_blocks()
 
-            if memory.trim_start <= offset < memory.trim_endex:
+            if memory.bound_start <= offset < memory.bound_endex:
                 values[offset] = offset
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref
@@ -3899,8 +3899,8 @@ class BaseMemorySuite:
             blocks = create_template_blocks()
             values = blocks_to_values(blocks, MAX_SIZE)
             memory = Memory.from_blocks(blocks)
-            memory.trim_start = memory.content_start - 1
-            memory.trim_endex = memory.content_endex + 1
+            memory.bound_start = memory.content_start - 1
+            memory.bound_endex = memory.content_endex + 1
 
             memory_backup = memory.__deepcopy__()
             backup, = memory.write_backup(offset, chunk)
@@ -3912,8 +3912,8 @@ class BaseMemorySuite:
             blocks_out = memory.to_blocks()
 
             values[offset:(offset + 3)] = chunk
-            values[:memory.trim_start] = [None] * memory.trim_start
-            values[memory.trim_endex:] = [None] * (len(values) - memory.trim_endex)
+            values[:memory.bound_start] = [None] * memory.bound_start
+            values[memory.bound_endex:] = [None] * (len(values) - memory.bound_endex)
             blocks_ref = values_to_blocks(values)
             assert blocks_out == blocks_ref
 
@@ -4712,12 +4712,12 @@ class BaseBytearraySuite:
         memory = bytesparse(b'ABCDEF', start=3, endex=2)
         assert not memory
         assert memory.span == (3, 3)
-        assert memory.trim_span == (3, 3)
+        assert memory.bound_span == (3, 3)
 
         memory = bytesparse(b'ABCDEF', start=None, endex=2)
         assert memory == b'AB'
         assert memory.span == (0, 2)
-        assert memory.trim_span == (None, 2)
+        assert memory.bound_span == (None, 2)
 
     def test__rectify_address(self):
         bytesparse = self.bytesparse
@@ -4818,22 +4818,22 @@ class BaseBytearraySuite:
         with pytest.raises(ValueError, match='negative offseted start'):
             memory.shift_backup(-1)
 
-    def test_trim_endex_negative(self):
+    def test_bound_endex_negative(self):
         bytesparse = self.bytesparse
         memory = bytesparse(b'ABC')
         with pytest.raises(ValueError, match='negative endex'):
-            memory.trim_endex = -1
+            memory.bound_endex = -1
 
-    def test_trim_span_negative(self):
+    def test_bound_span_negative(self):
         bytesparse = self.bytesparse
         memory = bytesparse(b'ABC')
         with pytest.raises(ValueError, match='negative start'):
-            memory.trim_span = (-1, None)
+            memory.bound_span = (-1, None)
         with pytest.raises(ValueError, match='negative endex'):
-            memory.trim_span = (None, -1)
+            memory.bound_span = (None, -1)
 
-    def test_trim_start_negative(self):
+    def test_bound_start_negative(self):
         bytesparse = self.bytesparse
         memory = bytesparse(b'ABC')
         with pytest.raises(ValueError, match='negative start'):
-            memory.trim_start = -1
+            memory.bound_start = -1
