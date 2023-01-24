@@ -31,9 +31,9 @@ from typing import Type
 from _common import *
 
 # noinspection PyUnresolvedReferences
-from cbytesparse.c import Memory as _Memory
+from cbytesparse.c import Memory as _Memory  # isort:skip
 # noinspection PyUnresolvedReferences
-from cbytesparse.c import bytesparse as _bytesparse
+from cbytesparse.c import bytesparse as _bytesparse  # isort:skip
 
 
 # Patch inspect.isfunction() to allow Cython functions to be discovered
