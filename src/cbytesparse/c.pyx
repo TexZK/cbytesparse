@@ -4396,7 +4396,7 @@ cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     return memory
 
 
-cdef Memory_* Memory_Cut_(const Memory_* that, addr_t start, addr_t endex, bint bound) except NULL:
+cdef Memory_* Memory_Cut_(Memory_* that, addr_t start, addr_t endex, bint bound) except NULL:
     cdef:
         const Rack_* blocks = that.blocks
         size_t block_count
@@ -4487,7 +4487,7 @@ cdef Memory_* Memory_Cut_(const Memory_* that, addr_t start, addr_t endex, bint 
     return memory
 
 
-cdef object Memory_Cut(const Memory_* that, object start, object endex, bint bound):
+cdef object Memory_Cut(Memory_* that, object start, object endex, bint bound):
     cdef:
         addr_t start_ = Memory_Start(that) if start is None else <addr_t>start
         addr_t endex_ = Memory_Endex(that) if endex is None else <addr_t>endex
@@ -5672,7 +5672,7 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
     blocks = that.blocks
     block_count = Rack_Length(blocks)
     if block_count:
-        block = Rack_Last__(blocks)
+        block = Rack_Last_(blocks)
         if start == Block_Endex(block):
             block = Block_Extend_(block, <size_t>size, data_ptr)  # might be faster
             Rack_Set__(blocks, block_count - 1, block)  # update pointer
@@ -7106,7 +7106,7 @@ cdef class Memory:
             size_t block_index
             size_t block_index_start
             size_t block_index_endex
-            const Block_* block
+            Block_* block
             addr_t block_start
             addr_t block_endex
             addr_t slice_start
@@ -7354,7 +7354,7 @@ cdef class Memory:
             ssize_t block_index_start_
             ssize_t block_index_endex_
             ssize_t block_index_step_
-            const Block_* block
+            Block_* block
 
         if block_count:
             if block_index_start is None:
@@ -10032,7 +10032,7 @@ cdef class Memory:
             byte_t backup
 
         if Rack_Bool(blocks):
-            block = Rack_Last_(blocks)
+            block = Rack_Last__(blocks)
             offset = Block_Length(block)
             if offset:
                 offset -= 1
