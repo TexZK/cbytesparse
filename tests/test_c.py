@@ -75,7 +75,7 @@ _load_cython_tests()
 
 
 class TestMemory(BaseMemorySuite):
-    Memory: type = _Memory
+    Memory: Type['_Memory'] = _Memory
     ADDR_NEG: bool = False
 
     def test___sizeof__(self):
