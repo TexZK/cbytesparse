@@ -1,4 +1,4 @@
-cbytesparse.c.bytesparse
+﻿cbytesparse.c.bytesparse
 ========================
 
 .. currentmodule:: cbytesparse.c
@@ -115,6 +115,9 @@ cbytesparse.c.bytesparse
 
    .. autosummary::
    
+      ~bytesparse.bound_endex
+      ~bytesparse.bound_span
+      ~bytesparse.bound_start
       ~bytesparse.content_endex
       ~bytesparse.content_endin
       ~bytesparse.content_parts
@@ -126,8 +129,5 @@ cbytesparse.c.bytesparse
       ~bytesparse.endin
       ~bytesparse.span
       ~bytesparse.start
-      ~bytesparse.trim_endex
-      ~bytesparse.trim_span
-      ~bytesparse.trim_start
    
    

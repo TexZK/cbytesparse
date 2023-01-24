@@ -1,4 +1,4 @@
-cbytesparse.c.Memory
+﻿cbytesparse.c.Memory
 ====================
 
 .. currentmodule:: cbytesparse.c
@@ -115,6 +115,9 @@ cbytesparse.c.Memory
 
    .. autosummary::
    
+      ~Memory.bound_endex
+      ~Memory.bound_span
+      ~Memory.bound_start
       ~Memory.content_endex
       ~Memory.content_endin
       ~Memory.content_parts
@@ -126,8 +129,5 @@ cbytesparse.c.Memory
       ~Memory.endin
       ~Memory.span
       ~Memory.start
-      ~Memory.trim_endex
-      ~Memory.trim_span
-      ~Memory.trim_start
    
    
