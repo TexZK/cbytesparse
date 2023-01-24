@@ -31,7 +31,7 @@ if os.getenv('SPELLCHECK'):
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'cbytesparse'
-year = '2020-2022'
+year = '2020-2023'
 author = 'Andrea Zoppi'
 copyright = f'{year}, {author}'
 version = release = read_version()
@@ -71,4 +71,3 @@ napoleon_include_private_with_doc = True
 napoleon_include_special_with_doc = True
 
 typehints_document_rtype = False
-
