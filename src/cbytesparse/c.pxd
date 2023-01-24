@@ -494,10 +494,10 @@ cdef extern from *:
     r"""
     typedef struct Memory_ {
         Rack_* blocks;
-        addr_t trim_start;
-        addr_t trim_endex;
-        int trim_start_;  // bint
-        int trim_endex_;  // bint
+        addr_t bound_start;
+        addr_t bound_endex;
+        int bound_start_;  // bint
+        int bound_endex_;  // bint
     } Memory_;
 
     #define Memory_HEADING (sizeof(Memory_))
@@ -507,17 +507,17 @@ cdef extern from *:
         # Stored memory blocks
         Rack_* blocks
 
-        # Trimming start address, if _trim_start_
-        addr_t trim_start
+        # Bounds start address, if _bound_start_
+        addr_t bound_start
 
-        # Triming exclusive end address, if _trim_endex_
-        addr_t trim_endex
+        # Bounds exclusive end address, if _bound_endex_
+        addr_t bound_endex
 
-        # Enables trimming start address
-        bint trim_start_
+        # Enables bounds start address
+        bint bound_start_
 
-        # Enables timming exclusive end address
-        bint trim_endex_
+        # Enables bounds exclusive end address
+        bint bound_endex_
 
     size_t Memory_HEADING
 
@@ -667,14 +667,14 @@ cdef void Memory_Reverse(Memory_* that) nogil
 
 cdef bint Memory_Contiguous(const Memory_* that) nogil
 
-cdef object Memory_GetTrimStart(const Memory_* that)
-cdef vint Memory_SetTrimStart(Memory_* that, object trim_start) except -1
+cdef object Memory_GetBoundStart(const Memory_* that)
+cdef vint Memory_SetBoundStart(Memory_* that, object bound_start) except -1
 
-cdef object Memory_GetTrimEndex(const Memory_* that)
-cdef vint Memory_SetTrimEndex(Memory_* that, object trim_endex) except -1
+cdef object Memory_GetBoundEndex(const Memory_* that)
+cdef vint Memory_SetBoundEndex(Memory_* that, object bound_endex) except -1
 
-cdef object Memory_GetTrimSpan(const Memory_* that)
-cdef vint Memory_SetTrimSpan(Memory_* that, object trim_span) except -1
+cdef object Memory_GetBoundSpan(const Memory_* that)
+cdef vint Memory_SetBoundSpan(Memory_* that, object bound_span) except -1
 
 cdef addr_t Memory_Start(const Memory_* that) nogil
 cdef addr_t Memory_Endex(const Memory_* that) nogil
@@ -731,11 +731,11 @@ cdef vint Memory_Delete(Memory_* that, object start, object endex) except -1
 cdef vint Memory_Clear_(Memory_* that, addr_t start, addr_t endex) except -1
 cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1
 
-cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) except -1
-cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) except -1
+cdef vint Memory_PreboundStart_(Memory_* that, addr_t endex_max, addr_t size) except -1
+cdef vint Memory_PreboundStart(Memory_* that, object endex_max, object size) except -1
 
-cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) except -1
-cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size) except -1
+cdef vint Memory_PreboundEndex_(Memory_* that, addr_t start_min, addr_t size) except -1
+cdef vint Memory_PreboundEndex(Memory_* that, object start_min, object size) except -1
 
 cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1
 cdef vint Memory_Crop(Memory_* that, object start, object endex) except -1
@@ -838,10 +838,10 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil
 cdef class Memory:
     cdef:
         Memory_* _  # C implementation
-        addr_t _trim_start
-        addr_t _trim_endex
-        bint _trim_start_
-        bint _trim_endex_
+        addr_t _bound_start
+        addr_t _bound_endex
+        bint _bound_start_
+        bint _bound_endex_
 
 
 cdef class bytesparse(Memory):

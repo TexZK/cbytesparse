@@ -647,9 +647,9 @@ cdef addr_t Block_BoundAddress(const Block_* that, addr_t address) nogil:
         addr_t block_endex = block_start + that.endex - that.start
 
     if address < block_start:
-        address = block_start  # trim to start
+        address = block_start  # bound to start
     elif address > block_endex:
-        address = block_endex  # trim to end
+        address = block_endex  # bound to end
     return address
 
 
@@ -659,9 +659,9 @@ cdef size_t Block_BoundAddressToOffset(const Block_* that, addr_t address) nogil
         addr_t block_endex = block_start + that.endex - that.start
 
     if address < block_start:
-        address = block_start  # trim to start
+        address = block_start  # bound to start
     elif address > block_endex:
-        address = block_endex  # trim to end
+        address = block_endex  # bound to end
     return <size_t>(address - block_start)
 
 
@@ -670,7 +670,7 @@ cdef size_t Block_BoundOffset(const Block_* that, size_t offset) nogil:
         size_t size = that.endex - that.start
 
     if offset > size:
-        offset = size  # trim to end
+        offset = size  # bound to end
     return offset
 
 
@@ -680,14 +680,14 @@ cdef (addr_t, addr_t) Block_BoundAddressSlice(const Block_* that, addr_t start, 
         addr_t block_endex = block_start + (that.endex - that.start)
 
     if start < block_start:
-        start = block_start  # trim to start
+        start = block_start  # bound to start
     elif start > block_endex:
-        start = block_endex  # trim to end
+        start = block_endex  # bound to end
 
     if endex < block_start:
-        endex = block_start  # trim to start
+        endex = block_start  # bound to start
     elif endex > block_endex:
-        endex = block_endex  # trim to end
+        endex = block_endex  # bound to end
 
     if endex < start:
         endex = start  # clamp negative length
@@ -701,14 +701,14 @@ cdef (size_t, size_t) Block_BoundAddressSliceToOffset(const Block_* that, addr_t
         addr_t block_endex = block_start + (that.endex - that.start)
 
     if start < block_start:
-        start = block_start  # trim to start
+        start = block_start  # bound to start
     elif start > block_endex:
-        start = block_endex  # trim to end
+        start = block_endex  # bound to end
 
     if endex < block_start:
-        endex = block_start  # trim to start
+        endex = block_start  # bound to start
     elif endex > block_endex:
-        endex = block_endex  # trim to end
+        endex = block_endex  # bound to end
 
     if endex < start:
         endex = start  # clamp negative length
@@ -721,10 +721,10 @@ cdef (size_t, size_t) Block_BoundOffsetSlice(const Block_* that, size_t start, s
         size_t size = that.endex - that.start
 
     if start > size:
-        start = size  # trim to end
+        start = size  # bound to end
 
     if endex > size:
-        endex = size  # trim to end
+        endex = size  # bound to end
 
     if endex < start:
         endex = start  # clamp negative length
@@ -784,9 +784,9 @@ cdef ssize_t Block_Find__(const Block_* that, size_t start, size_t endex, byte_t
         const byte_t* end
 
     if start > size:
-        start = size  # trim to end
+        start = size  # bound to end
     if endex > size:
-        endex = size  # trim to end
+        endex = size  # bound to end
     if endex < start:
         endex = start  # clamp negative length
 
@@ -814,9 +814,9 @@ cdef ssize_t Block_Find_(const Block_* that, size_t start, size_t endex,
         size2 = that.endex - that.start
 
         if start > size2:
-            start = size2  # trim to end
+            start = size2  # bound to end
         if endex > size2:
-            endex = size2  # trim to end
+            endex = size2  # bound to end
         if endex < start:
             endex = start  # clamp negative length
 
@@ -824,9 +824,9 @@ cdef ssize_t Block_Find_(const Block_* that, size_t start, size_t endex,
             size2 = endex - size + 1
 
             if start > size2:
-                start = size2  # trim to end
+                start = size2  # bound to end
             if endex > size2:
-                endex = size2  # trim to end
+                endex = size2  # bound to end
 
             ptr = &that.data[that.start + start]
             end = &that.data[that.start + endex]
@@ -847,12 +847,12 @@ cdef ssize_t Block_Find(const Block_* that, ssize_t start, ssize_t endex,
     if start < 0:
         start += ssize  # anchor to end
         if start < 0:
-            start = 0  # trim to start
+            start = 0  # bound to start
 
     if endex < 0:
         endex += ssize  # anchor to end
         if endex < 0:
-            endex = 0  # trim to start
+            endex = 0  # bound to start
 
     return Block_Find_(that, <size_t>start, <size_t>endex, size, buffer)
 
@@ -865,9 +865,9 @@ cdef ssize_t Block_ReverseFind__(const Block_* that, size_t start, size_t endex,
 
     if size:
         if start > size:
-            start = size  # trim to end
+            start = size  # bound to end
         if endex > size:
-            endex = size  # trim to end
+            endex = size  # bound to end
         if endex < start:
             endex = start  # clamp negative length
 
@@ -895,9 +895,9 @@ cdef ssize_t Block_ReverseFind_(const Block_* that, size_t start, size_t endex,
         size2 = that.endex - that.start
 
         if start > size2:
-            start = size2  # trim to end
+            start = size2  # bound to end
         if endex > size2:
-            endex = size2  # trim to end
+            endex = size2  # bound to end
         if endex < start:
             endex = start  # clamp negative length
 
@@ -905,9 +905,9 @@ cdef ssize_t Block_ReverseFind_(const Block_* that, size_t start, size_t endex,
             size2 = endex - size + 1
 
             if start > size2:
-                start = size2  # trim to end
+                start = size2  # bound to end
             if endex > size2:
-                endex = size2  # trim to end
+                endex = size2  # bound to end
 
             end = &that.data[that.start + start]
             ptr = &that.data[that.start + endex]
@@ -928,12 +928,12 @@ cdef ssize_t Block_ReverseFind(const Block_* that, ssize_t start, ssize_t endex,
     if start < 0:
         start += ssize  # anchor to end
         if start < 0:
-            start = 0  # trim to start
+            start = 0  # bound to start
 
     if endex < 0:
         endex += ssize  # anchor to end
         if endex < 0:
-            endex = 0  # trim to start
+            endex = 0  # bound to start
 
     return Block_ReverseFind_(that, <size_t>start, <size_t>endex, size, buffer)
 
@@ -946,9 +946,9 @@ cdef size_t Block_Count__(const Block_* that, size_t start, size_t endex, byte_t
         const byte_t* end
 
     if start > size:
-        start = size  # trim to end
+        start = size  # bound to end
     if endex > size:
-        endex = size  # trim to end
+        endex = size  # bound to end
     if endex < start:
         endex = start  # clamp negative length
 
@@ -977,9 +977,9 @@ cdef size_t Block_Count_(const Block_* that, size_t start, size_t endex,
         size2 = that.endex - that.start
 
         if start > size2:
-            start = size2  # trim to end
+            start = size2  # bound to end
         if endex > size2:
-            endex = size2  # trim to end
+            endex = size2  # bound to end
         if endex < start:
             endex = start  # clamp negative length
 
@@ -987,9 +987,9 @@ cdef size_t Block_Count_(const Block_* that, size_t start, size_t endex,
             size2 = endex - size + 1
 
             if start > size2:
-                start = size2  # trim to end
+                start = size2  # bound to end
             if endex > size2:
-                endex = size2  # trim to end
+                endex = size2  # bound to end
 
             ptr = &that.data[that.start + start]
             end = &that.data[that.start + endex]
@@ -1011,12 +1011,12 @@ cdef size_t Block_Count(const Block_* that, ssize_t start, ssize_t endex,
     if start < 0:
         start += ssize  # anchor to end
         if start < 0:
-            start = 0  # trim to start
+            start = 0  # bound to start
 
     if endex < 0:
         endex += ssize  # anchor to end
         if endex < 0:
-            endex = 0  # trim to start
+            endex = 0  # bound to start
 
     return Block_Count_(that, <size_t>start, <size_t>endex, size, buffer)
 
@@ -1543,14 +1543,14 @@ cdef vint Block_ReadSlice_(const Block_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim source start
+        start = size  # bound source start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative source length
     elif endex > size:
-        endex = size  # trim source end
+        endex = size  # bound source end
 
     size = endex - start
     Block_Read_(that, start, size, buffer)
@@ -1565,7 +1565,7 @@ cdef vint Block_ReadSlice(const Block_* that, ssize_t start, ssize_t endex,
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim source start
+        start = 0  # bound source start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -1582,14 +1582,14 @@ cdef Block_* Block_GetSlice_(const Block_* that, size_t start, size_t endex) exc
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim source start
+        start = size  # bound source start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative source length
     elif endex > size:
-        endex = size  # trim source end
+        endex = size  # bound source end
 
     return Block_Create(that.address + start, endex - start, &that.data[that.start + start])
 
@@ -1601,7 +1601,7 @@ cdef Block_* Block_GetSlice(const Block_* that, ssize_t start, ssize_t endex) ex
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim source start
+        start = 0  # bound source start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -1622,12 +1622,12 @@ cdef Block_* Block_WriteSlice_(Block_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim target start
+        start = size  # bound target start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex > size:
-        endex = size  # trim target end
+        endex = size  # bound target end
 
     if endex < start:
         endex = start  # clamp negative target length
@@ -1661,7 +1661,7 @@ cdef Block_* Block_WriteSlice(Block_* that, ssize_t start, ssize_t endex,
         start += ssize  # anchor to end
     if start < 0:
         # start2 -= start  # skip initial source data  # as per bytearray
-        start = 0  # trim target start
+        start = 0  # bound target start
     if start2 > endex2:
         start2 = endex2  # clamp source start
 
@@ -1689,12 +1689,12 @@ cdef Block_* Block_SetSlice_(Block_* that, size_t start, size_t endex,
     if start2 > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start2 > size2:
-        start2 = size2  # trim source start
+        start2 = size2  # bound source start
 
     if endex2 > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex2 > size2:
-        endex2 = size2  # trim source end
+        endex2 = size2  # bound source end
 
     if endex2 < start2:
         endex2 = start2  # clamp negative source length
@@ -1705,12 +1705,12 @@ cdef Block_* Block_SetSlice_(Block_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim target start
+        start = size  # bound target start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex > size:
-        endex = size  # trim target end
+        endex = size  # bound target end
 
     if endex < start:
         endex = start  # clamp negative target length
@@ -1740,7 +1740,7 @@ cdef Block_* Block_SetSlice(Block_* that, ssize_t start, ssize_t endex,
         start += ssize  # anchor to target end
     if start < 0:
         # start2 -= start  # skip initial source data  # as per bytearray
-        start = 0  # trim target start
+        start = 0  # bound target start
 
     if endex < 0:
         endex += ssize  # anchor to target end
@@ -1750,7 +1750,7 @@ cdef Block_* Block_SetSlice(Block_* that, ssize_t start, ssize_t endex,
     if start2 < 0:
         start2 += ssize2  # anchor to source end
     if start2 < 0:
-        start2 = 0  # trim source start
+        start2 = 0  # bound source start
 
     if endex2 < 0:
         endex2 += ssize2  # anchor to source end
@@ -1770,14 +1770,14 @@ cdef Block_* Block_DelSlice_(Block_* that, size_t start, size_t endex) except NU
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim start
+        start = size  # bound start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative length
     elif endex > size:
-        endex = size  # trim end
+        endex = size  # bound end
 
     that = Block_Delete_(that, start, (endex - start))
     return that
@@ -1792,7 +1792,7 @@ cdef Block_* Block_DelSlice(Block_* that, ssize_t start, ssize_t endex) except N
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim start
+        start = 0  # bound start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -1839,14 +1839,14 @@ cdef BlockView Block_ViewSlice_(Block_* that, size_t start, size_t endex):
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim source start
+        start = size  # bound source start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative source length
     elif endex > size:
-        endex = size  # trim source end
+        endex = size  # bound source end
 
     view = BlockView()
     that = Block_Acquire(that)
@@ -1865,7 +1865,7 @@ cdef BlockView Block_ViewSlice(Block_* that, ssize_t start, ssize_t endex):
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim source start
+        start = 0  # bound source start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -2778,14 +2778,14 @@ cdef vint Rack_ReadSlice_(const Rack_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim source start
+        start = size  # bound source start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative source length
     elif endex > size:
-        endex = size  # trim source end
+        endex = size  # bound source end
 
     size = endex - start
     Rack_Read_(that, start, size, buffer, direct)
@@ -2800,7 +2800,7 @@ cdef vint Rack_ReadSlice(const Rack_* that, ssize_t start, ssize_t endex,
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim source start
+        start = 0  # bound source start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -2820,14 +2820,14 @@ cdef Rack_* Rack_GetSlice_(const Rack_* that, size_t start, size_t endex) except
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim source start
+        start = size  # bound source start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative source length
     elif endex > size:
-        endex = size  # trim source end
+        endex = size  # bound source end
 
     try:
         size = endex - start
@@ -2852,7 +2852,7 @@ cdef Rack_* Rack_GetSlice(const Rack_* that, ssize_t start, ssize_t endex) excep
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim source start
+        start = 0  # bound source start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -2873,12 +2873,12 @@ cdef Rack_* Rack_WriteSlice_(Rack_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim target start
+        start = size  # bound target start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex > size:
-        endex = size  # trim target end
+        endex = size  # bound target end
 
     if endex < start:
         endex = start  # clamp negative target length
@@ -2912,7 +2912,7 @@ cdef Rack_* Rack_WriteSlice(Rack_* that, ssize_t start, ssize_t endex,
         start += ssize  # anchor to end
     if start < 0:
         # start2 -= start  # skip initial source data  # as per bytearray
-        start = 0  # trim target start
+        start = 0  # bound target start
     if start2 > endex2:
         start2 = endex2  # clamp source start
 
@@ -2940,12 +2940,12 @@ cdef Rack_* Rack_SetSlice_(Rack_* that, size_t start, size_t endex,
     if start2 > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start2 > size2:
-        start2 = size2  # trim source start
+        start2 = size2  # bound source start
 
     if endex2 > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex2 > size2:
-        endex2 = size2  # trim source end
+        endex2 = size2  # bound source end
 
     if endex2 < start2:
         endex2 = start2  # clamp negative source length
@@ -2956,12 +2956,12 @@ cdef Rack_* Rack_SetSlice_(Rack_* that, size_t start, size_t endex,
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim target start
+        start = size  # bound target start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex > size:
-        endex = size  # trim target end
+        endex = size  # bound target end
 
     if endex < start:
         endex = start  # clamp negative target length
@@ -2991,7 +2991,7 @@ cdef Rack_* Rack_SetSlice(Rack_* that, ssize_t start, ssize_t endex,
         start += ssize  # anchor to target end
     if start < 0:
         # start2 -= start  # skip initial source data  # as per bytearray
-        start = 0  # trim target start
+        start = 0  # bound target start
 
     if endex < 0:
         endex += ssize  # anchor to target end
@@ -3001,7 +3001,7 @@ cdef Rack_* Rack_SetSlice(Rack_* that, ssize_t start, ssize_t endex,
     if start2 < 0:
         start2 += ssize2  # anchor to source end
     if start2 < 0:
-        start2 = 0  # trim source start
+        start2 = 0  # bound source start
 
     if endex2 < 0:
         endex2 += ssize2  # anchor to source end
@@ -3021,14 +3021,14 @@ cdef Rack_* Rack_DelSlice_(Rack_* that, size_t start, size_t endex) except NULL:
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif start > size:
-        start = size  # trim start
+        start = size  # bound start
 
     if endex > SIZE_HMAX:
         raise OverflowError('size overflow')
     elif endex < start:
         endex = start  # clamp negative length
     elif endex > size:
-        endex = size  # trim end
+        endex = size  # bound end
 
     that = Rack_Delete_(that, start, (endex - start))
     return that
@@ -3043,7 +3043,7 @@ cdef Rack_* Rack_DelSlice(Rack_* that, ssize_t start, ssize_t endex) except NULL
     if start < 0:
         start += ssize  # anchor to end
     if start < 0:
-        start = 0  # trim start
+        start = 0  # bound start
 
     if endex < 0:
         endex += ssize  # anchor to end
@@ -3180,10 +3180,10 @@ cdef Memory_* Memory_Alloc() except NULL:
         raise MemoryError()
 
     that.blocks = blocks
-    that.trim_start = 0
-    that.trim_endex = ADDR_MAX
-    that.trim_start_ = False
-    that.trim_endex_ = False
+    that.bound_start = 0
+    that.bound_endex = ADDR_MAX
+    that.bound_start_ = False
+    that.bound_endex_ = False
     return that
 
 
@@ -3211,21 +3211,21 @@ cdef Memory_* Memory_Create(
         raise MemoryError()
     try:
         if start is None:
-            that.trim_start = ADDR_MIN
-            that.trim_start_ = False
+            that.bound_start = ADDR_MIN
+            that.bound_start_ = False
         else:
-            that.trim_start = <addr_t>start
-            that.trim_start_ = True
+            that.bound_start = <addr_t>start
+            that.bound_start_ = True
 
         if endex is None:
-            that.trim_endex = ADDR_MAX
-            that.trim_endex_ = False
+            that.bound_endex = ADDR_MAX
+            that.bound_endex_ = False
         else:
-            that.trim_endex = <addr_t>endex
-            that.trim_endex_ = True
+            that.bound_endex = <addr_t>endex
+            that.bound_endex_ = True
 
-        if that.trim_endex < that.trim_start:
-            that.trim_endex = that.trim_start
+        if that.bound_endex < that.bound_start:
+            that.bound_endex = that.bound_start
 
         that.blocks = Rack_Alloc(0)
 
@@ -3310,27 +3310,27 @@ cdef Memory_* Memory_FromBlocks(
         for block_start_, block_data_ in blocks:
             block_offset = 0
             block_start = <addr_t>(block_start_ + offset) if offset_ else <addr_t>block_start_
-            if that.trim_endex <= block_start:
+            if that.bound_endex <= block_start:
                 break
 
             block_view = block_data_
             block_size = <size_t>len(block_view)
             CheckAddAddrU(block_start, block_size)
             block_endex = block_start + block_size
-            if block_endex <= that.trim_start:
+            if block_endex <= that.bound_start:
                 continue
 
-            # Trim before memory
-            if block_start < that.trim_start:
-                delta = that.trim_start - block_start
+            # Bound before memory
+            if block_start < that.bound_start:
+                delta = that.bound_start - block_start
                 CheckAddrToSizeU(delta)
                 block_start += <size_t>delta
                 block_size  -= <size_t>delta
                 block_offset = <size_t>delta
 
-            # Trim after memory
-            if that.trim_endex < block_endex:
-                delta = block_endex - that.trim_endex
+            # Bound after memory
+            if that.bound_endex < block_endex:
+                delta = block_endex - that.bound_endex
                 CheckAddrToSizeU(delta)
                 block_endex -= <size_t>delta
                 block_size  -= <size_t>delta
@@ -3342,7 +3342,7 @@ cdef Memory_* Memory_FromBlocks(
                 that.blocks = Rack_Append(that.blocks, block)
                 block = NULL
             else:
-                if not that.trim_start_ and not that.trim_endex_:
+                if not that.bound_start_ and not that.bound_endex_:
                     raise ValueError('invalid block data size')
 
         if validate:
@@ -3375,25 +3375,25 @@ cdef Memory_* Memory_FromBytes_(
         Block_* block = NULL
 
     try:
-        if that.trim_endex <= block_start:
+        if that.bound_endex <= block_start:
             return that
 
         CheckAddAddrU(block_start, block_size)
         block_endex = block_start + block_size
-        if block_endex <= that.trim_start:
+        if block_endex <= that.bound_start:
             return that
 
-        # Trim before memory
-        if block_start < that.trim_start:
-            delta = that.trim_start - block_start
+        # Bound before memory
+        if block_start < that.bound_start:
+            delta = that.bound_start - block_start
             CheckAddrToSizeU(delta)
             block_start += <size_t>delta
             block_size  -= <size_t>delta
             block_offset = <size_t>delta
 
-        # Trim after memory
-        if that.trim_endex < block_endex:
-            delta = block_endex - that.trim_endex
+        # Bound after memory
+        if that.bound_endex < block_endex:
+            delta = block_endex - that.bound_endex
             CheckAddrToSizeU(delta)
             block_endex -= <size_t>delta
             block_size  -= <size_t>delta
@@ -3469,15 +3469,15 @@ cdef Memory_* Memory_FromMemory_(
         Memory_* that = Memory_Copy(memory)
 
     try:
-        that.trim_start = ADDR_MIN
-        that.trim_endex = ADDR_MAX
-        that.trim_start_ = False
-        that.trim_endex_ = False
+        that.bound_start = ADDR_MIN
+        that.bound_endex = ADDR_MAX
+        that.bound_start_ = False
+        that.bound_endex_ = False
 
         Memory_Shift(that, offset)
 
-        Memory_SetTrimStart(that, start)
-        Memory_SetTrimEndex(that, endex)
+        Memory_SetBoundStart(that, start)
+        Memory_SetBoundEndex(that, endex)
 
         if validate:
             Memory_Validate(that)
@@ -4389,10 +4389,10 @@ cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
         raise MemoryError()
 
     memory.blocks = blocks
-    memory.trim_start = that.trim_start
-    memory.trim_endex = that.trim_endex
-    memory.trim_start_ = that.trim_start_
-    memory.trim_endex_ = that.trim_endex_
+    memory.bound_start = that.bound_start
+    memory.bound_endex = that.bound_endex
+    memory.bound_start_ = that.bound_start_
+    memory.bound_endex_ = that.bound_endex_
     return memory
 
 
@@ -4433,7 +4433,7 @@ cdef Memory_* Memory_Cut_(Memory_* that, addr_t start, addr_t endex, bint bound)
                     block1 = Block_Acquire(block1)
                     Rack_Set__(memory_blocks, block_index, block1)
             try:
-                # Trim cloned data before the selection start address
+                # Bound cloned data before the selection start address
                 block_index = 0
                 block1 = Rack_Get_(memory_blocks, block_index)
                 block_start = Block_Start(block1)
@@ -4450,7 +4450,7 @@ cdef Memory_* Memory_Cut_(Memory_* that, addr_t start, addr_t endex, bint bound)
                         Rack_Set__(memory_blocks, block_index, block2)
                         Block_Release(block1)
 
-                # Trim cloned data after the selection end address
+                # Bound cloned data after the selection end address
                 block_index = block_count - 1
                 block1 = Rack_Get_(memory_blocks, block_index)
                 block_endex = Block_Endex(block1)
@@ -4479,10 +4479,10 @@ cdef Memory_* Memory_Cut_(Memory_* that, addr_t start, addr_t endex, bint bound)
                 raise
 
     if bound:
-        memory.trim_start = start
-        memory.trim_endex = endex
-        memory.trim_start_ = True
-        memory.trim_endex_ = True
+        memory.bound_start = start
+        memory.bound_endex = endex
+        memory.bound_start_ = True
+        memory.bound_endex_ = True
 
     return memory
 
@@ -4526,19 +4526,19 @@ cdef bint Memory_Contiguous(const Memory_* that) nogil:
         addr_t endex
 
     if not block_count:
-        start = that.trim_start
-        endex = that.trim_endex
-        if that.trim_start_ and that.trim_endex_ and start < endex:
+        start = that.bound_start
+        endex = that.bound_endex
+        if that.bound_start_ and that.bound_endex_ and start < endex:
             return False
         return True
 
     elif block_count == 1:
-        start = that.trim_start
-        if that.trim_start_:
+        start = that.bound_start
+        if that.bound_start_:
             if start != Block_Start(Rack_First__(blocks)):
                 return False
-        endex = that.trim_endex
-        if that.trim_endex_:
+        endex = that.bound_endex
+        if that.bound_endex_:
             if endex != Block_Endex(Rack_Last__(blocks)):
                 return False
         return True
@@ -4546,92 +4546,92 @@ cdef bint Memory_Contiguous(const Memory_* that) nogil:
     return False
 
 
-cdef object Memory_GetTrimStart(const Memory_* that):
-    return that.trim_start if that.trim_start_ else None
+cdef object Memory_GetBoundStart(const Memory_* that):
+    return that.bound_start if that.bound_start_ else None
 
 
-cdef vint Memory_SetTrimStart(Memory_* that, object trim_start) except -1:
+cdef vint Memory_SetBoundStart(Memory_* that, object bound_start) except -1:
     cdef:
-        addr_t trim_start_
-        addr_t trim_endex_
+        addr_t bound_start_
+        addr_t bound_endex_
 
-    if trim_start is None:
-        trim_start_ = ADDR_MIN
-        that.trim_start_ = False
+    if bound_start is None:
+        bound_start_ = ADDR_MIN
+        that.bound_start_ = False
     else:
-        trim_start_ = <addr_t>trim_start
-        that.trim_start_ = True
+        bound_start_ = <addr_t>bound_start
+        that.bound_start_ = True
 
-    trim_endex_ = that.trim_endex
-    if that.trim_start_ and that.trim_endex_ and trim_endex_ < trim_start_:
-        that.trim_endex = trim_endex_ = trim_start_
+    bound_endex_ = that.bound_endex
+    if that.bound_start_ and that.bound_endex_ and bound_endex_ < bound_start_:
+        that.bound_endex = bound_endex_ = bound_start_
 
-    that.trim_start = trim_start_
-    if that.trim_start_:
-        Memory_Crop_(that, trim_start_, trim_endex_)
-
-
-cdef object Memory_GetTrimEndex(const Memory_* that):
-    return that.trim_endex if that.trim_endex_ else None
+    that.bound_start = bound_start_
+    if that.bound_start_:
+        Memory_Crop_(that, bound_start_, bound_endex_)
 
 
-cdef vint Memory_SetTrimEndex(Memory_* that, object trim_endex) except -1:
+cdef object Memory_GetBoundEndex(const Memory_* that):
+    return that.bound_endex if that.bound_endex_ else None
+
+
+cdef vint Memory_SetBoundEndex(Memory_* that, object bound_endex) except -1:
     cdef:
-        addr_t trim_start_
-        addr_t trim_endex_
+        addr_t bound_start_
+        addr_t bound_endex_
 
-    if trim_endex is None:
-        trim_endex_ = ADDR_MAX
-        that.trim_endex_ = False
+    if bound_endex is None:
+        bound_endex_ = ADDR_MAX
+        that.bound_endex_ = False
     else:
-        trim_endex_ = <addr_t>trim_endex
-        that.trim_endex_ = True
+        bound_endex_ = <addr_t>bound_endex
+        that.bound_endex_ = True
 
-    trim_start_ = that.trim_start
-    if that.trim_start_ and that.trim_endex_ and trim_endex_ < trim_start_:
-        that.trim_start = trim_start_ = trim_endex_
+    bound_start_ = that.bound_start
+    if that.bound_start_ and that.bound_endex_ and bound_endex_ < bound_start_:
+        that.bound_start = bound_start_ = bound_endex_
 
-    that.trim_endex = trim_endex_
-    if that.trim_endex_:
-        Memory_Crop_(that, trim_start_, trim_endex_)
-
-
-cdef object Memory_GetTrimSpan(const Memory_* that):
-    return (that.trim_start if that.trim_start_ else None,
-            that.trim_endex if that.trim_endex_ else None)
+    that.bound_endex = bound_endex_
+    if that.bound_endex_:
+        Memory_Crop_(that, bound_start_, bound_endex_)
 
 
-cdef vint Memory_SetTrimSpan(Memory_* that, object trim_span) except -1:
-    trim_start, trim_endex = trim_span
+cdef object Memory_GetBoundSpan(const Memory_* that):
+    return (that.bound_start if that.bound_start_ else None,
+            that.bound_endex if that.bound_endex_ else None)
 
-    if trim_start is None:
-        trim_start_ = 0
-        that.trim_start_ = False
+
+cdef vint Memory_SetBoundSpan(Memory_* that, object bound_span) except -1:
+    bound_start, bound_endex = bound_span
+
+    if bound_start is None:
+        bound_start_ = 0
+        that.bound_start_ = False
     else:
-        trim_start_ = <addr_t>trim_start
-        that.trim_start_ = True
+        bound_start_ = <addr_t>bound_start
+        that.bound_start_ = True
 
-    if trim_endex is None:
-        trim_endex_ = ADDR_MAX
-        that.trim_endex_ = False
+    if bound_endex is None:
+        bound_endex_ = ADDR_MAX
+        that.bound_endex_ = False
     else:
-        trim_endex_ = <addr_t>trim_endex
-        that.trim_endex_ = True
+        bound_endex_ = <addr_t>bound_endex
+        that.bound_endex_ = True
 
-    if that.trim_start_ and that.trim_endex_ and trim_endex_ < trim_start_:
-        trim_endex_ = trim_start_
+    if that.bound_start_ and that.bound_endex_ and bound_endex_ < bound_start_:
+        bound_endex_ = bound_start_
 
-    that.trim_start = trim_start_
-    that.trim_endex = trim_endex_
-    if that.trim_start_ or that.trim_endex_:
-        Memory_Crop_(that, trim_start_, trim_endex_)
+    that.bound_start = bound_start_
+    that.bound_endex = bound_endex_
+    if that.bound_start_ or that.bound_endex_:
+        Memory_Crop_(that, bound_start_, bound_endex_)
 
 
 cdef addr_t Memory_Start(const Memory_* that) nogil:
     cdef:
         const Rack_* blocks
 
-    if not that.trim_start_:
+    if not that.bound_start_:
         # Return actual
         blocks = that.blocks
         if Rack_Bool(blocks):
@@ -4639,14 +4639,14 @@ cdef addr_t Memory_Start(const Memory_* that) nogil:
         else:
             return 0
     else:
-        return that.trim_start
+        return that.bound_start
 
 
 cdef addr_t Memory_Endex(const Memory_* that) nogil:
     cdef:
         const Rack_* blocks
 
-    if not that.trim_endex_:
+    if not that.bound_endex_:
         # Return actual
         blocks = that.blocks
         if Rack_Bool(blocks):
@@ -4654,7 +4654,7 @@ cdef addr_t Memory_Endex(const Memory_* that) nogil:
         else:
             return Memory_Start(that)
     else:
-        return that.trim_endex
+        return that.bound_endex
 
 
 cdef (addr_t, addr_t) Memory_Span(const Memory_* that) nogil:
@@ -4665,7 +4665,7 @@ cdef object Memory_Endin(const Memory_* that):
     cdef:
         const Rack_* blocks
 
-    if not that.trim_endex_:
+    if not that.bound_endex_:
         # Return actual
         blocks = that.blocks
         if Rack_Bool(blocks):
@@ -4673,7 +4673,7 @@ cdef object Memory_Endin(const Memory_* that):
         else:
             return <object>Memory_Start(that) - 1
     else:
-        return <object>that.trim_endex - 1
+        return <object>that.bound_endex - 1
 
 
 cdef addr_t Memory_ContentStart(const Memory_* that) nogil:
@@ -4682,10 +4682,10 @@ cdef addr_t Memory_ContentStart(const Memory_* that) nogil:
 
     if Rack_Bool(blocks):
         return Block_Start(Rack_First__(blocks))
-    elif not that.trim_start_:
+    elif not that.bound_start_:
         return 0
     else:
-        return that.trim_start
+        return that.bound_start
 
 
 cdef addr_t Memory_ContentEndex(const Memory_* that) nogil:
@@ -4694,10 +4694,10 @@ cdef addr_t Memory_ContentEndex(const Memory_* that) nogil:
 
     if Rack_Bool(blocks):
         return Block_Endex(Rack_Last__(blocks))
-    elif not that.trim_start_:
+    elif not that.bound_start_:
         return 0  # default to start
     else:
-        return that.trim_start  # default to start
+        return that.bound_start  # default to start
 
 
 cdef (addr_t, addr_t) Memory_ContentSpan(const Memory_* that) nogil:
@@ -4710,10 +4710,10 @@ cdef object Memory_ContentEndin(const Memory_* that):
 
     if Rack_Bool(blocks):
         return <object>Block_Endex(Rack_Last__(blocks)) - 1
-    elif not that.trim_start_:  # default to start-1
+    elif not that.bound_start_:  # default to start-1
         return -1
     else:
-        return <object>that.trim_start - 1  # default to start-1
+        return <object>that.bound_start - 1  # default to start-1
 
 
 cdef addr_t Memory_ContentSize(const Memory_* that) nogil:
@@ -4779,40 +4779,40 @@ cdef vint Memory_Validate(const Memory_* that) except -1:
 cdef (addr_t, addr_t) Memory_Bound_(const Memory_* that, addr_t start, addr_t endex,
                                     bint start_, bint endex_) nogil:
     cdef:
-        addr_t trim_start
-        addr_t trim_endex
+        addr_t bound_start
+        addr_t bound_endex
 
-    trim_start = that.trim_start
-    trim_endex = that.trim_endex
+    bound_start = that.bound_start
+    bound_endex = that.bound_endex
 
     if not start_:
-        if not that.trim_start_:
+        if not that.bound_start_:
             if Rack_Bool(that.blocks):
                 start = Block_Start(Rack_First__(that.blocks))
             else:
                 start = 0
         else:
-            start = trim_start
+            start = bound_start
     else:
-        if that.trim_start_:
-            if start < trim_start:
-                start = trim_start
+        if that.bound_start_:
+            if start < bound_start:
+                start = bound_start
         if endex_:
             if endex < start:
                 endex = start
 
     if not endex_:
-        if not that.trim_endex_:
+        if not that.bound_endex_:
             if Rack_Bool(that.blocks):
                 endex = Block_Endex(Rack_Last__(that.blocks))
             else:
                 endex = start
         else:
-            endex = trim_endex
+            endex = bound_endex
     else:
-        if that.trim_endex_:
-            if endex > trim_endex:
-                endex = trim_endex
+        if that.bound_endex_:
+            if endex > bound_endex:
+                endex = bound_endex
         if start > endex:
             start = endex
 
@@ -4852,9 +4852,9 @@ cdef object Memory_Peek(const Memory_* that, object address):
 
 
 cdef vint Memory_PokeNone_(Memory_* that, addr_t address) except -1:
-    if address < that.trim_start:
+    if address < that.bound_start:
         return 0
-    if address >= that.trim_endex:
+    if address >= that.bound_endex:
         return 0
 
     # Standard clear method
@@ -4873,9 +4873,9 @@ cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
         Block_* block2
         addr_t block_start2
 
-    if address < that.trim_start:
+    if address < that.bound_start:
         return 0
-    if address >= that.trim_endex:
+    if address >= that.bound_endex:
         return 0
 
     blocks = that.blocks
@@ -4927,7 +4927,7 @@ cdef vint Memory_Poke_(Memory_* that, addr_t address, byte_t item) except -1:
     Memory_Erase__(that, address, address + 1, False)  # clear
     Memory_Place__(that, address, 1, &item, False)  # write
 
-    Memory_Crop_(that, that.trim_start, that.trim_endex)
+    Memory_Crop_(that, that.bound_start, that.bound_endex)
     return 0
 
 
@@ -4985,7 +4985,7 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
                         block2 = Block_Copy(block2)
                         Rack_Set__(memory_blocks, block_index, block2)  # update pointer
 
-                    # Trim cloned data before the selection start address
+                    # Bound cloned data before the selection start address
                     block_index = 0
                     block2 = Rack_Get_(memory_blocks, block_index)
                     block_start = Block_Start(block2)
@@ -4994,7 +4994,7 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
                         block2.address = start
                         Rack_Set__(memory_blocks, block_index, block2)
 
-                    # Trim cloned data after the selection end address
+                    # Bound cloned data after the selection end address
                     block_index = block_count - 1
                     block2 = Rack_Get_(memory_blocks, block_index)
                     block_endex = Block_Endex(block2)
@@ -5050,10 +5050,10 @@ cdef Memory_* Memory_Extract__(const Memory_* that, addr_t start, addr_t endex,
             if bound:
                 endex = offset
     if bound:
-        memory.trim_start = start
-        memory.trim_endex = endex
-        memory.trim_start_ = True
-        memory.trim_endex_ = True
+        memory.bound_start = start
+        memory.bound_endex = endex
+        memory.bound_start_ = True
+        memory.bound_endex_ = True
 
     return memory
 
@@ -5106,7 +5106,7 @@ cdef vint Memory_ShiftLeft_(Memory_* that, addr_t offset) except -1:
         Block_* block
 
     if offset and Rack_Bool(blocks):
-        Memory_PretrimStart_(that, ADDR_MAX, offset)
+        Memory_PreboundStart_(that, ADDR_MAX, offset)
         blocks = that.blocks
 
         for block_index in range(Rack_Length(blocks)):
@@ -5121,7 +5121,7 @@ cdef vint Memory_ShiftRight_(Memory_* that, addr_t offset) except -1:
         Block_* block
 
     if offset and Rack_Bool(blocks):
-        Memory_PretrimEndex_(that, ADDR_MIN, offset)
+        Memory_PreboundEndex_(that, ADDR_MIN, offset)
         blocks = that.blocks
 
         for block_index in range(Rack_Length(blocks)):
@@ -5148,7 +5148,7 @@ cdef vint Memory_Reserve_(Memory_* that, addr_t address, addr_t size) except -1:
         Block_* block2
 
     if size and Rack_Bool(blocks):
-        Memory_PretrimEndex_(that, address, size)
+        Memory_PreboundEndex_(that, address, size)
 
         block_index = Rack_IndexStart(blocks, address)
         block_count = Rack_Length(blocks)
@@ -5445,18 +5445,18 @@ cdef vint Memory_Clear(Memory_* that, object start, object endex) except -1:
     Memory_Clear_(that, start_, endex_)
 
 
-cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) except -1:
+cdef vint Memory_PreboundStart_(Memory_* that, addr_t endex_max, addr_t size) except -1:
     cdef:
         addr_t content_start
-        addr_t trim_start
+        addr_t bound_start
         addr_t endex
 
     if size:
-        trim_start = that.trim_start if that.trim_start_ else ADDR_MIN
-        if CannotAddAddrU(trim_start, size):
+        bound_start = that.bound_start if that.bound_start_ else ADDR_MIN
+        if CannotAddAddrU(bound_start, size):
             endex = ADDR_MAX
         else:
-            endex = trim_start + size
+            endex = bound_start + size
 
         if endex > endex_max:
             endex = endex_max
@@ -5465,25 +5465,25 @@ cdef vint Memory_PretrimStart_(Memory_* that, addr_t endex_max, addr_t size) exc
         Memory_Erase__(that, content_start, endex, False)  # clear
 
 
-cdef vint Memory_PretrimStart(Memory_* that, object endex_max, object size) except -1:
+cdef vint Memory_PreboundStart(Memory_* that, object endex_max, object size) except -1:
         cdef:
             addr_t endex_max_ = ADDR_MAX if endex_max is None else <addr_t>endex_max
 
-        Memory_PretrimStart_(that, endex_max_, <addr_t>size)
+        Memory_PreboundStart_(that, endex_max_, <addr_t>size)
 
 
-cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) except -1:
+cdef vint Memory_PreboundEndex_(Memory_* that, addr_t start_min, addr_t size) except -1:
     cdef:
         addr_t content_endex
-        addr_t trim_endex
+        addr_t bound_endex
         addr_t start
 
     if size:
-        trim_endex = that.trim_endex if that.trim_endex_ else ADDR_MAX
-        if CannotSubAddrU(trim_endex, size):
+        bound_endex = that.bound_endex if that.bound_endex_ else ADDR_MAX
+        if CannotSubAddrU(bound_endex, size):
             start = ADDR_MIN
         else:
-            start = trim_endex - size
+            start = bound_endex - size
 
         if start < start_min:
             start = start_min
@@ -5492,11 +5492,11 @@ cdef vint Memory_PretrimEndex_(Memory_* that, addr_t start_min, addr_t size) exc
         Memory_Erase__(that, start, content_endex, False)  # clear
 
 
-cdef vint Memory_PretrimEndex(Memory_* that, object start_min, object size) except -1:
+cdef vint Memory_PreboundEndex(Memory_* that, object start_min, object size) except -1:
         cdef:
             addr_t start_min_ = ADDR_MIN if start_min is None else <addr_t>start_min
 
-        Memory_PretrimEndex_(that, start_min_, <addr_t>size)
+        Memory_PreboundEndex_(that, start_min_, <addr_t>size)
 
 
 cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1:
@@ -5504,14 +5504,14 @@ cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1:
         addr_t block_start
         addr_t block_endex
 
-    # Trim blocks exceeding before memory start
+    # Bound blocks exceeding before memory start
     if Rack_Bool(that.blocks):
         block_start = Block_Start(Rack_First_(that.blocks))
 
         if block_start < start:
             Memory_Erase__(that, block_start, start, False)  # clear
 
-    # Trim blocks exceeding after memory end
+    # Bound blocks exceeding after memory end
     if Rack_Bool(that.blocks):
         block_endex = Block_Endex(Rack_Last_(that.blocks))
 
@@ -5535,10 +5535,10 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
         addr_t size = endex - start
         addr_t delta
 
-        addr_t trim_start
-        addr_t trim_endex
-        bint trim_start_
-        bint trim_endex_
+        addr_t bound_start
+        addr_t bound_endex
+        bint bound_start_
+        bint bound_endex_
 
         const Rack_* blocks
         size_t block_count
@@ -5559,18 +5559,18 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
 
     CheckAddAddrU(endex, address)
     endex += address
-    trim_start_ = that.trim_start_
-    trim_start = that.trim_start
+    bound_start_ = that.bound_start_
+    bound_start = that.bound_start
 
-    if trim_start_ and endex <= trim_start:
+    if bound_start_ and endex <= bound_start:
         return 0
 
     CheckAddAddrU(start, address)
     start += address
-    trim_endex_ = that.trim_endex_
-    trim_endex = that.trim_endex
+    bound_endex_ = that.bound_endex_
+    bound_endex = that.bound_endex
 
-    if trim_endex_ and trim_endex <= start:
+    if bound_endex_ and bound_endex <= start:
         return 0
 
     if clear:
@@ -5588,27 +5588,27 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
         block = Rack_Get__(blocks, block_index)
 
         block_endex = Block_Endex(block) + address
-        if trim_start_ and block_endex <= trim_start:
+        if bound_start_ and block_endex <= bound_start:
             continue
 
         block_start = Block_Start(block) + address
-        if trim_endex_ and trim_endex <= block_start:
+        if bound_endex_ and bound_endex <= block_start:
             break
 
         block_size = block_endex - block_start
         block_offset = 0
 
-        # Trim before memory
-        if trim_start_ and block_start < trim_start:
-            delta = trim_start - block_start
+        # Bound before memory
+        if bound_start_ and block_start < bound_start:
+            delta = bound_start - block_start
             CheckAddrToSizeU(delta)
             block_start += <size_t>delta
             block_size  -= <size_t>delta
             block_offset = <size_t>delta
 
-        # Trim after memory
-        if trim_endex_ and trim_endex < block_endex:
-            delta = block_endex - trim_endex
+        # Bound after memory
+        if bound_endex_ and bound_endex < block_endex:
+            delta = block_endex - bound_endex
             CheckAddrToSizeU(delta)
             block_endex -= <size_t>delta
             block_size  -= <size_t>delta
@@ -5623,10 +5623,10 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
         addr_t endex
         addr_t offset
 
-        addr_t trim_start
-        addr_t trim_endex
-        bint trim_start_
-        bint trim_endex_
+        addr_t bound_start
+        addr_t bound_endex
+        bint bound_start_
+        bint bound_endex_
 
         Rack_* blocks
         size_t block_count
@@ -5642,27 +5642,27 @@ cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, cons
     start = address
     endex = start + size
 
-    trim_start_ = that.trim_start_
-    trim_start = that.trim_start
-    if trim_start_ and endex <= trim_start:
+    bound_start_ = that.bound_start_
+    bound_start = that.bound_start
+    if bound_start_ and endex <= bound_start:
         return 0
 
-    trim_endex_ = that.trim_endex_
-    trim_endex = that.trim_endex
-    if trim_endex_ and trim_endex <= start:
+    bound_endex_ = that.bound_endex_
+    bound_endex = that.bound_endex
+    if bound_endex_ and bound_endex <= start:
         return 0
 
-    # Trim before memory
-    if trim_start_ and start < trim_start:
-        offset = trim_start - start
+    # Bound before memory
+    if bound_start_ and start < bound_start:
+        offset = bound_start - start
         CheckAddrToSizeU(offset)
         start += offset
         size -= <size_t>offset
         data_ptr += <size_t>offset
 
-    # Trim after memory
-    if trim_endex_ and trim_endex < endex:
-        offset = endex - trim_endex
+    # Bound after memory
+    if bound_endex_ and bound_endex < endex:
+        offset = endex - bound_endex
         CheckAddrToSizeU(offset)
         endex -= offset
         size -= <size_t>offset
@@ -6136,22 +6136,22 @@ cdef class Memory:
     type ``uint_fast64_t``.
 
     Attributes:
-        _trim_start (int):
-            Memory trimming start address. Any data before this address is
+        _bound_start (int):
+            Memory bounds start address. Any data before this address is
             automatically discarded; disabled if ``None``.
 
-        _trim_endex (int):
-            Memory trimming exclusive end address. Any data at or after this
+        _bound_endex (int):
+            Memory bounds exclusive end address. Any data at or after this
             address is automatically discarded; disabled if ``None``.
 
     Arguments:
         start (int):
             Optional memory start address.
-            Anything before will be trimmed away.
+            Anything before will be deleted.
 
         endex (int):
             Optional memory exclusive end address.
-            Anything at or after it will be trimmed away.
+            Anything at or after it will be deleted.
 
     Examples:
         >>> from cbytesparse.c import Memory
@@ -6491,7 +6491,7 @@ cdef class Memory:
 
         Computes the actual length of the stored items, i.e.
         (:attr:`endex` - :attr:`start`).
-        This will consider any trimmings being active.
+        This will consider any boundss being active.
 
         Returns:
             int: Memory length.
@@ -6655,8 +6655,8 @@ cdef class Memory:
             list inner_list
 
         if size < STR_MAX_CONTENT_SIZE:
-            trim_start = f'{memory.trim_start}, ' if memory.trim_start_ else ''
-            trim_endex = f', {memory.trim_endex}' if memory.trim_endex_ else ''
+            bound_start = f'{memory.bound_start}, ' if memory.bound_start_ else ''
+            bound_endex = f', {memory.bound_endex}' if memory.bound_endex_ else ''
 
             inner_list = []
             blocks = memory.blocks
@@ -6667,7 +6667,7 @@ cdef class Memory:
 
             inner = ', '.join(inner_list)
 
-            return f'<{trim_start}[{inner}]{trim_endex}>'
+            return f'<{bound_start}[{inner}]{bound_endex}>'
         else:
             return repr(self)
 
@@ -6779,40 +6779,40 @@ cdef class Memory:
 
         return Rack_IndexStart(self._.blocks, address)
 
-    def _pretrim_endex(
+    def _prebound_endex(
         self: Memory,
         start_min: Optional[Address],
         size: Address,
     ) -> None:
-        r"""Trims final data.
+        r"""Bounds final data.
 
-        Low-level method to manage trimming of data starting from an address.
+        Low-level method to manage bounds of data starting from an address.
 
         Arguments:
             start_min (int):
                 Starting address of the erasure range.
-                If ``None``, :attr:`trim_endex` minus `size` is considered.
+                If ``None``, :attr:`bound_endex` minus `size` is considered.
 
             size (int):
                 Size of the erasure range.
 
         See Also:
-            :meth:`_pretrim_endex_backup`
+            :meth:`_prebound_endex_backup`
         """
 
-        Memory_PretrimEndex(self._, start_min, size)
+        Memory_PreboundEndex(self._, start_min, size)
 
-    def _pretrim_endex_backup(
+    def _prebound_endex_backup(
         self: Memory,
         start_min: Optional[Address],
         size: Address,
     ) -> Memory:
-        r"""Backups a `_pretrim_endex()` operation.
+        r"""Backups a `_prebound_endex()` operation.
 
         Arguments:
             start_min (int):
                 Starting address of the erasure range.
-                If ``None``, :attr:`trim_endex` minus `size` is considered.
+                If ``None``, :attr:`bound_endex` minus `size` is considered.
 
             size (int):
                 Size of the erasure range.
@@ -6821,7 +6821,7 @@ cdef class Memory:
             :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
-            :meth:`_pretrim_endex`
+            :meth:`_prebound_endex`
         """
         cdef:
             addr_t start_min_
@@ -6829,8 +6829,8 @@ cdef class Memory:
             const Memory_* memory = self._
             addr_t start
 
-        if memory.trim_endex_ and size_ > 0:
-            start = memory.trim_endex
+        if memory.bound_endex_ and size_ > 0:
+            start = memory.bound_endex
             CheckSubAddrU(start, size)
             start -= size
             if start_min is not None:
@@ -6841,40 +6841,40 @@ cdef class Memory:
         else:
             return Memory()
 
-    def _pretrim_start(
+    def _prebound_start(
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
     ) -> None:
-        r"""Trims initial data.
+        r"""Bounds initial data.
 
-        Low-level method to manage trimming of data starting from an address.
+        Low-level method to manage bounds of data starting from an address.
 
         Arguments:
             endex_max (int):
                 Exclusive end address of the erasure range.
-                If ``None``, :attr:`trim_start` plus `size` is considered.
+                If ``None``, :attr:`bound_start` plus `size` is considered.
 
             size (int):
                 Size of the erasure range.
 
         See Also:
-            :meth:`_pretrim_start_backup`
+            :meth:`_prebound_start_backup`
         """
 
-        Memory_PretrimStart(self._, endex_max, size)
+        Memory_PreboundStart(self._, endex_max, size)
 
-    def _pretrim_start_backup(
+    def _prebound_start_backup(
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
     ) -> Memory:
-        r"""Backups a `_pretrim_start()` operation.
+        r"""Backups a `_prebound_start()` operation.
 
         Arguments:
             endex_max (int):
                 Exclusive end address of the erasure range.
-                If ``None``, :attr:`trim_start` plus `size` is considered.
+                If ``None``, :attr:`bound_start` plus `size` is considered.
 
             size (int):
                 Size of the erasure range.
@@ -6883,7 +6883,7 @@ cdef class Memory:
             :obj:`ImmutableMemory`: Backup memory region.
 
         See Also:
-            :meth:`_pretrim_start`
+            :meth:`_prebound_start`
         """
         cdef:
             addr_t endex_max_
@@ -6891,8 +6891,8 @@ cdef class Memory:
             const Memory_* memory = self._
             addr_t endex
 
-        if memory.trim_start_ and size_ > 0:
-            endex = memory.trim_start
+        if memory.bound_start_ and size_ > 0:
+            endex = memory.bound_start
             CheckAddAddrU(endex, size)
             endex += size
             if endex_max is not None:
@@ -7149,7 +7149,7 @@ cdef class Memory:
         In case of stored data, :attr:`content_start` and
         :attr:`content_endex` are used as bounds.
 
-        In case of trimming limits, :attr:`trim_start` or :attr:`trim_endex`
+        In case of bounds limits, :attr:`bound_start` or :attr:`bound_endex`
         are used as bounds, when not ``None``.
 
         In case `start` and `endex` are in the wrong order, one clamps
@@ -7398,9 +7398,9 @@ cdef class Memory:
         By default, it is the current maximmum exclusive end address of
         the last stored block.
 
-        If the memory has no data and no trimming, :attr:`start` is returned.
+        If the memory has no data and no bounds, :attr:`start` is returned.
 
-        Trimming is considered only for an empty memory.
+        Bounds considered only for an empty memory.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -7449,10 +7449,10 @@ cdef class Memory:
         By default, it is the current maximmum inclusive end address of
         the last stored block.
 
-        If the memory has no data and no trimming, :attr:`start` minus one is
+        If the memory has no data and no bounds, :attr:`start` minus one is
         returned.
 
-        Trimming is considered only for an empty memory.
+        Bounds considered only for an empty memory.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -7776,9 +7776,9 @@ cdef class Memory:
         By default, it is the current minimum inclusive start address of
         the first stored block.
 
-        If the memory has no data and no trimming, 0 is returned.
+        If the memory has no data and no bounds, 0 is returned.
 
-        Trimming is considered only for an empty memory.
+        Bounds considered only for an empty memory.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -7904,7 +7904,7 @@ cdef class Memory:
         The memory is considered to have contiguous data if there is no empty
         space between blocks.
 
-        If trimming is defined, there must be no empty space also towards it.
+        If bounds defined, there must be no empty space also towards it.
         """
 
         return Memory_Contiguous(self._)
@@ -8089,7 +8089,7 @@ cdef class Memory:
 
             bound (bool):
                 The selected address range is applied to the resulting memory
-                as its trimming range. This retains information about any
+                as its bounds range. This retains information about any
                 initial and final emptiness of that range, which would be lost
                 otherwise.
 
@@ -8204,9 +8204,9 @@ cdef class Memory:
         By default, it is the current maximmum exclusive end address of
         the last stored block.
 
-        If  :attr:`trim_endex` not ``None``, that is returned.
+        If  :attr:`bound_endex` not ``None``, that is returned.
 
-        If the memory has no data and no trimming, :attr:`start` is returned.
+        If the memory has no data and no bounds, :attr:`start` is returned.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -8251,9 +8251,9 @@ cdef class Memory:
         By default, it is the current maximmum inclusive end address of
         the last stored block.
 
-        If  :attr:`trim_endex` not ``None``, that minus one is returned.
+        If  :attr:`bound_endex` not ``None``, that minus one is returned.
 
-        If the memory has no data and no trimming, :attr:`start` is returned.
+        If the memory has no data and no bounds, :attr:`start` is returned.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -8499,7 +8499,7 @@ cdef class Memory:
 
             bound (bool):
                 The selected address range is applied to the resulting memory
-                as its trimming range. This retains information about any
+                as its bounds range. This retains information about any
                 initial and final emptiness of that range, which would be lost
                 otherwise.
 
@@ -8790,11 +8790,11 @@ cdef class Memory:
 
             start (int):
                 Optional memory start address.
-                Anything before will be trimmed away.
+                Anything before will be deleted.
 
             endex (int):
                 Optional memory exclusive end address.
-                Anything at or after it will be trimmed away.
+                Anything at or after it will be deleted.
 
             copy (bool):
                 Forces copy of provided input data.
@@ -8867,11 +8867,11 @@ cdef class Memory:
 
             start (int):
                 Optional memory start address.
-                Anything before will be trimmed away.
+                Anything before will be deleted.
 
             endex (int):
                 Optional memory exclusive end address.
-                Anything at or after it will be trimmed away.
+                Anything at or after it will be deleted.
 
             copy (bool):
                 Forces copy of provided input data into the underlying data
@@ -8938,11 +8938,11 @@ cdef class Memory:
 
             start (int):
                 Optional memory start address.
-                Anything before will be trimmed away.
+                Anything before will be deleted.
 
             endex (int):
                 Optional memory exclusive end address.
-                Anything at or after it will be trimmed away.
+                Anything at or after it will be deleted.
 
             validate (bool):
                 Validates the resulting :obj:`ImmutableMemory` object.
@@ -9007,11 +9007,11 @@ cdef class Memory:
 
             start (int):
                 Optional memory start address.
-                Anything before will be trimmed away.
+                Anything before will be deleted.
 
             endex (int):
                 Optional memory exclusive end address.
-                Anything at or after it will be trimmed away.
+                Anything at or after it will be deleted.
 
             copy (bool):
                 Forces copy of provided input data into the underlying data
@@ -9083,11 +9083,11 @@ cdef class Memory:
 
             start (int):
                 Optional memory start address.
-                Anything before will be trimmed away.
+                Anything before will be deleted.
 
             endex (int):
                 Optional memory exclusive end address.
-                Anything at or after it will be trimmed away.
+                Anything at or after it will be deleted.
 
             validate (bool):
                 Validates the resulting :obj:`ImmutableMemory` object.
@@ -9221,7 +9221,7 @@ cdef class Memory:
 
             if start__ is None:
                 block = Rack_First__(blocks)
-                start_ = Block_Start(block)  # override trim start
+                start_ = Block_Start(block)  # override bound start
                 yield None, start_
                 block_index_start = 0
             else:
@@ -9445,7 +9445,7 @@ cdef class Memory:
         """
 
         size = 1 if isinstance(data, int) else len(data)
-        backup = self._pretrim_endex_backup(address, size)
+        backup = self._prebound_endex_backup(address, size)
         return address, backup
 
     def insert_restore(
@@ -10272,7 +10272,7 @@ cdef class Memory:
             :meth:`reserve_restore`
         """
 
-        backup = self._pretrim_endex_backup(address, size)
+        backup = self._prebound_endex_backup(address, size)
         return address, backup
 
     def reserve_restore(
@@ -10731,9 +10731,9 @@ cdef class Memory:
             Memory backup
 
         if offset < 0:
-            backup = self._pretrim_start_backup(None, -offset)
+            backup = self._prebound_start_backup(None, -offset)
         else:
-            backup = self._pretrim_endex_backup(None, +offset)
+            backup = self._prebound_endex_backup(None, +offset)
         return offset, backup
 
     def shift_restore(
@@ -10801,9 +10801,9 @@ cdef class Memory:
         By default, it is the current minimum inclusive start address of
         the first stored block.
 
-        If :attr:`trim_start` not ``None``, that is returned.
+        If :attr:`bound_start` not ``None``, that is returned.
 
-        If the memory has no data and no trimming, 0 is returned.
+        If the memory has no data and no bounds, 0 is returned.
 
         Examples:
             >>> from cbytesparse.c import Memory
@@ -10980,63 +10980,63 @@ cdef class Memory:
         return data
 
     @property
-    def trim_endex(
+    def bound_endex(
         self: Memory,
     ) -> Optional[Address]:
-        r"""int: Trimming exclusive end address.
+        r"""int: Bounds exclusive end address.
 
         Any data at or after this address is automatically discarded.
         Disabled if ``None``.
         """
 
-        return Memory_GetTrimEndex(self._)
+        return Memory_GetBoundEndex(self._)
 
-    @trim_endex.setter
-    def trim_endex(
+    @bound_endex.setter
+    def bound_endex(
         self: Memory,
-        trim_endex: Address,
+        bound_endex: Address,
     ) -> None:
 
-        Memory_SetTrimEndex(self._, trim_endex)
+        Memory_SetBoundEndex(self._, bound_endex)
 
     @property
-    def trim_span(
+    def bound_span(
         self: Memory,
     ) -> OpenInterval:
-        r"""tuple of int: Trimming span addresses.
+        r"""tuple of int: Bounds span addresses.
 
-        A :obj:`tuple` holding :attr:`trim_start` and :attr:`trim_endex`.
+        A :obj:`tuple` holding :attr:`bound_start` and :attr:`bound_endex`.
         """
 
-        return Memory_GetTrimSpan(self._)
+        return Memory_GetBoundSpan(self._)
 
-    @trim_span.setter
-    def trim_span(
+    @bound_span.setter
+    def bound_span(
         self: Memory,
-        trim_span: OpenInterval,
+        bound_span: OpenInterval,
     ) -> None:
 
-        Memory_SetTrimSpan(self._, trim_span)
+        Memory_SetBoundSpan(self._, bound_span)
 
     @property
-    def trim_start(
+    def bound_start(
         self: Memory,
     ) -> Optional[Address]:
-        r"""int: Trimming start address.
+        r"""int: Bounds start address.
 
         Any data before this address is automatically discarded.
         Disabled if ``None``.
         """
 
-        return Memory_GetTrimStart(self._)
+        return Memory_GetBoundStart(self._)
 
-    @trim_start.setter
-    def trim_start(
+    @bound_start.setter
+    def bound_start(
         self: Memory,
-        trim_start: Address,
+        bound_start: Address,
     ) -> None:
 
-        Memory_SetTrimStart(self._, trim_start)
+        Memory_SetBoundStart(self._, bound_start)
 
     def update(
         self: Memory,
@@ -11533,13 +11533,13 @@ cdef class bytesparse(Memory):
 
         start (int):
             Optional memory start address.
-            Anything before will be trimmed away.
+            Anything before will be deleted.
             If `source` is provided, its data start at this address
             (0 if `start` is ``None``).
 
         endex (int):
             Optional memory exclusive end address.
-            Anything at or after it will be trimmed away.
+            Anything at or after it will be deleted.
     """
 
     def __init__(
@@ -11893,10 +11893,10 @@ cdef class bytesparse(Memory):
         memory2_.blocks = memory1_.blocks
         memory1_.blocks = NULL
 
-        memory2_.trim_start = memory1_.trim_start
-        memory2_.trim_endex = memory1_.trim_endex
-        memory2_.trim_start_ = memory1_.trim_start_
-        memory2_.trim_endex_ = memory1_.trim_endex_
+        memory2_.bound_start = memory1_.bound_start
+        memory2_.bound_endex = memory1_.bound_endex
+        memory2_.bound_start_ = memory1_.bound_start_
+        memory2_.bound_endex_ = memory1_.bound_endex_
         return memory2
 
     @classmethod
@@ -11931,10 +11931,10 @@ cdef class bytesparse(Memory):
         memory2_.blocks = memory1_.blocks
         memory1_.blocks = NULL
 
-        memory2_.trim_start = memory1_.trim_start
-        memory2_.trim_endex = memory1_.trim_endex
-        memory2_.trim_start_ = memory1_.trim_start_
-        memory2_.trim_endex_ = memory1_.trim_endex_
+        memory2_.bound_start = memory1_.bound_start
+        memory2_.bound_endex = memory1_.bound_endex
+        memory2_.bound_start_ = memory1_.bound_start_
+        memory2_.bound_endex_ = memory1_.bound_endex_
         return memory2
 
     @classmethod
@@ -11979,10 +11979,10 @@ cdef class bytesparse(Memory):
         memory2_.blocks = memory1_.blocks
         memory1_.blocks = NULL
 
-        memory2_.trim_start = memory1_.trim_start
-        memory2_.trim_endex = memory1_.trim_endex
-        memory2_.trim_start_ = memory1_.trim_start_
-        memory2_.trim_endex_ = memory1_.trim_endex_
+        memory2_.bound_start = memory1_.bound_start
+        memory2_.bound_endex = memory1_.bound_endex
+        memory2_.bound_start_ = memory1_.bound_start_
+        memory2_.bound_endex_ = memory1_.bound_endex_
         return memory2
 
     def gaps(
@@ -12230,7 +12230,7 @@ cdef class bytesparse(Memory):
         cdef:
             const Memory_* memory = self._
 
-        if not memory.trim_start_ and offset < 0:
+        if not memory.bound_start_ and offset < 0:
             if Memory_Bool(memory):
                 if Memory_Start(memory) + offset < 0:
                     raise ValueError('negative offseted start')
@@ -12244,7 +12244,7 @@ cdef class bytesparse(Memory):
         cdef:
             const Memory_* memory = self._
 
-        if not memory.trim_start_ and offset < 0:
+        if not memory.bound_start_ and offset < 0:
             if Memory_Bool(memory):
                 if Memory_Start(memory) + offset < 0:
                     raise ValueError('negative offseted start')
@@ -12252,67 +12252,67 @@ cdef class bytesparse(Memory):
         return super().shift_backup(offset)
 
     @property
-    def trim_endex(
+    def bound_endex(
         self,
     ) -> Optional[Address]:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetTrimEndex(self._)
+        return Memory_GetBoundEndex(self._)
 
-    @trim_endex.setter
-    def trim_endex(
+    @bound_endex.setter
+    def bound_endex(
         self,
-        trim_endex: Optional[Address],
+        bound_endex: Optional[Address],
     ) -> None:
 
-        if trim_endex is not None and trim_endex < 0:
+        if bound_endex is not None and bound_endex < 0:
             raise ValueError('negative endex')
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetTrimEndex(self._, trim_endex)
+        Memory_SetBoundEndex(self._, bound_endex)
 
     @property
-    def trim_span(
+    def bound_span(
         self,
     ) -> OpenInterval:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetTrimSpan(self._)
+        return Memory_GetBoundSpan(self._)
 
-    @trim_span.setter
-    def trim_span(
+    @bound_span.setter
+    def bound_span(
         self,
-        trim_span: OpenInterval,
+        bound_span: OpenInterval,
     ) -> None:
 
-        trim_start, trim_endex = trim_span
-        if trim_start is not None and trim_start < 0:
+        bound_start, bound_endex = bound_span
+        if bound_start is not None and bound_start < 0:
             raise ValueError('negative start')
-        if trim_endex is not None and trim_endex < 0:
+        if bound_endex is not None and bound_endex < 0:
             raise ValueError('negative endex')
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetTrimSpan(self._, trim_span)
+        Memory_SetBoundSpan(self._, bound_span)
 
     @property
-    def trim_start(
+    def bound_start(
         self,
     ) -> Optional[Address]:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        return Memory_GetTrimStart(self._)
+        return Memory_GetBoundStart(self._)
 
-    @trim_start.setter
-    def trim_start(
+    @bound_start.setter
+    def bound_start(
         self,
-        trim_start: Optional[Address],
+        bound_start: Optional[Address],
     ) -> None:
 
-        if trim_start is not None and trim_start < 0:
+        if bound_start is not None and bound_start < 0:
             raise ValueError('negative start')
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
-        Memory_SetTrimStart(self._, trim_start)
+        Memory_SetBoundStart(self._, bound_start)
 
     def values(
         self,
