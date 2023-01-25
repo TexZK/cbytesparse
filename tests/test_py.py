@@ -22,3 +22,29 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
+from typing import Type
+
+from _common import *
+
+from cbytesparse.py import Memory as _Memory
+from cbytesparse.py import bytesparse as _bytesparse
+
+
+class TestMemory(BaseMemorySuite):
+    Memory: Type['_Memory'] = _Memory
+    ADDR_NEG: bool = False
+
+    def test___sizeof__(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'AB'], [5, b'x'], [7, b'123']])
+        assert memory.__sizeof__() > 0
+        assert memory.__sizeof__() > 6
+
+
+class TestBytesparse(BaseBytearraySuite, BaseMemorySuite):
+    bytesparse: Type['_bytesparse'] = _bytesparse
+
+    # Reuse some of BaseMemorySuite methods
+    Memory: Type['_Memory'] = _bytesparse
+    ADDR_NEG: bool = False
