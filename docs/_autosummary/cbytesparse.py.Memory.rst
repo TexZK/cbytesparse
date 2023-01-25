@@ -1,7 +1,7 @@
-cbytesparse.c.Memory
-====================
+cbytesparse.py.Memory
+=====================
 
-.. currentmodule:: cbytesparse.c
+.. currentmodule:: cbytesparse.py
 
 .. autoclass:: Memory
    :members:

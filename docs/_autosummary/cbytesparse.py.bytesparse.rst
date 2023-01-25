@@ -1,7 +1,7 @@
-cbytesparse.c.bytesparse
-========================
+cbytesparse.py.bytesparse
+=========================
 
-.. currentmodule:: cbytesparse.c
+.. currentmodule:: cbytesparse.py
 
 .. autoclass:: bytesparse
    :members:

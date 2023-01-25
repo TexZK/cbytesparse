@@ -27,4 +27,5 @@
    :recursive:
 
    cbytesparse.c
+   cbytesparse.py
 
