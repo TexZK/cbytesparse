@@ -47,6 +47,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Type
+from typing import TypeVar
 from typing import Union
 
 from bytesparse.base import STR_MAX_CONTENT_SIZE
@@ -65,6 +66,13 @@ from bytesparse.base import MutableBytesparse
 from bytesparse.base import MutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
+
+try:
+    from typing import Self
+    __SELF_WORKAROUND = False
+except ImportError:  # pragma: no cover
+    __SELF_WORKAROUND = True  # Python < 3.11
+
 
 # Allocate an empty block, so that an empty view can be returned statically
 cdef:
@@ -6203,6 +6211,12 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil:
 
 # =====================================================================================================================
 
+cdef class Memory
+if __SELF_WORKAROUND:
+    Self = None
+    Self = TypeVar('Self', bound='Memory')
+
+
 cdef class Memory:
     r"""Virtual memory.
 
@@ -6250,7 +6264,7 @@ cdef class Memory:
     def __add__(
         self: Memory,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Memory:
+    ) -> Self:
         cdef:
             Memory_* memory_ = Memory_Add(self._, value)
             Memory memory = Memory_AsObject(memory_)
@@ -6339,7 +6353,7 @@ cdef class Memory:
 
     def __copy__(
         self: Memory,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a shallow copy.
 
         Note:
@@ -6360,7 +6374,7 @@ cdef class Memory:
 
     def __deepcopy__(
         self: Memory,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a deep copy.
 
         Returns:
@@ -6530,7 +6544,7 @@ cdef class Memory:
     def __iadd__(
         self: Memory,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Memory:
+    ) -> Self:
 
         Memory_IAdd(self._, value)
         return self
@@ -6538,7 +6552,7 @@ cdef class Memory:
     def __imul__(
         self: Memory,
         times: int,
-    ) -> Memory:
+    ) -> Self:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
 
@@ -6584,7 +6598,7 @@ cdef class Memory:
     def __mul__(
         self: Memory,
         times: int,
-    ) -> Memory:
+    ) -> Self:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
             Memory_* memory_ = Memory_Mul(self._, times_)
@@ -6888,7 +6902,7 @@ cdef class Memory:
         self: Memory,
         start_min: Optional[Address],
         size: Address,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `_prebound_endex()` operation.
 
         Arguments:
@@ -6950,7 +6964,7 @@ cdef class Memory:
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `_prebound_start()` operation.
 
         Arguments:
@@ -7391,7 +7405,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `clear()` operation.
 
         Arguments:
@@ -8052,7 +8066,7 @@ cdef class Memory:
 
     def copy(
         self: Memory,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a deep copy.
 
         Returns:
@@ -8216,7 +8230,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Cuts a slice of memory.
 
         Arguments:
@@ -8283,7 +8297,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `delete()` operation.
 
         Arguments:
@@ -8616,7 +8630,7 @@ cdef class Memory:
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Selects items from a range.
 
         Arguments:
@@ -8737,7 +8751,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `fill()` operation.
 
         Arguments:
@@ -8919,7 +8933,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from blocks.
 
         Arguments:
@@ -8995,7 +9009,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from a byte-like chunk.
 
         Arguments:
@@ -9065,7 +9079,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from a iterable address/byte mapping.
 
         Arguments:
@@ -9136,7 +9150,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from another one.
 
         Arguments:
@@ -9211,7 +9225,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from a byte-like sequence.
 
         Arguments:
@@ -9270,7 +9284,7 @@ cdef class Memory:
     def fromhex(
         cls,
         string: str,
-    ) -> Memory:
+    ) -> Self:
         r"""Creates a virtual memory from an hexadecimal string.
 
         Arguments:
@@ -10280,7 +10294,7 @@ cdef class Memory:
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
         r"""Backups a `remove()` operation.
 
         Arguments:
@@ -11576,6 +11590,12 @@ MutableMemory.register(Memory)
 
 # =====================================================================================================================
 
+cdef class bytesparse
+if __SELF_WORKAROUND:
+    Self = None
+    Self = TypeVar('Self', bound='bytesparse')
+
+
 cdef class bytesparse(Memory):
     r"""Wrapper for more `bytearray` compatibility.
 
@@ -11625,7 +11645,7 @@ cdef class bytesparse(Memory):
     """
 
     def __init__(
-        self,
+        self: bytesparse,
         *args: Any,  # see bytearray.__init__()
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -11657,7 +11677,7 @@ cdef class bytesparse(Memory):
             Memory_Place__(self._, address, size, ptr, False)
 
     def __delitem__(
-        self,
+        self: bytesparse,
         key: Union[Address, slice],
     ) -> None:
 
@@ -11670,7 +11690,7 @@ cdef class bytesparse(Memory):
         super().__delitem__(key)
 
     def __getitem__(
-        self,
+        self: bytesparse,
         key: Union[Address, slice],
     ) -> Any:
 
@@ -11683,7 +11703,7 @@ cdef class bytesparse(Memory):
         return super().__getitem__(key)
 
     def __setitem__(
-        self,
+        self: bytesparse,
         key: Union[Address, slice],
         value: Optional[Union[AnyBytes, Value]],
     ) -> None:
@@ -11697,7 +11717,7 @@ cdef class bytesparse(Memory):
         super().__setitem__(key, value)
 
     def _rectify_address(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Address:
         r"""Rectifies an address.
@@ -11730,7 +11750,7 @@ cdef class bytesparse(Memory):
             raise IndexError('index out of range')
 
     def _rectify_span(
-        self,
+        self: bytesparse,
         start: Optional[Address],
         endex: Optional[Address],
     ) -> OpenInterval:
@@ -11773,7 +11793,7 @@ cdef class bytesparse(Memory):
         return start, endex
 
     def block_span(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
 
@@ -11781,7 +11801,7 @@ cdef class bytesparse(Memory):
         return super().block_span(address)
 
     def blocks(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[Tuple[Address, memoryview]]:
@@ -11790,7 +11810,7 @@ cdef class bytesparse(Memory):
         yield from super().blocks(start=start, endex=endex)
 
     def bound(
-        self,
+        self: bytesparse,
         start: Optional[Address],
         endex: Optional[Address],
     ) -> ClosedInterval:
@@ -11800,7 +11820,7 @@ cdef class bytesparse(Memory):
 
     @property
     def bound_endex(
-        self,
+        self: bytesparse,
     ) -> Optional[Address]:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
@@ -11808,7 +11828,7 @@ cdef class bytesparse(Memory):
 
     @bound_endex.setter
     def bound_endex(
-        self,
+        self: bytesparse,
         bound_endex: Optional[Address],
     ) -> None:
 
@@ -11820,7 +11840,7 @@ cdef class bytesparse(Memory):
 
     @property
     def bound_span(
-        self,
+        self: bytesparse,
     ) -> OpenInterval:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
@@ -11828,7 +11848,7 @@ cdef class bytesparse(Memory):
 
     @bound_span.setter
     def bound_span(
-        self,
+        self: bytesparse,
         bound_span: OpenInterval,
     ) -> None:
 
@@ -11843,7 +11863,7 @@ cdef class bytesparse(Memory):
 
     @property
     def bound_start(
-        self,
+        self: bytesparse,
     ) -> Optional[Address]:
 
         # Copy-pasted from Memory, because I cannot figure out how to override properties
@@ -11851,7 +11871,7 @@ cdef class bytesparse(Memory):
 
     @bound_start.setter
     def bound_start(
-        self,
+        self: bytesparse,
         bound_start: Optional[Address],
     ) -> None:
 
@@ -11862,7 +11882,7 @@ cdef class bytesparse(Memory):
         Memory_SetBoundStart(self._, bound_start)
 
     def clear(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> None:
@@ -11871,16 +11891,16 @@ cdef class bytesparse(Memory):
         super().clear(start, endex)
 
     def clear_backup(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().clear_backup(start=start, endex=endex)
 
     def count(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -11890,7 +11910,7 @@ cdef class bytesparse(Memory):
         return super().count(item, start=start, endex=endex)
 
     def crop(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> None:
@@ -11899,7 +11919,7 @@ cdef class bytesparse(Memory):
         super().crop(start=start, endex=endex)
 
     def crop_backup(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Tuple[Optional[ImmutableMemory], Optional[ImmutableMemory]]:
@@ -11908,17 +11928,17 @@ cdef class bytesparse(Memory):
         return super().crop_backup(start=start, endex=endex)
 
     def cut(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().cut(start=start, endex=endex)
 
     def delete(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> None:
@@ -11927,16 +11947,16 @@ cdef class bytesparse(Memory):
         super().delete(start=start, endex=endex)
 
     def delete_backup(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().delete_backup(start=start, endex=endex)
 
     def equal_span(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Tuple[Optional[Address], Optional[Address], Optional[Value]]:
 
@@ -11944,19 +11964,19 @@ cdef class bytesparse(Memory):
         return super().equal_span(address)
 
     def extract(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().extract(start=start, endex=endex, pattern=pattern, step=step, bound=bound)
 
     def fill(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
@@ -11966,16 +11986,16 @@ cdef class bytesparse(Memory):
         super().fill(start=start, endex=endex, pattern=pattern)
 
     def fill_backup(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().fill_backup(start=start, endex=endex)
 
     def find(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -11985,7 +12005,7 @@ cdef class bytesparse(Memory):
         return super().find(item, start=start, endex=endex)
 
     def flood(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         pattern: Union[AnyBytes, Value] = 0,
@@ -11995,7 +12015,7 @@ cdef class bytesparse(Memory):
         super().flood(start=start, endex=endex, pattern=pattern)
 
     def flood_backup(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> List[OpenInterval]:
@@ -12012,7 +12032,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> bytesparse:
+    ) -> Self:
         cdef:
             Memory memory1
             bytesparse memory2
@@ -12053,7 +12073,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> bytesparse:
+    ) -> Self:
         cdef:
             Memory memory1
             bytesparse memory2
@@ -12091,7 +12111,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> bytesparse:
+    ) -> Self:
         cdef:
             const Memory_* memory_
             Memory memory1
@@ -12131,7 +12151,7 @@ cdef class bytesparse(Memory):
         return memory2
 
     def gaps(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[OpenInterval]:
@@ -12140,7 +12160,7 @@ cdef class bytesparse(Memory):
         yield from super().gaps(start=start, endex=endex)
 
     def get(
-        self,
+        self: bytesparse,
         address: Address,
         default: Optional[Value] = None,
     ) -> Optional[Value]:
@@ -12149,7 +12169,7 @@ cdef class bytesparse(Memory):
         return super().get(address, default=default)
 
     def index(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12159,7 +12179,7 @@ cdef class bytesparse(Memory):
         return super().index(item, start=start, endex=endex)
 
     def insert(
-        self,
+        self: bytesparse,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
     ) -> None:
@@ -12168,7 +12188,7 @@ cdef class bytesparse(Memory):
         super().insert(address, data)
 
     def insert_backup(
-        self,
+        self: bytesparse,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
     ) -> Tuple[Address, ImmutableMemory]:
@@ -12177,7 +12197,7 @@ cdef class bytesparse(Memory):
         return super().insert_backup(address, data)
 
     def intervals(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> Iterator[ClosedInterval]:
@@ -12186,7 +12206,7 @@ cdef class bytesparse(Memory):
         yield from super().intervals(start=start, endex=endex)
 
     def items(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -12201,7 +12221,7 @@ cdef class bytesparse(Memory):
         yield from super().items(start=start, endex=endex, pattern=pattern)
 
     def keys(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
     ) -> Iterator[Address]:
@@ -12215,7 +12235,7 @@ cdef class bytesparse(Memory):
         yield from super().keys(start=start, endex=endex)
 
     def ofind(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12225,7 +12245,7 @@ cdef class bytesparse(Memory):
         return super().ofind(item, start=start, endex=endex)
 
     def peek(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Optional[Value]:
 
@@ -12233,7 +12253,7 @@ cdef class bytesparse(Memory):
         return super().peek(address)
 
     def poke(
-        self,
+        self: bytesparse,
         address: Address,
         item: Optional[Union[AnyBytes, Value]],
     ) -> None:
@@ -12242,7 +12262,7 @@ cdef class bytesparse(Memory):
         super().poke(address, item)
 
     def poke_backup(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Tuple[Address, Optional[Value]]:
 
@@ -12250,7 +12270,7 @@ cdef class bytesparse(Memory):
         return super().poke_backup(address)
 
     def pop(
-        self,
+        self: bytesparse,
         address: Optional[Address] = None,
         default: Optional[Value] = None,
     ) -> Optional[Value]:
@@ -12260,7 +12280,7 @@ cdef class bytesparse(Memory):
         return super().pop(address=address, default=default)
 
     def pop_backup(
-        self,
+        self: bytesparse,
         address: Optional[Address] = None,
     ) -> Tuple[Address, Optional[Value]]:
 
@@ -12269,7 +12289,7 @@ cdef class bytesparse(Memory):
         return super().pop_backup(address=address)
 
     def remove(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12279,17 +12299,17 @@ cdef class bytesparse(Memory):
         super().remove(item, start=start, endex=endex)
 
     def remove_backup(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Memory:
+    ) -> Self:
 
         start, endex = self._rectify_span(start, endex)
         return super().remove_backup(item, start=start, endex=endex)
 
     def reserve(
-        self,
+        self: bytesparse,
         address: Address,
         size: Address,
     ) -> None:
@@ -12298,7 +12318,7 @@ cdef class bytesparse(Memory):
         super().reserve(address, size)
 
     def reserve_backup(
-        self,
+        self: bytesparse,
         address: Address,
         size: Address,
     ) -> Tuple[Address, ImmutableMemory]:
@@ -12307,7 +12327,7 @@ cdef class bytesparse(Memory):
         return super().reserve_backup(address, size)
 
     def rfind(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12317,7 +12337,7 @@ cdef class bytesparse(Memory):
         return super().rfind(item, start=start, endex=endex)
 
     def rindex(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12327,7 +12347,7 @@ cdef class bytesparse(Memory):
         return super().rindex(item, start=start, endex=endex)
 
     def rofind(
-        self,
+        self: bytesparse,
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
@@ -12337,7 +12357,7 @@ cdef class bytesparse(Memory):
         return super().rofind(item, start=start, endex=endex)
 
     def rvalues(
-        self,
+        self: bytesparse,
         start: Optional[Union[Address, EllipsisType]] = None,
         endex: Optional[Address] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -12352,7 +12372,7 @@ cdef class bytesparse(Memory):
         yield from super().rvalues(start=start, endex=endex, pattern=pattern)
 
     def setdefault(
-        self,
+        self: bytesparse,
         address: Address,
         default: Optional[Value] = None,
     ) -> Optional[Value]:
@@ -12361,7 +12381,7 @@ cdef class bytesparse(Memory):
         return super().setdefault(address, default=default)
 
     def setdefault_backup(
-        self,
+        self: bytesparse,
         address: Address,
     ) -> Tuple[Address, Optional[Value]]:
 
@@ -12369,7 +12389,7 @@ cdef class bytesparse(Memory):
         return super().setdefault_backup(address)
 
     def shift(
-        self,
+        self: bytesparse,
         offset: Address,
     ) -> None:
         cdef:
@@ -12383,7 +12403,7 @@ cdef class bytesparse(Memory):
         super().shift(offset)
 
     def shift_backup(
-        self,
+        self: bytesparse,
         offset: Address,
     ) -> Tuple[Address, ImmutableMemory]:
         cdef:
@@ -12397,7 +12417,7 @@ cdef class bytesparse(Memory):
         return super().shift_backup(offset)
 
     def values(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Union[Address, EllipsisType]] = None,
         pattern: Optional[Union[AnyBytes, Value]] = None,
@@ -12412,7 +12432,7 @@ cdef class bytesparse(Memory):
         yield from super().values(start=start, endex=endex, pattern=pattern)
 
     def view(
-        self,
+        self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
     ) -> memoryview:
@@ -12421,7 +12441,7 @@ cdef class bytesparse(Memory):
         return super().view(start=start, endex=endex)
 
     def write(
-        self,
+        self: bytesparse,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
         clear: bool = False,
@@ -12431,7 +12451,7 @@ cdef class bytesparse(Memory):
         super().write(address, data, clear=clear)
 
     def write_backup(
-        self,
+        self: bytesparse,
         address: Address,
         data: Union[AnyBytes, Value, ImmutableMemory],
         clear: bool = False,
