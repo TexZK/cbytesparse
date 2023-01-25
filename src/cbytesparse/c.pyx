@@ -61,6 +61,7 @@ from bytesparse.base import BlockSequence
 from bytesparse.base import ClosedInterval
 from bytesparse.base import EllipsisType
 from bytesparse.base import ImmutableMemory
+from bytesparse.base import MutableBytesparse
 from bytesparse.base import MutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
@@ -12438,3 +12439,8 @@ cdef class bytesparse(Memory):
 
         address = self._rectify_address(address)
         return super().write_backup(address, data, clear=clear)
+
+
+ImmutableMemory.register(bytesparse)
+MutableMemory.register(bytesparse)
+MutableBytesparse.register(bytesparse)

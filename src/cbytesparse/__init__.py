@@ -114,6 +114,6 @@ True
 
 __version__ = '0.0.6'
 
-from .c import Memory  # noqa F401
-from .c import bytesparse  # noqa F401
-from .c import collapse_blocks  # noqa F401
+from .py import Memory  # noqa F401
+from .py import bytesparse  # noqa F401
+from .py import collapse_blocks  # noqa F401
