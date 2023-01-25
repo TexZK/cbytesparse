@@ -741,6 +741,7 @@ cdef vint Memory_Crop_(Memory_* that, addr_t start, addr_t endex) except -1
 cdef vint Memory_Crop(Memory_* that, object start, object endex) except -1
 
 cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, bint clear) except -1
+cdef vint Memory_WriteMemory_(Memory_* that, addr_t address, object data, bint clear) except -1
 cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1
 cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) except -1
 

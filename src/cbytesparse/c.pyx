@@ -4258,6 +4258,10 @@ cdef vint Memory_Extend(Memory_* that, object items, object offset) except -1:
 
     if isinstance(items, Memory):
         Memory_ExtendSame_(that, (<Memory>items)._, <addr_t>offset)
+
+    elif isinstance(items, ImmutableMemory):
+        Memory_Write(that, Memory_ContentEndex(that) + offset, items, True)
+
     else:
         if isinstance(items, int):
             items_value = <byte_t>items
@@ -5616,6 +5620,96 @@ cdef vint Memory_WriteSame_(Memory_* that, addr_t address, const Memory_* data, 
         Memory_Place__(that, block_start, block_size, Block_At__(block, block_offset), False)  # write
 
 
+cdef vint Memory_WriteMemory_(Memory_* that, addr_t address, object data, bint clear) except -1:
+    cdef:
+        addr_t data_start = <addr_t>data.start
+        addr_t data_endex = <addr_t>data.endex
+        addr_t start
+        addr_t endex
+        addr_t size
+        addr_t offset
+        object block_start
+        object block_data
+        object block_size
+        addr_t block_start_
+        addr_t block_endex_
+        addr_t block_size_
+        const byte_t[:] block_view
+        size_t block_offset
+
+    CheckAddAddrU(data_start, address)
+    CheckAddAddrU(data_endex, address)
+    start = data_start + address
+    endex = data_endex + address
+    size = endex - start
+
+    if not size:
+        return 0
+
+    if that.bound_start_ and endex <= that.bound_start:
+        return 0
+
+    if that.bound_endex_ and that.bound_endex <= start:
+        return 0
+
+    # Check shifted block bounds
+    for block_start, block_data in data.blocks():
+        block_start_ = <addr_t>block_start
+        CheckAddAddrU(block_start_, address)
+        block_start_ += address
+
+        block_size = len(block_data)
+        block_size_ = <addr_t>block_size
+        CheckAddAddrU(block_start_, block_size_)
+
+    if clear:
+        # Clear anything between source data boundaries
+        Memory_Erase__(that, start, endex, False)  # clear
+    else:
+        # Clear only overwritten ranges
+        for block_start, block_data in data.blocks():
+            block_start_ = <addr_t>block_start
+            block_start_ += address
+
+            block_size = len(block_data)
+            block_size_ = <addr_t>block_size
+            block_endex_ = block_start_ + block_size_
+
+            Memory_Erase__(that, block_start_, block_endex_, False)  # clear
+
+    for block_start, block_data in data.blocks():
+        block_start_ = <addr_t>block_start
+        block_start_ += address
+
+        block_size = len(block_data)
+        block_size_ = <addr_t>block_size
+        block_endex_ = block_start_ + block_size_
+
+        if that.bound_start_ and block_endex_ <= that.bound_start:
+            continue
+        if that.bound_endex_ and that.bound_endex <= block_start_:
+            break
+
+        block_view = block_data
+        block_offset = 0
+
+        # Bound before memory
+        if that.bound_start_ and block_start_ < that.bound_start:
+            offset = that.bound_start - block_start_
+            block_start_ += offset
+            CheckAddrToSizeU(offset)
+            block_offset = <size_t>offset
+
+        # Bound after memory
+        if that.bound_endex_ and that.bound_endex < block_endex_:
+            offset = block_endex_ - that.bound_endex
+            block_endex_ -= offset
+
+        block_size_ = block_endex_ - block_start_
+        with cython.boundscheck(False):
+            Memory_Place__(that, block_start_, block_size_, &block_view[block_offset], False)  # write
+
+
 cdef vint Memory_WriteRaw_(Memory_* that, addr_t address, size_t data_size, const byte_t* data_ptr) except -1:
     cdef:
         addr_t size = data_size
@@ -5691,25 +5785,12 @@ cdef vint Memory_Write(Memory_* that, object address, object data, bint clear) e
         byte_t data_value
         size_t data_size
         const byte_t* data_ptr
-        addr_t data_start
-        addr_t data_endex
 
     if isinstance(data, Memory):
         Memory_WriteSame_(that, address_, (<Memory>data)._, clear)
 
     elif isinstance(data, ImmutableMemory):
-        for block_start, block_data in data:
-            data_start = <addr_t>block_start
-            data_view = block_data
-            with cython.boundscheck(False):
-                data_ptr = &data_view[0]
-            data_size = <size_t>len(data_view)
-            CheckAddAddrU(data_start, data_size)
-            data_endex = data_start + data_size
-            CheckAddAddrU(data_start, address_)
-            CheckAddAddrU(data_endex, address_)
-
-            Memory_WriteRaw_(that, data_start + address_, data_size, data_ptr)
+        Memory_WriteMemory_(that, address_, data, clear)
 
     else:
         if isinstance(data, int):
