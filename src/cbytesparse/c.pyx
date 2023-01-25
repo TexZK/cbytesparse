@@ -68,10 +68,11 @@ from bytesparse.base import OpenInterval
 from bytesparse.base import Value
 
 try:
-    from typing import Self
     __SELF_WORKAROUND = False
+    from typing import Self
 except ImportError:  # pragma: no cover
     __SELF_WORKAROUND = True  # Python < 3.11
+    Self = None  # dummy
 
 
 # Allocate an empty block, so that an empty view can be returned statically
@@ -8965,3 +8966,9 @@ cdef class bytesparse(Memory):
 ImmutableMemory.register(bytesparse)
 MutableMemory.register(bytesparse)
 MutableBytesparse.register(bytesparse)
+
+
+# =====================================================================================================================
+
+if __SELF_WORKAROUND:
+    del Self

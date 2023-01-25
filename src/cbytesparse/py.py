@@ -64,11 +64,11 @@ from .c import bytesparse as _CythonBytesparse  # isort:skip
 from .c import collapse_blocks as _collapse_blocks  # isort:skip
 
 try:
-    from typing import Self
     __SELF_WORKAROUND = False
+    from typing import Self
 except ImportError:  # pragma: no cover
-    Self = None  # dummy
     __SELF_WORKAROUND = True  # Python < 3.11
+    Self = None  # dummy
 
 
 def collapse_blocks(
