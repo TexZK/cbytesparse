@@ -19,6 +19,7 @@ cbytesparse.c.BlockView
       ~BlockView.__init__
       ~BlockView.check
       ~BlockView.release
+      ~BlockView.toreadonly
    
    
 
@@ -31,7 +32,6 @@ cbytesparse.c.BlockView
       ~BlockView.acquired
       ~BlockView.endex
       ~BlockView.endin
-      ~BlockView.memview
       ~BlockView.start
    
    
