@@ -4625,7 +4625,11 @@ cdef object Memory_GetBoundSpan(const Memory_* that):
 
 
 cdef vint Memory_SetBoundSpan(Memory_* that, object bound_span) except -1:
-    bound_start, bound_endex = bound_span
+    if bound_span is None:
+        bound_start = None
+        bound_endex = None
+    else:
+        bound_start, bound_endex = bound_span
 
     if bound_start is None:
         bound_start_ = 0
@@ -6647,7 +6651,7 @@ cdef class Memory:
     @bound_span.setter
     def bound_span(
         self: Memory,
-        bound_span: OpenInterval,
+        bound_span: Optional[OpenInterval],
     ) -> None:
 
         Memory_SetBoundSpan(self._, bound_span)
@@ -8370,9 +8374,11 @@ cdef class bytesparse(Memory):
     @bound_span.setter
     def bound_span(
         self: bytesparse,
-        bound_span: OpenInterval,
+        bound_span: Optional[OpenInterval],
     ) -> None:
 
+        if bound_span is None:
+            bound_span = (None, None)
         bound_start, bound_endex = bound_span
         if bound_start is not None and bound_start < 0:
             raise ValueError('negative start')
