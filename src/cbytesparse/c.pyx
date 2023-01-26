@@ -4392,6 +4392,15 @@ cdef BlockView Memory_View(const Memory_* that, object start, object endex):
     return Memory_View_(that, start_, endex_)
 
 
+cdef BlockView Memory_Read_(const Memory_* that, addr_t address, size_t size):
+    CheckAddAddrU(address, size)
+    return Memory_View_(that, address, address + size)
+
+
+cdef BlockView Memory_Read(const Memory_* that, object address, object size):
+    return Memory_Read_(that, <addr_t>address, <size_t>size)
+
+
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     cdef:
         Rack_* blocks = Rack_Copy(that.blocks)
@@ -7652,6 +7661,16 @@ cdef class Memory:
         else:
             Memory_InsertRaw_(memory, address_, 1, &item_)
 
+    def read(
+        self: Memory,
+        address: Address,
+        size: Address,
+    ) -> memoryview:
+        cdef:
+            const Memory_* memory = self._
+
+        return Memory_Read(memory, address, size)
+
     def remove(
         self: Memory,
         item: Union[AnyBytes, Value],
@@ -8789,6 +8808,15 @@ cdef class bytesparse(Memory):
         if address is not None:
             address = self._rectify_address(address)
         return super().pop_backup(address=address)
+
+    def read(
+        self: bytesparse,
+        address: Address,
+        size: Address,
+    ) -> memoryview:
+
+        address = self._rectify_address(address)
+        return super().read(address, size)
 
     def remove(
         self: bytesparse,

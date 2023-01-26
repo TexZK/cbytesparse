@@ -35,6 +35,7 @@ from bytesparse.base import Address
 from bytesparse.base import BlockList
 from bytesparse.base import ImmutableMemory
 from bytesparse.base import OpenInterval
+from bytesparse.base import TypeAlias
 from bytesparse.base import Value
 from bytesparse.inplace import Memory as _InplaceMemory
 
@@ -237,7 +238,7 @@ def test_create_bitmask_values():
 
 # Create a fake ImmutableMemory, by just cloning an existing common class.
 # This allows to check against sub-classing with all the features available.
-FakeMemory = type('FakeMemory', (), dict(_InplaceMemory.__dict__))
+FakeMemory: TypeAlias = type('FakeMemory', (), dict(_InplaceMemory.__dict__))
 ImmutableMemory.register(FakeMemory)
 assert issubclass(FakeMemory, ImmutableMemory)
 
@@ -3497,6 +3498,35 @@ class BaseMemorySuite:
                 else:
                     with pytest.raises(ValueError, match=match):
                         memory.view(start, start + size)
+
+    def test_read_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        assert bytes(memory.read(2, 3)) == b'BCD'
+        assert bytes(memory.read(9, 1)) == b'y'
+        match = 'non-contiguous data within range'
+
+        with pytest.raises(ValueError, match=match):
+            memory.read(4, 3)
+        with pytest.raises(ValueError, match=match):
+            memory.read(0, 6)
+
+    def test_read_template(self):
+        Memory = self.Memory
+        match = 'non-contiguous data within range'
+        for start in range(MAX_START):
+            for size in range(MAX_SIZE):
+                blocks = create_template_blocks()
+                values = blocks_to_values(blocks, MAX_SIZE)
+                memory = Memory.from_blocks(blocks)
+                values_ref = values[start:(start + size)]
+
+                if all(x is not None for x in values_ref):
+                    values_out = list(memory.read(start, size))
+                    assert values_out == values_ref
+                else:
+                    with pytest.raises(ValueError, match=match):
+                        memory.read(start, size)
 
     def test_shift_doctest(self):
         Memory = self.Memory

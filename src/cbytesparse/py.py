@@ -948,6 +948,14 @@ class Memory(MutableMemory):
 
         self._impl.popitem_restore(address, item)
 
+    def read(
+        self,
+        address: Address,
+        size: Address,
+    ) -> memoryview:
+
+        return self._impl.read(address, size)
+
     def remove(
         self,
         item: Union[AnyBytes, Value],

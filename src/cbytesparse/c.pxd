@@ -658,6 +658,9 @@ cdef (addr_t, int) Memory_PopItem(Memory_* that) except *
 cdef BlockView Memory_View_(const Memory_* that, addr_t start, addr_t endex)
 cdef BlockView Memory_View(const Memory_* that, object start, object endex)
 
+cdef BlockView Memory_Read_(const Memory_* that, addr_t address, size_t size)
+cdef BlockView Memory_Read(const Memory_* that, object address, object size)
+
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL
 
 cdef Memory_* Memory_Cut_(Memory_* that, addr_t start, addr_t endex, bint bound) except NULL
