@@ -1887,7 +1887,7 @@ cdef class BlockView:
         buffer.obj = self
         buffer.len = self._endex - self._start
         buffer.itemsize = 1
-        buffer.readonly = not (flags & PyBUF_WRITABLE)
+        buffer.readonly = False  # not (flags & PyBUF_WRITABLE)
         buffer.ndim = 1
         buffer.format = <char*>'B' if flags & (PyBUF_FORMAT | CONTIGUOUS) else NULL
         buffer.shape = &buffer.len if flags & (PyBUF_ND | CONTIGUOUS) else NULL
