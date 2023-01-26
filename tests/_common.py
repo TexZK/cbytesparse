@@ -335,7 +335,8 @@ def test_readme_examples_doctest():
     a.fill(1, -1, b'*')
     assert a.to_blocks() == [[0, b'M*******g']]
 
-    v = memoryview(a.view(1, -1))
+    v = a.view(1, -1)
+    v = memoryview(v)
     v[::2] = b'1234'
     assert a.to_blocks() == [[0, b'M1*2*3*4g']]
     assert a.count(b'*') == 3
