@@ -59,9 +59,13 @@ build = "*"
 # Disabled use of tox as it was testing all Python versions on every wheel
 # when wheels are generated for each supported version
 # test-command = "tox -c {project}/tox.ini"
-# test-requires = ["pytest","tox"]
+# test-requires = ["pytest", "tox"]
 test-command = "pytest {project}/tests"
 test-requires = "pytest"
 
-# Skip CP 32-bit and all 3.6
-skip = ["cp36-*","cp3*_i686", "*-win32*"]
+skip = [
+    "cp36-*",       # Python 3.6
+    "cp*_i686",     # CPython 32-bit
+    "*-win32*",     # Windows 32-bit
+    "pp*",          # pypy
+]
