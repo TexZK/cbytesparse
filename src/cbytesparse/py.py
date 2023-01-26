@@ -208,6 +208,12 @@ class Memory(MutableMemory):
 
         self._impl.__setitem__(key, value)
 
+    def __sizeof__(
+        self,
+    ) -> int:
+
+        return super().__sizeof__() + self._impl.__sizeof__()  # approximate
+
     def __str__(
         self,
     ) -> str:
