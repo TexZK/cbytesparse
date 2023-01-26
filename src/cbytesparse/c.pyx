@@ -82,97 +82,6 @@ cdef:
 
 # =====================================================================================================================
 
-def collapse_blocks(
-    blocks: BlockIterable,
-) -> BlockList:
-    r"""Collapses a generic sequence of blocks.
-
-    Given a generic sequence of blocks, writes them in the same order,
-    generating a new sequence of non-contiguous blocks, sorted by address.
-
-    Arguments:
-        blocks (sequence of blocks):
-            Sequence of blocks to collapse.
-
-    Returns:
-        list of blocks: Collapsed block list.
-
-    Examples:
-        +---+---+---+---+---+---+---+---+---+---+
-        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-        +===+===+===+===+===+===+===+===+===+===+
-        |[0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9]|
-        +---+---+---+---+---+---+---+---+---+---+
-        |[A | B | C | D]|   |   |   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |   |   |   |[E | F]|   |   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |[$]|   |   |   |   |   |   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |   |   |   |   |   |   |[x | y | z]|   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |[$ | B | C | E | F | 5 | x | y | z | 9]|
-        +---+---+---+---+---+---+---+---+---+---+
-
-        >>> blocks = [
-        ...     [0, b'0123456789'],
-        ...     [0, b'ABCD'],
-        ...     [3, b'EF'],
-        ...     [0, b'$'],
-        ...     [6, b'xyz'],
-        ... ]
-        >>> collapse_blocks(blocks)
-        [[0, b'$BCEF5xyz9']]
-
-        ~~~
-
-        +---+---+---+---+---+---+---+---+---+---+
-        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-        +===+===+===+===+===+===+===+===+===+===+
-        |[0 | 1 | 2]|   |   |   |   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |   |   |   |   |[A | B]|   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |   |   |   |   |   |   |[x | y | z]|   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |   |[$]|   |   |   |   |   |   |   |   |
-        +---+---+---+---+---+---+---+---+---+---+
-        |[0 | $ | 2]|   |[A | B | x | y | z]|   |
-        +---+---+---+---+---+---+---+---+---+---+
-
-        >>> blocks = [
-        ...     [0, b'012'],
-        ...     [4, b'AB'],
-        ...     [6, b'xyz'],
-        ...     [1, b'$'],
-        ... ]
-        >>> collapse_blocks(blocks)
-        [[0, b'0$2'], [4, b'ABxyz']]
-    """
-
-    cdef:
-        Memory_* memory = Memory_Alloc()
-        list collapsed = []
-        size_t block_index
-        const Rack_* blocks2
-        const Block_* block
-
-    try:
-        for block_start, block_data in blocks:
-            Memory_Write(memory, block_start, block_data, True)
-        blocks2 = memory.blocks
-
-        for block_index in range(Rack_Length(blocks2)):
-            block = Rack_Get__(blocks2, block_index)
-            collapsed.append([Block_Start(block), Block_Bytes(block)])
-    finally:
-        Memory_Free(memory)
-
-    return collapsed
-
-
-# =====================================================================================================================
-
 # FIXME: Not yet provided by the current Cython (0.29.x)
 cdef void* PyMem_Calloc(size_t nelem, size_t elsize):
     cdef:
@@ -6697,6 +6606,31 @@ cdef class Memory:
     ) -> None:
 
         Memory_Write(self._, 0, backup, True)
+
+    @classmethod
+    def collapse_blocks(
+        cls,
+        blocks: BlockIterable,
+    ) -> BlockList:
+        cdef:
+            Memory_* memory = Memory_Alloc()
+            list collapsed = []
+            size_t block_index
+            const Rack_* blocks2
+            const Block_* block
+
+        try:
+            for block_start, block_data in blocks:
+                Memory_Write(memory, block_start, block_data, True)
+            blocks2 = memory.blocks
+
+            for block_index in range(Rack_Length(blocks2)):
+                block = Rack_Get__(blocks2, block_index)
+                collapsed.append([Block_Start(block), Block_Bytes(block)])
+        finally:
+            Memory_Free(memory)
+
+        return collapsed
 
     def content_blocks(
         self,

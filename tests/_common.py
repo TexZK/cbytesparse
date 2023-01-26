@@ -1100,6 +1100,30 @@ class BaseMemorySuite:
     def test_remove_restore_doctest(self):
         pass  # no doctest
 
+    def test_collapse_blocks___doctest__(self):
+        Memory = self.Memory
+
+        blocks = [
+            [0, b'0123456789'],
+            [0, b'ABCD'],
+            [3, b'EF'],
+            [0, b'$'],
+            [6, b'xyz'],
+        ]
+        ans_out = Memory.collapse_blocks(blocks)
+        ans_ref = [[0, b'$BCEF5xyz9']]
+        assert ans_out == ans_ref
+
+        blocks = [
+            [0, b'012'],
+            [4, b'AB'],
+            [6, b'xyz'],
+            [1, b'$'],
+        ]
+        ans_out = Memory.collapse_blocks(blocks)
+        ans_ref = [[0, b'0$2'], [4, b'ABxyz']]
+        assert ans_out == ans_ref
+
     def test___contains___doctest(self):
         Memory = self.Memory
         memory = Memory.from_blocks([[1, b'ABC'], [5, b'123'], [9, b'xyz']])

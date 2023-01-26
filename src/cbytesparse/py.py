@@ -60,8 +60,6 @@ from bytesparse.base import Value
 from .c import Memory as _CythonMemory  # isort:skip
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 from .c import bytesparse as _CythonBytesparse  # isort:skip
-# noinspection PyUnresolvedReferences,PyPackageRequirements
-from .c import collapse_blocks as _collapse_blocks  # isort:skip
 
 try:
     __SELF_WORKAROUND = False
@@ -69,16 +67,6 @@ try:
 except ImportError:  # pragma: no cover
     __SELF_WORKAROUND = True  # Python < 3.11
     Self = None  # dummy
-
-
-def collapse_blocks(
-    blocks: BlockIterable,
-) -> BlockList:
-
-    return _collapse_blocks(blocks)
-
-
-collapse_blocks.__doc__ = _collapse_blocks.__doc__
 
 if __SELF_WORKAROUND:  # pragma: no cover
     del Self
@@ -405,6 +393,14 @@ class Memory(MutableMemory):
     ) -> None:
 
         self._impl.clear_restore(backup)
+
+    @classmethod
+    def collapse_blocks(
+        cls,
+        blocks: BlockIterable,
+    ) -> BlockList:
+
+        return cls._Memory.collapse_blocks(blocks)
 
     def content_blocks(
         self,
