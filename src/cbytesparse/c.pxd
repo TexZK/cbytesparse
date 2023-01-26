@@ -360,7 +360,7 @@ cdef class BlockView:
         Block_* _block  # wrapped C implementation
         size_t _start  # data slice start
         size_t _endex  # data slice endex
-        object _memview  # shadow memoryview
+        object _memoryview_object  # shadow memoryview
 
     cdef vint check_(BlockView self) except -1
     cdef vint release_(BlockView self) except -1

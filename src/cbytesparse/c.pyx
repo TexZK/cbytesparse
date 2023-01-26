@@ -49,6 +49,7 @@ from typing import Tuple
 from typing import Type
 from typing import TypeVar
 from typing import Union
+from typing import cast as _cast
 
 from bytesparse.base import STR_MAX_CONTENT_SIZE
 from bytesparse.base import Address
@@ -78,6 +79,7 @@ except ImportError:  # pragma: no cover
 # Allocate an empty block, so that an empty view can be returned statically
 cdef:
     Block_* _empty_block = Block_Acquire(Block_Alloc(0, 0, False))
+    bytearray _empty_bytearray = bytearray(b'')
 
 
 # =====================================================================================================================
@@ -1804,12 +1806,19 @@ cdef class BlockView:
     """
 
     cdef vint check_(BlockView self) except -1:
-        if self._block == NULL:
+        cdef:
+            Block_* block = self._block
+
+        if block:
+            if self._endex > block.allocated:
+                 raise RuntimeError('exceeding allocated size')
+        else:
             raise RuntimeError('null internal data pointer')
 
     cdef vint release_(BlockView self) except -1:
-        if self._memview is not None:
-            self._memview = None
+        if self._memoryview_object is not None:
+            self._memoryview_object.release()
+            self._memoryview_object = None
             self._block = Block_Release_(self._block)
 
         self._block = Block_Release(self._block)
@@ -1844,10 +1853,23 @@ cdef class BlockView:
         size = <ssize_t>(self._endex - self._start)
         return PyBytes_FromStringAndSize(ptr, size)
 
-    def __cinit__(self: BlockView):
+    def __cinit__(
+        self: BlockView,
+    ):
+
         self._block = NULL
 
-    def __dealloc__(self: BlockView):
+    def __delitem__(
+        self: BlockView,
+        key: Any,
+    ) -> None:
+
+        raise TypeError('cannot delete memory')
+
+    def __dealloc__(
+        self: BlockView,
+    ):
+
         self.release_()
 
     def __eq__(
@@ -1862,7 +1884,7 @@ cdef class BlockView:
         if isinstance(other, BlockView):
             return Block_Eq(self._block, (<BlockView>other)._block)
         else:
-            return self.memview == other
+            return self._memoryview == other
 
     def __getattr__(
         self: BlockView,
@@ -1870,9 +1892,13 @@ cdef class BlockView:
     ) -> Any:
 
         self.check_()
-        return getattr(self.memview, attr)
+        return getattr(self._memoryview, attr)
 
-    def __getbuffer__(self: BlockView, Py_buffer* buffer, int flags):
+    def __getbuffer__(
+        self: BlockView,
+        Py_buffer* buffer,
+        int flags,
+    ):
         cdef:
             int CONTIGUOUS = PyBUF_C_CONTIGUOUS | PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
 
@@ -1880,7 +1906,6 @@ cdef class BlockView:
         #     raise ValueError('read only access')
 
         self.check_()
-
         self._block = Block_Acquire(self._block)
 
         buffer.buf = &self._block.data[self._start]
@@ -1897,11 +1922,11 @@ cdef class BlockView:
 
     def __getitem__(
         self: BlockView,
-        item: Any,
+        key: Union[Address, slice],
     ) -> Any:
 
         self.check_()
-        return self.memview[item]
+        return self._memoryview[key]
 
     def __len__(
         self: BlockView,
@@ -1911,7 +1936,11 @@ cdef class BlockView:
         self.check_()
         return self._endex - self._start
 
-    def __releasebuffer__(self: BlockView, Py_buffer* buffer):
+    def __releasebuffer__(
+        self: BlockView,
+         Py_buffer* buffer,
+    ):
+
         if self._block:
             self._block = Block_Release_(self._block)
 
@@ -1920,6 +1949,15 @@ cdef class BlockView:
     ) -> str:
 
         return repr(self.__str__())
+
+    def __setitem__(
+        self: BlockView,
+        key: Union[Address, slice],
+        value: Optional[Union[AnyBytes, Value, ImmutableMemory]],
+    ) -> None:
+
+        self.check_()
+        self._memoryview[key] = value
 
     def __sizeof__(
         self: BlockView,
@@ -1943,7 +1981,8 @@ cdef class BlockView:
             start = block.address
             CheckAddAddrU(start, size)
             endex = start + size
-            return f'<{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{<uintptr_t><void*>self:X}>'
+            r = '' if block else 'released '
+            return f'<{r}{type(self).__name__}[0x{start:X}:0x{endex:X}]@0x{<uintptr_t><void*>self:X}>'
         else:
             return self.__bytes__().decode('ascii')
 
@@ -1993,7 +2032,7 @@ cdef class BlockView:
         return self.endex - 1
 
     @property
-    def memview(
+    def _memoryview(
         self: BlockView,
     ) -> memoryview:
         r"""memoryview: Python :class:`memoryview` wrapper."""
@@ -2004,17 +2043,19 @@ cdef class BlockView:
 
         self.check_()
 
-        if self._memview is None:
+        if self._memoryview_object is None:
             self._block = Block_Acquire(self._block)
             data = &self._block.data[self._start]
             size = self._endex - self._start
 
-            if size > 0:
-                self._memview = <byte_t[:size]>data
+            if size:
+                view = <byte_t[:size]>data
             else:
-                self._memview = b''
+                view = _empty_bytearray
 
-        return self._memview
+            self._memoryview_object = memoryview(view)
+
+        return self._memoryview_object
 
     @property
     def start(
@@ -2024,6 +2065,12 @@ cdef class BlockView:
 
         self.check_()
         return self._block.address
+
+    def toreadonly(
+        self: BlockView,
+    ) -> memoryview:
+
+        return self._memoryview  # still writable though...
 
 
 # =====================================================================================================================
@@ -6163,12 +6210,15 @@ cdef class Memory:
     ) -> bytes:
         cdef:
             const Memory_* memory = self._
-            BlockView view = Memory_View_(memory, Memory_Start(memory), Memory_Endex(memory))
+            addr_t start = Memory_Start(memory)
+            addr_t endex = Memory_Endex(memory)
+            BlockView view = Memory_View_(memory, start, endex)
+            bytes data
 
         try:
             data = view.__bytes__()
         finally:
-            view.release()
+            view.release_()
         return data
 
     def __cinit__(self):
@@ -7606,8 +7656,9 @@ cdef class Memory:
     ) -> memoryview:
         cdef:
             const Memory_* memory = self._
+            BlockView view = Memory_Read(memory, address, size)
 
-        return Memory_Read(memory, address, size)
+        return _cast(memoryview, view)
 
     def remove(
         self: Memory,
@@ -7919,10 +7970,14 @@ cdef class Memory:
         endex: Optional[Address] = None,
     ) -> bytes:
         cdef:
-            BlockView view = Memory_View(self._, start, endex)
-            bytes data = view.__bytes__()
+            const Memory_* memory = self._
+            BlockView view = Memory_View(memory, start, endex)
+            bytes data
 
-        view.release_()
+        try:
+            data = view.__bytes__()
+        finally:
+            view.release_()
         return data
 
     def update(
@@ -8040,13 +8095,14 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> BlockView:
+    ) -> memoryview:
         cdef:
             const Memory_* memory = self._
             addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
             addr_t endex_ = Memory_Endex(memory) if endex is None else <addr_t>endex
+            BlockView view = Memory_View_(memory, start_, endex_)
 
-        return Memory_View_(memory, start_, endex_)
+        return _cast(memoryview, view)
 
     def write(
         self: Memory,
