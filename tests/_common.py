@@ -246,6 +246,140 @@ ImmutableMemory.register(FakeMemory)
 assert issubclass(FakeMemory, ImmutableMemory)
 
 
+def test_readme_examples_doctest():
+    from cbytesparse import Memory
+    from cbytesparse import bytesparse
+
+    m = bytesparse(b'Hello, World!')
+    assert len(m) == 13
+    assert str(m) == "<[[0, b'Hello, World!']]>"
+    assert bytes(m) == b'Hello, World!'
+    assert m.to_bytes() == b'Hello, World!'
+
+    m.extend(b'!!')
+    assert bytes(m) == b'Hello, World!!!'
+
+    i = m.index(b',')
+    assert i == 5
+    m[:i] = b'Ciao'
+    assert bytes(m) == b'Ciao, World!!!'
+
+    i = m.index(b',')
+    assert i == 4
+    m.insert(i, b'ne')
+    assert bytes(m) == b'Ciaone, World!!!'
+
+    i = m.index(b',')
+    assert i == 6
+    m[(i - 2):i] = b' ciao'
+    assert bytes(m) == b'Ciao ciao, World!!!'
+
+    assert m.pop() == 33
+    assert bytes(m) == b'Ciao ciao, World!!'
+
+    del m[m.index(b'l')]
+    assert bytes(m) == b'Ciao ciao, Word!!'
+
+    assert m.popitem() == (16, 33)
+    assert bytes(m) == b'Ciao ciao, Word!'
+
+    m.remove(b' ciao')
+    assert bytes(m) == b'Ciao, Word!'
+
+    i = m.index(b',')
+    assert i == 4
+    m.clear(start=i, endex=(i + 2))
+    assert m.to_blocks() == [[0, b'Ciao'], [6, b'Word!']]
+    assert m.contiguous is False
+    assert m.content_parts == 2
+    assert m.content_size == 9
+    assert len(m) == 11
+
+    m.flood(pattern=b'.')
+    assert bytes(m) == b'Ciao..Word!'
+    assert m[-2] == 100
+
+    assert m.peek(-2) == 100
+    m.poke(-2, b'k')
+    assert bytes(m) == b'Ciao..Work!'
+
+    m.crop(start=m.index(b'W'))
+    assert m.to_blocks() == [[6, b'Work!']]
+    assert m.span == (6, 11)
+    assert (m.start, m.endex) == (6, 11)
+
+    m.bound_span = (2, 10)
+    assert str(m) == "<2, [[6, b'Work']], 10>"
+    assert m.to_blocks() == [[6, b'Work']]
+
+    m.shift(-6)
+    assert m.to_blocks() == [[2, b'rk']]
+    assert str(m) == "<2, [[2, b'rk']], 10>"
+
+    a = bytesparse(b'Ma')
+    a.write(0, m)
+    assert a.to_blocks() == [[0, b'Mark']]
+
+    b = Memory.from_bytes(b'ing', offset=4)
+    assert b.to_blocks() == [[4, b'ing']]
+
+    a.write(0, b)
+    assert a.to_blocks() == [[0, b'Marking']]
+
+    a.reserve(4, 2)
+    assert a.to_blocks() == [[0, b'Mark'], [6, b'ing']]
+
+    a.write(4, b'et')
+    assert a.to_blocks() == [[0, b'Marketing']]
+
+    a.fill(1, -1, b'*')
+    assert a.to_blocks() == [[0, b'M*******g']]
+
+    v = memoryview(a.view(1, -1))
+    v[::2] = b'1234'
+    assert a.to_blocks() == [[0, b'M1*2*3*4g']]
+    assert a.count(b'*') == 3
+    del v
+
+    c = a.copy()
+    assert (c == a) is True
+    assert (c is a) is False
+
+    del a[a.index(b'*')::2]
+    assert a.to_blocks() == [[0, b'M1234']]
+
+    a.shift(3)
+    assert a.to_blocks() == [[3, b'M1234']]
+    assert list(a.keys()) == [3, 4, 5, 6, 7]
+    assert list(a.values()) == [77, 49, 50, 51, 52]
+    assert list(a.items()) == [(3, 77), (4, 49), (5, 50), (6, 51), (7, 52)]
+
+    assert c.to_blocks() == [[0, b'M1*2*3*4g']]
+    c[2::2] = None
+    assert c.to_blocks() == [[0, b'M1'], [3, b'2'], [5, b'3'], [7, b'4']]
+    assert list(c.intervals()) == [(0, 2), (3, 4), (5, 6), (7, 8)]
+    assert list(c.gaps()) == [(None, 0), (2, 3), (4, 5), (6, 7), (8, None)]
+
+    c.flood(pattern=b'xy')
+    assert c.to_blocks() == [[0, b'M1x2x3x4']]
+
+    t = c.cut(c.index(b'1'), c.index(b'3'))
+    assert t.to_blocks() == [[1, b'1x2x']]
+    assert c.to_blocks() == [[0, b'M'], [5, b'3x4']]
+    assert t.bound_span == (1, 5)
+
+    k = bytesparse.from_blocks([[4, b'ABC'], [9, b'xy']], start=2, endex=15)
+    assert str(k) == "<2, [[4, b'ABC'], [9, b'xy']], 15>"
+    assert k.bound_span == (2, 15)
+    assert k.span == (2, 15)
+    assert k.content_span == (4, 11)
+    assert len(k) == 13
+    assert k.content_size == 5
+
+    k.flood(pattern=b'.')
+    assert k.to_blocks() == [[2, b'..ABC..xy....']]
+
+
 class BaseMemorySuite:
 
     Memory: Type[MutableMemory] = MutableMemory  # replace by subclassing 'Memory'
