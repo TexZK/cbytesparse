@@ -26,6 +26,7 @@ cbytesparse.c.Memory
       ~Memory.clear
       ~Memory.clear_backup
       ~Memory.clear_restore
+      ~Memory.collapse_blocks
       ~Memory.content_blocks
       ~Memory.content_items
       ~Memory.content_keys
@@ -78,6 +79,7 @@ cbytesparse.c.Memory
       ~Memory.popitem
       ~Memory.popitem_backup
       ~Memory.popitem_restore
+      ~Memory.read
       ~Memory.remove
       ~Memory.remove_backup
       ~Memory.remove_restore

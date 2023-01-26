@@ -26,6 +26,7 @@ cbytesparse.py.bytesparse
       ~bytesparse.clear
       ~bytesparse.clear_backup
       ~bytesparse.clear_restore
+      ~bytesparse.collapse_blocks
       ~bytesparse.content_blocks
       ~bytesparse.content_items
       ~bytesparse.content_keys
@@ -78,6 +79,7 @@ cbytesparse.py.bytesparse
       ~bytesparse.popitem
       ~bytesparse.popitem_backup
       ~bytesparse.popitem_restore
+      ~bytesparse.read
       ~bytesparse.remove
       ~bytesparse.remove_backup
       ~bytesparse.remove_restore
