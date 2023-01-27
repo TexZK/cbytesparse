@@ -45,8 +45,8 @@ Overview
     :alt: Supported implementations
     :target: https://pypi.org/project/cbytesparse/
 
-
 .. end-badges
+
 
 Library to handle sparse bytes within a virtual memory space.
 
@@ -137,9 +137,9 @@ Here's a quick usage example of ``bytesparse`` objects:
 13
 >>> str(m)  # string representation, with bounds and data blocks
 "<[[0, b'Hello, World!']]>"
->>> bytes(m)  # export as bytes
+>>> bytes(m)  # exports as bytes
 b'Hello, World!'
->>> m.to_bytes()  # export the whole range as bytes
+>>> m.to_bytes()  # exports the whole range as bytes
 b'Hello, World!'
 >>> # ----------------------------------------------------------------
 >>> m.extend(b'!!')  # more emphasis!!!
@@ -218,7 +218,7 @@ b'Ciao..Work!'
 >>> m.to_blocks()
 [[6, b'Work']]
 >>> # ----------------------------------------------------------------
->>> m.shift(-6)  # shift to the left; NOTE: address bounds will cut 2 bytes!
+>>> m.shift(-6)  # shifts to the left; NOTE: address bounds will cut 2 bytes!
 >>> m.to_blocks()
 [[2, b'rk']]
 >>> str(m)
@@ -267,7 +267,7 @@ False
 >>> a.to_blocks()
 [[0, b'M1234']]
 >>> # ----------------------------------------------------------------
->>> a.shift(3)  # move away from the trivial 0 index
+>>> a.shift(3)  # moves away from the trivial 0 index
 >>> a.to_blocks()
 [[3, b'M1234']]
 >>> list(a.keys())
@@ -277,21 +277,21 @@ False
 >>> list(a.items())
 [(3, 77), (4, 49), (5, 50), (6, 51), (7, 52)]
 >>> # ----------------------------------------------------------------
->>> c.to_blocks()  # remind
+>>> c.to_blocks()  # reminder
 [[0, b'M1*2*3*4g']]
 >>> c[2::2] = None  # clears (empties) every other byte from the first asterisk
 >>> c.to_blocks()
 [[0, b'M1'], [3, b'2'], [5, b'3'], [7, b'4']]
->>> list(c.intervals())  # list all the block ranges
+>>> list(c.intervals())  # lists all the block ranges
 [(0, 2), (3, 4), (5, 6), (7, 8)]
->>> list(c.gaps())  # list all the empty ranges
+>>> list(c.gaps())  # lists all the empty ranges
 [(None, 0), (2, 3), (4, 5), (6, 7), (8, None)]
 >>> # ----------------------------------------------------------------
->>> c.flood(pattern=b'xy')  # fill empty spaces
+>>> c.flood(pattern=b'xy')  # fills empty spaces
 >>> c.to_blocks()
 [[0, b'M1x2x3x4']]
 >>> # ----------------------------------------------------------------
->>> t = c.cut(c.index(b'1'), c.index(b'3'))  # cut an inner slice
+>>> t = c.cut(c.index(b'1'), c.index(b'3'))  # cuts an inner slice
 >>> t.to_blocks()
 [[1, b'1x2x']]
 >>> c.to_blocks()
@@ -300,7 +300,7 @@ False
 (1, 5)
 >>> # ----------------------------------------------------------------
 >>> k = bytesparse.from_blocks([[4, b'ABC'], [9, b'xy']], start=2, endex=15)  # bounded
->>> str(k)  # show summary
+>>> str(k)  # shows summary
 "<2, [[4, b'ABC'], [9, b'xy']], 15>"
 >>> k.bound_span  # defined at creation
 (2, 15)

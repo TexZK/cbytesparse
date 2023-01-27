@@ -615,9 +615,6 @@ cdef bint Memory_Bool(const Memory_* that) nogil
 cdef addr_t Memory_Length(const Memory_* that) nogil
 cdef bint Memory_IsEmpty(const Memory_* that) nogil
 
-cdef object Memory_ObjFind(const Memory_* that, object item, object start, object endex)
-cdef object Memory_RevObjFind(const Memory_* that, object item, object start, object endex)
-
 cdef addr_t Memory_FindUnbounded_(const Memory_* that, size_t size, const byte_t* buffer) except? -1
 cdef addr_t Memory_FindBounded_(const Memory_* that, size_t size, const byte_t* buffer,
                                 addr_t start, addr_t endex) except? -1
