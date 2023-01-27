@@ -413,7 +413,7 @@ class BaseMemorySuite:
 
         Memory(start=1, endex=0)
         Memory(start=2, endex=0)
-        if self.ADDR_NEG:
+        if self.ADDR_NEG:  # pragma: no cover (not supported by cbytesparse)
             Memory(start=0, endex=-1)
             Memory(start=0, endex=-2)
 

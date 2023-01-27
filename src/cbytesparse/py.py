@@ -868,15 +868,6 @@ class Memory(MutableMemory):
 
         yield from self._impl.keys(start=start, endex=endex)
 
-    def ofind(
-        self,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Optional[Address]:
-
-        return self._impl.ofind(item, start=start, endex=endex)
-
     def peek(
         self,
         address: Address,
@@ -1030,15 +1021,6 @@ class Memory(MutableMemory):
     ) -> Address:
 
         return self._impl.rindex(item, start=start, endex=endex)
-
-    def rofind(
-        self,
-        item: Union[AnyBytes, Value],
-        start: Optional[Address] = None,
-        endex: Optional[Address] = None,
-    ) -> Optional[Address]:
-
-        return self._impl.rofind(item, start=start, endex=endex)
 
     def rvalues(
         self,
