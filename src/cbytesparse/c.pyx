@@ -4233,7 +4233,12 @@ cdef vint Memory_Extend(Memory_* that, object items, object offset) except -1:
             items_size = 1
             items_ptr = &items_value
         else:
-            items_view = items
+            try:
+                items_view = items
+            except TypeError:
+                items = bytes(items)
+                items_view = items
+
             items_size = len(items_view)
             with cython.boundscheck(False):
                 items_ptr = &items_view[0]
