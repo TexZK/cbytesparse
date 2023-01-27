@@ -46,6 +46,7 @@ from cpython.ref cimport PyObject
 from libc.stdint cimport int_fast64_t
 from libc.stdint cimport uint_fast64_t
 from libc.stdint cimport uintptr_t
+from libc.string cimport memchr
 from libc.string cimport memcmp
 from libc.string cimport memcpy
 from libc.string cimport memmove
@@ -116,6 +117,7 @@ cdef size_t Upsize(size_t allocated, size_t requested) nogil
 
 # ---------------------------------------------------------------------------------------------------------------------
 
+cdef const void* memrchr(const void *ptr, int ch, size_t count) nogil
 cdef void Reverse(byte_t* buffer, size_t start, size_t endin) nogil
 cdef bint IsSequence(object obj) except -1
 
@@ -186,6 +188,135 @@ cdef saddr_t MulAddrS(saddr_t a, saddr_t b) except? 0xDEAD
 cdef bint CannotAddrToSizeS(saddr_t a) nogil
 cdef vint CheckAddrToSizeS(saddr_t a) except -1
 cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD
+
+
+# =====================================================================================================================
+
+cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          size_t data_start, size_t data_endex) nogil
+cdef size_t Buffer_Count(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         size_t data_start, size_t data_endex) nogil
+
+cdef bint Buffer_StartsWith_(const byte_t* data_ptr, size_t data_size,
+                             const byte_t* token_ptr, size_t token_size) nogil
+cdef bint Buffer_StartsWith(const byte_t[:] data_view,
+                            const byte_t[:] token_view) nogil
+
+cdef bint Buffer_EndsWith_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size) nogil
+cdef bint Buffer_EndsWith(const byte_t[:] data_view,
+                          const byte_t[:] token_view) nogil
+
+cdef bint Buffer_Contains_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size,
+                           size_t data_start, size_t data_endex) nogil
+cdef bint Buffer_Contains(const byte_t[:] data_view,
+                          const byte_t[:] token_view,
+                          size_t data_start, size_t data_endex) nogil
+
+cdef ssize_t Buffer_Find_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          size_t data_start, size_t data_endex) nogil
+cdef ssize_t Buffer_Find(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         size_t data_start, size_t data_endex) nogil
+
+cdef ssize_t Buffer_RevFind_(const byte_t* data_ptr, size_t data_size,
+                             const byte_t* token_ptr, size_t token_size,
+                             size_t data_start, size_t data_endex) nogil
+cdef ssize_t Buffer_RevFind(const byte_t[:] data_view,
+                            const byte_t[:] token_view,
+                            size_t data_start, size_t data_endex) nogil
+
+cdef ssize_t Buffer_Index_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size,
+                           size_t data_start, size_t data_endex) except -1
+cdef ssize_t Buffer_Index(const byte_t[:] data_view,
+                          const byte_t[:] token_view,
+                          size_t data_start, size_t data_endex) except -1
+
+cdef ssize_t Buffer_RevIndex_(const byte_t* data_ptr, size_t data_size,
+                              const byte_t* token_ptr, size_t token_size,
+                              size_t data_start, size_t data_endex) except -1
+cdef ssize_t Buffer_RevIndex(const byte_t[:] data_view,
+                             const byte_t[:] token_view,
+                             size_t data_start, size_t data_endex) except -1
+
+cdef vint Buffer_Replace_(byte_t* data_ptr, size_t data_size,
+                          const byte_t* old_ptr, size_t old_size,
+                          const byte_t* new_ptr, size_t count,
+                          size_t data_start, size_t data_endex) nogil
+cdef vint Buffer_Replace(byte_t[:] data_view,
+                         const byte_t[:] old_view,
+                         const byte_t[:] new_view,
+                         size_t count, size_t data_start, size_t data_endex) except -1
+
+cdef vint Buffer_ReplaceAll_(byte_t* data_ptr, size_t data_size,
+                             const byte_t* old_ptr, size_t old_size,
+                             const byte_t* new_ptr, size_t count,
+                             size_t data_start, size_t data_endex) nogil
+cdef vint Buffer_ReplaceAll(byte_t[:] data_view,
+                            const byte_t[:] old_view,
+                            const byte_t[:] new_view,
+                            size_t count, size_t data_start, size_t data_endex) except -1
+
+cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsAlNum(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsAlpha_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsAlpha(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsASCII_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsASCII(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsDigit_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsDigit(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsLower(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsUpper(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsTitle_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsTitle(const byte_t[:] data_view) nogil
+
+cdef void Buffer_Lower_(byte_t* data_ptr, size_t data_size) nogil
+cdef void Buffer_Lower(byte_t[:] data_view) nogil
+
+cdef void Buffer_Upper_(byte_t* data_ptr, size_t data_size) nogil
+cdef void Buffer_Upper(byte_t[:] data_view) nogil
+
+cdef void Buffer_SwapCase_(byte_t* data_ptr, size_t data_size) nogil
+cdef void Buffer_SwapCase(byte_t[:] data_view) nogil
+
+cdef void Buffer_Capitalize_(byte_t* data_ptr, size_t data_size) nogil
+cdef void Buffer_Capitalize(byte_t[:] data_view) nogil
+
+cdef void Buffer_Title_(byte_t* data_ptr, size_t data_size) nogil
+cdef void Buffer_Title(byte_t[:] data_view) nogil
+
+cdef bytes Buffer_MakeTrans_(const byte_t* in_ptr, size_t in_size, const byte_t* out_ptr)
+cdef bytes Buffer_MakeTrans(const byte_t[:] in_view,
+                            const byte_t[:] out_view)
+
+cdef void Buffer_Translate_(byte_t* data_ptr, size_t data_size, const byte_t* table_ptr) nogil
+cdef vint Buffer_Translate(byte_t[:] data_view,
+                           const byte_t[:] table_view) except -1
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+cdef class InplaceView:
+    cdef:
+        object _wrapped  # wrapped buffer object (e.g. memoryview, bytearray)
+
+    cdef vint check_(InplaceView self) except -1
 
 
 # =====================================================================================================================

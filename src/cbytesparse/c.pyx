@@ -91,9 +91,11 @@ except ImportError:  # pragma: no cover
     Self = None  # dummy
 
 
-# Allocate an empty block, so that an empty view can be returned statically
 cdef:
+    # Allocate an empty block, so that an empty view can be returned statically
     Block_* _empty_block = Block_Acquire(Block_Alloc(0, 0, False))
+
+    # Allocate an empty bytearray to use to export empty memoryviews
     bytearray _empty_bytearray = bytearray(b'')
 
 
@@ -154,6 +156,19 @@ cdef size_t Upsize(size_t allocated, size_t requested) nogil:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+
+cdef const void* memrchr(const void *ptr, int ch, size_t count) nogil:
+    cdef:
+        const byte_t* p = &(<const byte_t*>ptr)[count]
+        const byte_t* e = &(<const byte_t*>ptr)[0]
+        byte_t b = <byte_t>ch
+
+    while p != e:
+        p -= 1
+        if p[0] == b:
+            return p
+    return NULL
+
 
 cdef void Reverse(byte_t* buffer, size_t start, size_t endin) nogil:
     cdef:
@@ -406,6 +421,893 @@ cdef vint CheckAddrToSizeS(saddr_t a) except -1:
 cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD:
     CheckAddrToSizeS(a)
     return <ssize_t>a
+
+
+# =====================================================================================================================
+
+cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          size_t data_start, size_t data_endex) nogil:
+    cdef:
+        size_t count = 0
+
+    if data_endex > data_size: data_endex = data_size
+    if data_endex <= data_start: return 0
+    if token_size == 0: return 0
+    if token_size > data_endex - data_start: return 0
+    data_endex -= token_size
+
+    while data_start < data_endex:
+        if memcmp(&data_ptr[data_start], token_ptr, token_size) == 0:
+            count += 1
+            if CannotAddSizeU(data_start, token_size): break
+            data_start += token_size
+    return count
+
+
+cdef size_t Buffer_Count(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         size_t data_start, size_t data_endex) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_Count_(&data_view[0], len(data_view),
+                             &token_view[0], len(token_view),
+                             data_start, data_endex)
+
+
+cdef bint Buffer_StartsWith_(const byte_t* data_ptr, size_t data_size,
+                             const byte_t* token_ptr, size_t token_size) nogil:
+
+    if token_size == 0: return False
+    if data_size < token_size: return False
+    return memcmp(&data_ptr[0], token_ptr, token_size) == 0
+
+
+cdef bint Buffer_StartsWith(const byte_t[:] data_view,
+                            const byte_t[:] token_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_StartsWith_(&data_view[0], len(data_view),
+                                  &token_view[0], len(token_view))
+
+
+cdef bint Buffer_EndsWith_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size) nogil:
+
+    if token_size == 0: return False
+    if data_size < token_size: return False
+    return memcmp(&data_ptr[data_size - token_size], token_ptr, token_size) == 0
+
+
+cdef bint Buffer_EndsWith(const byte_t[:] data_view,
+                          const byte_t[:] token_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_EndsWith_(&data_view[0], len(data_view),
+                                &token_view[0], len(token_view))
+
+
+cdef bint Buffer_Contains_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size,
+                           size_t data_start, size_t data_endex) nogil:
+
+    return Buffer_Find_(data_ptr, data_size,
+                        token_ptr, token_size,
+                        data_start, data_endex) >= 0
+
+
+cdef bint Buffer_Contains(const byte_t[:] data_view,
+                          const byte_t[:] token_view,
+                          size_t data_start, size_t data_endex) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_Contains_(&data_view[0], len(data_view),
+                                &token_view[0], len(token_view),
+                                data_start, data_endex)
+
+
+cdef ssize_t Buffer_Find_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          size_t data_start, size_t data_endex) nogil:
+    cdef:
+        const byte_t* data_cur
+        const byte_t* data_end
+
+    if data_endex > data_size: data_endex = data_size
+    if data_endex <= data_start: return -1
+    if token_size == 0: return -1
+    if token_size > data_endex - data_start: return -1
+    data_endex -= token_size
+    data_cur = &data_ptr[data_start]
+    data_end = &data_ptr[data_endex]
+
+    while True:
+        data_size = <size_t>(<uintptr_t>data_end - <uintptr_t>data_cur)
+        data_cur = <const byte_t*>memchr(data_cur, token_ptr[0], data_size)
+        if data_cur == NULL: return -1
+        if memcmp(data_cur, token_ptr, token_size) == 0:
+            return <ssize_t><size_t>(<uintptr_t>data_cur - <uintptr_t>data_ptr)
+        data_cur += 1
+
+
+cdef ssize_t Buffer_Find(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         size_t data_start, size_t data_endex) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_Find_(&data_view[0], len(data_view),
+                            &token_view[0], len(token_view),
+                            data_start, data_endex)
+
+
+cdef ssize_t Buffer_RevFind_(const byte_t* data_ptr, size_t data_size,
+                             const byte_t* token_ptr, size_t token_size,
+                             size_t data_start, size_t data_endex) nogil:
+    cdef:
+        const byte_t* data_cur
+        const byte_t* data_end
+
+    if data_endex > data_size: data_endex = data_size
+    if data_endex <= data_start: return -1
+    if token_size == 0: return -1
+    if token_size > data_endex - data_start: return -1
+    data_endex -= token_size
+    data_cur = &data_ptr[data_endex]
+    data_end = &data_ptr[data_start]
+
+    while True:
+        data_size = <size_t>(<uintptr_t>data_cur - <uintptr_t>data_end)
+        data_cur = <const byte_t*>memrchr(data_end, token_ptr[0], data_size)
+        if data_cur == NULL: return -1
+        if memcmp(data_cur, token_ptr, token_size) == 0:
+            return <ssize_t><size_t>(<uintptr_t>data_cur - <uintptr_t>data_ptr)
+
+
+cdef ssize_t Buffer_RevFind(const byte_t[:] data_view,
+                            const byte_t[:] token_view,
+                            size_t data_start, size_t data_endex) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_RevFind_(&data_view[0], len(data_view),
+                               &token_view[0], len(token_view),
+                               data_start, data_endex)
+
+
+cdef ssize_t Buffer_Index_(const byte_t* data_ptr, size_t data_size,
+                           const byte_t* token_ptr, size_t token_size,
+                           size_t data_start, size_t data_endex) except -1:
+    cdef:
+        ssize_t index = Buffer_Find_(data_ptr, data_size,
+                                     token_ptr, token_size,
+                                     data_start, data_endex)
+
+    if index < 0:
+        raise ValueError('subsection not found')
+    return index
+
+
+cdef ssize_t Buffer_Index(const byte_t[:] data_view,
+                          const byte_t[:] token_view,
+                          size_t data_start, size_t data_endex) except -1:
+
+    with cython.boundscheck(False):
+        return Buffer_Index_(&data_view[0], len(data_view),
+                             &token_view[0], len(token_view),
+                             data_start, data_endex)
+
+
+cdef ssize_t Buffer_RevIndex_(const byte_t* data_ptr, size_t data_size,
+                              const byte_t* token_ptr, size_t token_size,
+                              size_t data_start, size_t data_endex) except -1:
+    cdef:
+        ssize_t index = Buffer_RevFind_(data_ptr, data_size,
+                                        token_ptr, token_size,
+                                        data_start, data_endex)
+
+    if index < 0:
+        raise ValueError('subsection not found')
+    return index
+
+
+cdef ssize_t Buffer_RevIndex(const byte_t[:] data_view,
+                             const byte_t[:] token_view,
+                             size_t data_start, size_t data_endex) except -1:
+
+    with cython.boundscheck(False):
+        return Buffer_RevIndex_(&data_view[0], len(data_view),
+                                &token_view[0], len(token_view),
+                                data_start, data_endex)
+
+
+cdef vint Buffer_Replace_(byte_t* data_ptr, size_t data_size,
+                          const byte_t* old_ptr, size_t old_size,
+                          const byte_t* new_ptr, size_t count,
+                          size_t data_start, size_t data_endex) nogil:
+    cdef:
+        ssize_t index = Buffer_Find_(data_ptr, data_size,
+                                     old_ptr, old_size,
+                                     data_start, data_endex)
+
+    if index >= 0:
+        memcpy(&data_ptr[index], new_ptr, old_size)
+
+
+cdef vint Buffer_Replace(byte_t[:] data_view,
+                         const byte_t[:] old_view,
+                         const byte_t[:] new_view,
+                         size_t count, size_t data_start, size_t data_endex) except -1:
+
+    if len(old_view) != len(new_view):
+        raise ValueError('different old and new sizes')
+
+    with cython.boundscheck(False):
+        return Buffer_Replace_(&data_view[0], len(data_view),
+                               &old_view[0], len(old_view),
+                               &new_view[0], count,
+                               data_start, data_endex)
+
+
+cdef vint Buffer_ReplaceAll_(byte_t* data_ptr, size_t data_size,
+                             const byte_t* old_ptr, size_t old_size,
+                             const byte_t* new_ptr, size_t count,
+                             size_t data_start, size_t data_endex) nogil:
+    cdef:
+        ssize_t index
+
+    while True:
+        index = Buffer_Find_(data_ptr, data_size,
+                             old_ptr, old_size,
+                             data_start, data_endex)
+        if index < 0: break
+        memcpy(&data_ptr[index], new_ptr, old_size)
+        data_start += old_size
+
+
+cdef vint Buffer_ReplaceAll(byte_t[:] data_view,
+                            const byte_t[:] old_view,
+                            const byte_t[:] new_view,
+                            size_t count, size_t data_start, size_t data_endex) except -1:
+
+    if len(old_view) != len(new_view):
+        raise ValueError('different sizes')
+
+    with cython.boundscheck(False):
+        return Buffer_ReplaceAll_(&data_view[0], len(data_view),
+                                  &old_view[0], len(old_view),
+                                  &new_view[0], count,
+                                  data_start, data_endex)
+
+
+cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t _0 = 0x30
+        byte_t _9 = 0x39
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if 0 <= c <= _9: continue
+            if A <= c <= Z: continue
+            if a <= c <= z: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsAlNum(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsAlNum_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsAlpha_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if A <= c <= Z: continue
+            if a <= c <= z: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsAlpha(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsAlpha_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsASCII_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if c < 128: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsASCII(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsASCII_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsDigit_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t _0 = 0x30
+        byte_t _9 = 0x39
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if _0 <= c <= _9: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsDigit(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsDigit_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if a <= c <= z: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsLower(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsLower_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if A <= c <= Z: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsUpper(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsUpper_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if 0x09 <= c <= 0x0D: continue
+            if 0x1C <= c <= 0x20: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsUpper_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+        bint inside = False
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+
+            if a <= c <= z:
+                if not inside:
+                    return False
+                inside = True
+
+            elif A <= c <= Z:
+                if inside:
+                    return False
+                inside = True
+
+            else:
+                inside = False
+
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsTitle(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsTitle_(&data_view[0], len(data_view))
+
+
+cdef void Buffer_Lower_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    for i in range(data_size):
+        c = data_ptr[i]
+        if A <= c <= Z:
+            data_ptr[i] += a - A
+
+
+cdef void Buffer_Lower(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        Buffer_Lower_(&data_view[0], len(data_view))
+
+
+cdef void Buffer_Upper_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    for i in range(data_size):
+        c = data_ptr[i]
+        if a <= c <= z:
+            data_ptr[i] -= a - A
+
+
+cdef void Buffer_Upper(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        Buffer_Upper_(&data_view[0], len(data_view))
+
+
+cdef void Buffer_SwapCase_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    for i in range(data_size):
+        c = data_ptr[i]
+
+        if A <= c <= Z:
+            data_ptr[i] += a - A
+
+        elif a <= c <= z:
+            data_ptr[i] -= a - A
+
+
+cdef void Buffer_SwapCase(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        Buffer_SwapCase_(&data_view[0], len(data_view))
+
+
+cdef void Buffer_Capitalize_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+
+    if data_size:
+        c = data_ptr[0]
+        if a <= c <= z:
+            data_ptr[0] -= a - A
+
+    for i in range(1, data_size):
+        c = data_ptr[i]
+        if A <= c <= Z:
+            data_ptr[i] += a - A
+
+
+cdef void Buffer_Capitalize(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        Buffer_Capitalize_(&data_view[0], len(data_view))
+
+
+cdef void Buffer_Title_(byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        byte_t A = 0x41
+        byte_t Z = 0x5A
+        byte_t a = 0x61
+        byte_t z = 0x7A
+        size_t i
+        byte_t c
+        bint inside = False
+
+    for i in range(data_size):
+        c = data_ptr[i]
+
+        if a <= c <= z:
+            if not inside:
+                data_ptr[i] -= a - A
+            inside = True
+
+        elif A <= c <= Z:
+            if inside:
+                data_ptr[i] += a - A
+            inside = True
+
+        else:
+            inside = False
+
+
+cdef void Buffer_Title(byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        Buffer_Title_(&data_view[0], len(data_view))
+
+
+cdef bytes Buffer_MakeTrans_(const byte_t* in_ptr, size_t in_size, const byte_t* out_ptr):
+    cdef:
+        bytearray table = bytearray(range(256))
+        size_t i
+
+    for i in range(in_size):
+        table[in_ptr[i]] = out_ptr[i]
+
+    return bytes(table)
+
+
+cdef bytes Buffer_MakeTrans(const byte_t[:] in_view,
+                            const byte_t[:] out_view):
+
+    if len(in_view) != len(out_view):
+        raise ValueError('different sizes')
+
+    with cython.boundscheck(False):
+        return Buffer_MakeTrans_(&in_view[0], len(in_view), &out_view[0])
+
+
+cdef void Buffer_Translate_(byte_t* data_ptr, size_t data_size, const byte_t* table_ptr) nogil:
+    cdef:
+        size_t i
+
+    for i in range(data_size):
+        data_ptr[i] = table_ptr[data_ptr[i]]
+
+
+cdef vint Buffer_Translate(byte_t[:] data_view,
+                           const byte_t[:] table_view) except -1:
+
+    if len(table_view) != 256:
+        raise ValueError('translation table must be 256 characters long')
+
+    with cython.boundscheck(False):
+        return Buffer_MakeTrans_(&data_view[0], len(data_view), &table_view[0])
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+cdef class InplaceView:
+
+    cdef vint check_(InplaceView self) except -1:
+
+        if self._wrapped is None:
+            raise RuntimeError('null internal wrapped reference')
+
+    def __init__(
+        self: InplaceView,
+        wrapped not None: ByteString,
+    ):
+
+        self._wrapped = wrapped
+
+    def count(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = 0 if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_Count(self._wrapped, token, start_, endex_)
+
+    def release(
+        self: InplaceView,
+    ) -> None:
+
+        self._wrapped = None
+
+    def startswith(
+        self: InplaceView,
+        token not None: ByteString,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_StartsWith(self._wrapped, token)
+
+    def endswith(
+        self: InplaceView,
+        token not None: ByteString,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_StartsWith(self._wrapped, token)
+
+    def __contains__(
+        self: InplaceView,
+        token not None: ByteString,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_Contains(self._wrapped, token, 0, SIZE_MAX)
+
+    def contains(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_Contains(self._wrapped, token, start_, endex_)
+
+    def find(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_Find(self._wrapped, token, start_, endex_)
+
+    def rfind(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_RevFind(self._wrapped, token, start_, endex_)
+
+    def index(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_Index(self._wrapped, token, start_, endex_)
+
+    def rindex(
+        self: InplaceView,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        return Buffer_RevIndex(self._wrapped, token, start_, endex_)
+
+    def replace(
+        self: InplaceView,
+        old not None: ByteString,
+        new not None: ByteString,
+        count: int = -1,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> InplaceView:
+        cdef:
+            size_t count_ = SIZE_MAX if count is None else <size_t>count
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+
+        self.check_()
+        Buffer_Replace(self._wrapped, old, new, count_, start_, endex_)
+        return self
+
+    def caitalize(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_Capitalize(self._wrapped)
+        return self
+
+    def isalnum(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsAlNum(self._wrapped)
+
+    def isalpha(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsAlpha(self._wrapped)
+
+    def isascii(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsASCII(self._wrapped)
+
+    def isdigit(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsDigit(self._wrapped)
+
+    def islower(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsLower(self._wrapped)
+
+    def isspace(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsSpace(self._wrapped)
+
+    def istitle(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsTitle(self._wrapped)
+
+    def isupper(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_()
+        return Buffer_IsUpper(self._wrapped)
+
+    def lower(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_Lower(self._wrapped)
+        return self
+
+    def upper(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_Upper(self._wrapped)
+        return self
+
+    def swapcase(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_SwapCase(self._wrapped)
+        return self
+
+    def title(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_Title(self._wrapped)
+        return self
+
+    @staticmethod
+    def maketrans(
+        chars_from not None: ByteString,
+        chars_to not None: ByteString,
+    ) -> bytes:
+
+        return Buffer_MakeTrans(chars_from, chars_to)
+
+    def translate(
+        self: InplaceView,
+        table not None: ByteString,
+    ) -> InplaceView:
+
+        self.check_()
+        Buffer_Translate(self._wrapped, table)
+        return self
+
+    @property
+    def wrapped(
+        self: InplaceView,
+    ) -> Optional[memoryview]:
+
+        return self._wrapped
 
 
 # =====================================================================================================================
