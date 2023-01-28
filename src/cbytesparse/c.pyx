@@ -99,6 +99,24 @@ cdef:
     bytearray _empty_bytearray = bytearray(b'')
 
 
+cdef extern from *:
+    r"""
+    #define _0_ ((byte_t)'0')
+    #define _9_ ((byte_t)'9')
+    #define _A_ ((byte_t)'A')
+    #define _Z_ ((byte_t)'Z')
+    #define _a_ ((byte_t)'a')
+    #define _z_ ((byte_t)'z')
+    """
+
+    byte_t _0_
+    byte_t _9_
+    byte_t _A_
+    byte_t _Z_
+    byte_t _a_
+    byte_t _z_
+
+
 # =====================================================================================================================
 
 # FIXME: Not yet provided by the current Cython (0.29.x)
@@ -701,21 +719,15 @@ cdef size_t Buffer_RevReplace(byte_t[:] data_view,
 
 cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t _0 = 0x30
-        byte_t _9 = 0x39
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if _0 <= c <= _9: continue
-            if A <= c <= Z: continue
-            if a <= c <= z: continue
+            if _0_ <= c <= _9_: continue
+            if _A_ <= c <= _Z_: continue
+            if _a_ <= c <= _z_: continue
             return False
         return True
     else:
@@ -730,18 +742,14 @@ cdef bint Buffer_IsAlNum(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsAlpha_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if A <= c <= Z: continue
-            if a <= c <= z: continue
+            if _A_ <= c <= _Z_: continue
+            if _a_ <= c <= _z_: continue
             return False
         return True
     else:
@@ -756,14 +764,13 @@ cdef bint Buffer_IsAlpha(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsASCII_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t ascii_count = 128
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if c < ascii_count: continue
+            if c < 128: continue
             return False
         return True
     else:
@@ -824,15 +831,13 @@ cdef bint Buffer_IsLower(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if A <= c <= Z: continue
+            if _A_ <= c <= _Z_: continue
             return False
         return True
     else:
@@ -869,10 +874,6 @@ cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
         bint inside = False
@@ -881,12 +882,12 @@ cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
         for i in range(data_size):
             c = data_ptr[i]
 
-            if a <= c <= z:
+            if _a_ <= c <= _z_:
                 if not inside:
                     return False
                 inside = True
 
-            elif A <= c <= Z:
+            elif _A_ <= c <= _Z_:
                 if inside:
                     return False
                 inside = True
@@ -907,17 +908,13 @@ cdef bint Buffer_IsTitle(byte_t[:] data_view) nogil:
 
 cdef void Buffer_Lower_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     for i in range(data_size):
         c = data_ptr[i]
-        if A <= c <= Z:
-            data_ptr[i] += a - A
+        if _A_ <= c <= _Z_:
+            data_ptr[i] += _a_ - _A_
 
 
 cdef void Buffer_Lower(byte_t[:] data_view) nogil:
@@ -928,17 +925,13 @@ cdef void Buffer_Lower(byte_t[:] data_view) nogil:
 
 cdef void Buffer_Upper_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     for i in range(data_size):
         c = data_ptr[i]
-        if a <= c <= z:
-            data_ptr[i] -= a - A
+        if _a_ <= c <= _z_:
+            data_ptr[i] -= _a_ - _A_
 
 
 cdef void Buffer_Upper(byte_t[:] data_view) nogil:
@@ -949,21 +942,17 @@ cdef void Buffer_Upper(byte_t[:] data_view) nogil:
 
 cdef void Buffer_SwapCase_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     for i in range(data_size):
         c = data_ptr[i]
 
-        if A <= c <= Z:
-            data_ptr[i] += a - A
+        if _A_ <= c <= _Z_:
+            data_ptr[i] += _a_ - _A_
 
-        elif a <= c <= z:
-            data_ptr[i] -= a - A
+        elif _a_ <= c <= _z_:
+            data_ptr[i] -= _a_ - _A_
 
 
 cdef void Buffer_SwapCase(byte_t[:] data_view) nogil:
@@ -974,22 +963,18 @@ cdef void Buffer_SwapCase(byte_t[:] data_view) nogil:
 
 cdef void Buffer_Capitalize_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
 
     if data_size:
         c = data_ptr[0]
-        if a <= c <= z:
-            data_ptr[0] -= a - A
+        if _a_ <= c <= _z_:
+            data_ptr[0] -= _a_ - _A_
 
     for i in range(1, data_size):
         c = data_ptr[i]
-        if A <= c <= Z:
-            data_ptr[i] += a - A
+        if _A_ <= c <= _Z_:
+            data_ptr[i] += _a_ - _A_
 
 
 cdef void Buffer_Capitalize(byte_t[:] data_view) nogil:
@@ -1000,10 +985,6 @@ cdef void Buffer_Capitalize(byte_t[:] data_view) nogil:
 
 cdef void Buffer_Title_(byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t A = 0x41
-        byte_t Z = 0x5A
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
         bint inside = False
@@ -1011,14 +992,14 @@ cdef void Buffer_Title_(byte_t* data_ptr, size_t data_size) nogil:
     for i in range(data_size):
         c = data_ptr[i]
 
-        if a <= c <= z:
+        if _a_ <= c <= _z_:
             if not inside:
-                data_ptr[i] -= a - A
+                data_ptr[i] -= _a_ - _A_
             inside = True
 
-        elif A <= c <= Z:
+        elif _A_ <= c <= _Z_:
             if inside:
-                data_ptr[i] += a - A
+                data_ptr[i] += _a_ - _A_
             inside = True
 
         else:
@@ -1229,14 +1210,6 @@ cdef class InplaceView:
         Buffer_Replace(self._wrapped, old, new, count_, start_, endex_)
         return self
 
-    def caitalize(
-        self: InplaceView,
-    ) -> InplaceView:
-
-        self.check_wrapped_()
-        Buffer_Capitalize(self._wrapped)
-        return self
-
     def isalnum(
         self: InplaceView,
     ) -> bool:
@@ -1315,6 +1288,14 @@ cdef class InplaceView:
 
         self.check_wrapped_()
         Buffer_SwapCase(self._wrapped)
+        return self
+
+    def capitalize(
+        self: InplaceView,
+    ) -> InplaceView:
+
+        self.check_wrapped_()
+        Buffer_Capitalize(self._wrapped)
         return self
 
     def title(

@@ -386,6 +386,13 @@ class TestInplaceView:
             instance.replace(hexview[i:(i + 1)], negview[i:(i + 1)])
         assert hexview == negbytes
 
+    def test_isalnum(self):
+        instance = InplaceView(b'H3ll0W0rld')
+        assert instance.isalnum() is True
+
+        instance = InplaceView(b'H3ll0W0rld!')
+        assert instance.isalnum() is False
+
     def test_capitalize(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.capitalize() == bytestr.capitalize()
@@ -393,13 +400,6 @@ class TestInplaceView:
         buffer = loremstr.lower()
         instance = InplaceView(bytearray(buffer))
         assert instance.capitalize() == buffer.capitalize()
-
-    def test_isalnum(self):
-        instance = InplaceView(b'H3ll0W0rld')
-        assert instance.isalnum() is True
-
-        instance = InplaceView(b'H3ll0W0rld!')
-        assert instance.isalnum() is False
 
 
 class TestMemory(BaseMemorySuite):
