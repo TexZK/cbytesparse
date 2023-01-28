@@ -437,8 +437,11 @@ cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
     if token_size > data_endex - data_start: return 0
     data_endex -= token_size
 
-    while data_start < data_endex:
-        if memcmp(&data_ptr[data_start], token_ptr, token_size) == 0:
+    while data_start <= data_endex:
+        if data_ptr[data_start] != token_ptr[0]:  # early pruning
+            data_start += 1
+        elif memcmp(&data_ptr[data_start], token_ptr, token_size):
+            data_start += 1
             count += 1
             if CannotAddSizeU(data_start, token_size): break
             data_start += token_size
