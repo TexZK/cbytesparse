@@ -692,7 +692,7 @@ cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil:
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if 0 <= c <= _9: continue
+            if _0 <= c <= _9: continue
             if A <= c <= Z: continue
             if a <= c <= z: continue
             return False
@@ -735,13 +735,14 @@ cdef bint Buffer_IsAlpha(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsASCII_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
+        byte_t ascii_count = 128
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if c < 128: continue
+            if c < ascii_count: continue
             return False
         return True
     else:
@@ -1059,7 +1060,7 @@ cdef class InplaceView:
 
     def __init__(
         self: InplaceView,
-        wrapped not None: ByteString,
+        wrapped: ByteString,
     ):
 
         self._wrapped = wrapped
