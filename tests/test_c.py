@@ -28,8 +28,12 @@ import inspect
 import sys
 from typing import Type
 
+import pytest
+
 from _common import *
 
+# noinspection PyUnresolvedReferences
+from cbytesparse.c import InplaceView  # isort:skip
 # noinspection PyUnresolvedReferences
 from cbytesparse.c import Memory as _Memory  # isort:skip
 # noinspection PyUnresolvedReferences
@@ -75,6 +79,102 @@ _load_cython_tests()
 
 
 class TestMemory(BaseMemorySuite):
+@pytest.fixture
+def hexstr():
+    return bytearray(b'0123456789ABCDEF')
+
+
+@pytest.fixture
+def hexview(hexstr):
+    return memoryview(hexstr)
+
+
+class TestInplaceView:
+
+    def test___init__(self, hexview):
+        instance = InplaceView(hexview)
+        assert instance.wrapped is hexview
+
+        InplaceView(None)  # FIXME TODO
+
+    def test___sizeof__(self, hexview):
+        instance = InplaceView(hexview)
+        assert instance.__sizeof__() > 0
+
+    def test_count(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+        for i in range(len(hexstr)):
+            assert instance.count(hexstr[i:(i + 1)]) == 1, i
+
+        view = memoryview(bytearray(10))
+        instance = InplaceView(view)
+        assert instance.count(b'\0') == 10
+        assert instance.count(b'\0' * 5) == 2
+        assert instance.count(b'\0' * 3) == 3
+        assert instance.count(b'\0' * 10) == 1
+        for start in range(10):
+            for endex in range(start, 10):
+                assert instance.count(b'\0', start=start, endex=endex) == endex - start
+
+        view = memoryview(bytearray(b'Hello, World!'))
+        instance = InplaceView(view)
+        assert instance.count(b'l') == 3
+        assert instance.count(b'll') == 1
+        assert instance.count(b'o') == 2
+        assert instance.count(b'World') == 1
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.count(None)
+
+    def test_release(self, hexview):
+        instance = InplaceView(hexview)
+        assert instance.wrapped is hexview
+        instance.release()
+        assert instance.wrapped is None
+        instance.release()
+        assert instance.wrapped is None
+
+    def test_startswith(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+        assert instance.startswith(hexstr) is True
+        assert instance.startswith(hexstr + b'\0') is False
+
+        for endex in range(1, len(hexview)):
+            assert instance.startswith(hexview[:endex]) is True
+
+        for start in range(1, len(hexview)):
+            assert instance.startswith(hexview[start:]) is False
+
+        for start in range(1, len(hexview)):
+            for endex in range(start, len(hexview)):
+                assert instance.startswith(hexview[start:endex]) is False
+
+        zeros = bytes(len(hexview) * 2)
+        zeroview = memoryview(zeros)
+        for i in range(len(zeroview)):
+            assert instance.startswith(zeroview[:i]) is False
+
+    def test_endswith(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+        assert instance.endswith(hexstr) is True
+        assert instance.endswith(b'\0' + hexstr) is False
+
+        for endex in range(len(hexview) - 1):
+            assert instance.endswith(hexview[:endex]) is False
+
+        for start in range(len(hexview) - 1):
+            assert instance.endswith(hexview[start:]) is True
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.endswith(hexview[start:endex]) is False
+
+        zeros = bytes(len(hexview) * 2)
+        zeroview = memoryview(zeros)
+        for i in range(len(zeroview)):
+            assert instance.endswith(zeroview[:i]) is False
+
+
     Memory: Type['_Memory'] = _Memory
     ADDR_NEG: bool = False
 
