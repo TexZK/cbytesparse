@@ -791,15 +791,13 @@ cdef bint Buffer_IsASCII(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsDigit_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t _0 = 0x30
-        byte_t _9 = 0x39
         size_t i
         byte_t c
 
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if _0 <= c <= _9: continue
+            if _0_ <= c <= _9_: continue
             return False
         return True
     else:
@@ -814,19 +812,18 @@ cdef bint Buffer_IsDigit(const byte_t[:] data_view) nogil:
 
 cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
-        byte_t a = 0x61
-        byte_t z = 0x7A
         size_t i
         byte_t c
+        bint cased = False
 
-    if data_size:
-        for i in range(data_size):
-            c = data_ptr[i]
-            if a <= c <= z: continue
+    for i in range(data_size):
+        c = data_ptr[i]
+        if _A_ <= c <= _Z_:
             return False
-        return True
-    else:
-        return False
+        if not cased:
+            if _a_ <= c <= _z_:
+                cased = True
+    return cased
 
 
 cdef bint Buffer_IsLower(const byte_t[:] data_view) nogil:
@@ -839,15 +836,16 @@ cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
         size_t i
         byte_t c
+        bint cased = False
 
-    if data_size:
-        for i in range(data_size):
-            c = data_ptr[i]
-            if _A_ <= c <= _Z_: continue
+    for i in range(data_size):
+        c = data_ptr[i]
+        if _a_ <= c <= _z_:
             return False
-        return True
-    else:
-        return False
+        if not cased:
+            if _A_ <= c <= _Z_:
+                cased = True
+    return cased
 
 
 cdef bint Buffer_IsUpper(const byte_t[:] data_view) nogil:
@@ -875,7 +873,7 @@ cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil:
 cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil:
 
     with cython.boundscheck(False):
-        return Buffer_IsUpper_(&data_view[0], len(data_view))
+        return Buffer_IsSpace_(&data_view[0], len(data_view))
 
 
 cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
@@ -1266,6 +1264,13 @@ cdef class InplaceView:
         self.check_wrapped_()
         return Buffer_IsLower(self._wrapped)
 
+    def isupper(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_wrapped_()
+        return Buffer_IsUpper(self._wrapped)
+
     def isspace(
         self: InplaceView,
     ) -> bool:
@@ -1279,13 +1284,6 @@ cdef class InplaceView:
 
         self.check_wrapped_()
         return Buffer_IsTitle(self._wrapped)
-
-    def isupper(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_wrapped_()
-        return Buffer_IsUpper(self._wrapped)
 
     def lower(
         self: InplaceView,
