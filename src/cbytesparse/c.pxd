@@ -486,12 +486,15 @@ cdef BlockView Block_ViewSlice(Block_* that, ssize_t start, ssize_t endex)
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class BlockView:
+cdef class BlockView(InplaceView):
     cdef:
         Block_* _block  # wrapped C implementation
         size_t _start  # data slice start
         size_t _endex  # data slice endex
         object _memoryview_object  # shadow memoryview
+
+    @staticmethod
+    cdef BlockView from_block(Block_* block, size_t start, size_t endex)
 
     cdef vint check_block_(BlockView self) except -1
     cdef vint release_(BlockView self) except -1

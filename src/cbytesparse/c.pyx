@@ -2663,21 +2663,12 @@ cdef bytearray Block_Bytearray(const Block_* that):
 
 
 cdef BlockView Block_View(Block_* that):
-    cdef:
-        BlockView view
-
-    view = BlockView()
-    that = Block_Acquire(that)
-    view._block = that
-    view._start = that.start
-    view._endex = that.endex
-    return view
+    return BlockView.from_block(that, that.start, that.endex)
 
 
 cdef BlockView Block_ViewSlice_(Block_* that, size_t start, size_t endex):
     cdef:
         size_t size = that.endex - that.start
-        BlockView view
 
     if start > SIZE_HMAX:
         raise OverflowError('size overflow')
@@ -2691,12 +2682,7 @@ cdef BlockView Block_ViewSlice_(Block_* that, size_t start, size_t endex):
     elif endex > size:
         endex = size  # bound source end
 
-    view = BlockView()
-    that = Block_Acquire(that)
-    view._block = that
-    view._start = that.start + start
-    view._endex = that.start + endex
-    return view
+    return BlockView.from_block(that, that.start + start, that.start + endex)
 
 
 cdef BlockView Block_ViewSlice(Block_* that, ssize_t start, ssize_t endex):
@@ -2720,12 +2706,33 @@ cdef BlockView Block_ViewSlice(Block_* that, ssize_t start, ssize_t endex):
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class BlockView:
+cdef class BlockView(InplaceView):
     r"""Block viewer.
 
     Memory view around an underlying block slice, implementing Python's `buffer`
     protocol API.
     """
+
+    @staticmethod
+    cdef BlockView from_block(Block_* block, size_t start, size_t endex):
+        cdef:
+            BlockView view
+
+        if block == NULL:
+            raise ValueError('no block')
+        if not block.start <= start <= block.endex:
+            raise ValueError('start outside range')
+        if not block.start <= endex <= block.endex:
+            raise ValueError('endex outside range')
+        if endex < start:
+            endex = start
+
+        view = BlockView()
+        view._block = Block_Acquire(block)
+        view._start = start
+        view._endex = endex
+        view._wrapped = view._memoryview
+        return view
 
     cdef vint check_block_(BlockView self) except -1:
         cdef:
@@ -2738,9 +2745,11 @@ cdef class BlockView:
             raise RuntimeError('null internal data pointer')
 
     cdef vint release_(BlockView self) except -1:
+        # InplaceView.release()
+
         if self._memoryview_object is not None:
-            self._memoryview_object.release()
-            self._memoryview_object = None
+            # self._memoryview_object.release()
+            # self._memoryview_object = None
             self._block = Block_Release_(self._block)
 
         self._block = Block_Release(self._block)
@@ -2850,6 +2859,12 @@ cdef class BlockView:
         self.check_block_()
         return self._memoryview[key]
 
+    def __init__(
+        self: BlockView,
+    ):
+
+        InplaceView.__init__(self, None)
+
     def __len__(
         self: BlockView,
     ) -> Address:
@@ -2934,6 +2949,7 @@ cdef class BlockView:
         Any access to the object after calling this function could raise exceptions.
         """
 
+        InplaceView.release(self)
         self.release_()
 
     @property
