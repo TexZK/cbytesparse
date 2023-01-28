@@ -1216,7 +1216,7 @@ cdef class InplaceView:
         self: InplaceView,
         old not None: ByteString,
         new not None: ByteString,
-        count: int = -1,
+        count: Optional[int] = None,
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> InplaceView:
