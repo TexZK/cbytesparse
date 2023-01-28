@@ -1122,8 +1122,8 @@ cdef class InplaceView:
         token not None: ByteString,
     ) -> bool:
 
-        return Buffer_StartsWith(self._wrapped, token)
         self.check_wrapped_()
+        return Buffer_EndsWith(self._wrapped, token)
 
     def __contains__(
         self: InplaceView,
