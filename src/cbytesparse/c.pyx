@@ -47,6 +47,12 @@ Note:
 cimport cython
 from cpython.bytearray cimport PyByteArray_FromStringAndSize
 from cpython.bytes cimport PyBytes_FromStringAndSize
+from cpython.object cimport Py_EQ
+from cpython.object cimport Py_GE
+from cpython.object cimport Py_GT
+from cpython.object cimport Py_LE
+from cpython.object cimport Py_LT
+from cpython.object cimport Py_NE
 
 from itertools import count as _count
 from itertools import islice as _islice
@@ -1080,6 +1086,21 @@ cdef class InplaceView:
     ) -> int:
 
         return sizeof(InplaceView)
+
+    def __richcmp__(
+        self: InplaceView,
+        other: ByteString,
+        op: int,
+    ) -> bool:
+
+        self.check_wrapped_()
+        if op == Py_EQ: return self._wrapped == other
+        if op == Py_NE: return self._wrapped != other
+        if op == Py_LT: return self._wrapped < other
+        if op == Py_LE: return self._wrapped <= other
+        if op == Py_GE: return self._wrapped >= other
+        if op == Py_GT: return self._wrapped > other
+        raise RuntimeError('unsupported rich comparison operation')
 
     def count(
         self: InplaceView,
