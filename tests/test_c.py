@@ -78,7 +78,6 @@ def _load_cython_tests():  # pragma: no cover
 _load_cython_tests()
 
 
-class TestMemory(BaseMemorySuite):
 @pytest.fixture
 def hexstr():
     return bytearray(b'0123456789ABCDEF')
@@ -175,6 +174,7 @@ class TestInplaceView:
             assert instance.endswith(zeroview[:i]) is False
 
 
+class TestMemory(BaseMemorySuite):
     Memory: Type['_Memory'] = _Memory
     ADDR_NEG: bool = False
 
