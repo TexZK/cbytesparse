@@ -244,23 +244,27 @@ cdef ssize_t Buffer_RevIndex(const byte_t[:] data_view,
                              const byte_t[:] token_view,
                              size_t data_start, size_t data_endex) except -1
 
-cdef vint Buffer_Replace_(byte_t* data_ptr, size_t data_size,
-                          const byte_t* old_ptr, size_t old_size,
-                          const byte_t* new_ptr, size_t count,
-                          size_t data_start, size_t data_endex) nogil
-cdef vint Buffer_Replace(byte_t[:] data_view,
-                         const byte_t[:] old_view,
-                         const byte_t[:] new_view,
-                         size_t count, size_t data_start, size_t data_endex) except -1
+cdef size_t Buffer_Replace_(byte_t* data_ptr, size_t data_size,
+                            const byte_t* old_ptr, size_t old_size,
+                            const byte_t* new_ptr,
+                            size_t count,
+                            size_t data_start, size_t data_endex) nogil
+cdef size_t Buffer_Replace(byte_t[:] data_view,
+                           const byte_t[:] old_view,
+                           const byte_t[:] new_view,
+                           size_t count,
+                           size_t data_start, size_t data_endex) except? -1
 
-cdef vint Buffer_ReplaceAll_(byte_t* data_ptr, size_t data_size,
-                             const byte_t* old_ptr, size_t old_size,
-                             const byte_t* new_ptr, size_t count,
-                             size_t data_start, size_t data_endex) nogil
-cdef vint Buffer_ReplaceAll(byte_t[:] data_view,
-                            const byte_t[:] old_view,
-                            const byte_t[:] new_view,
-                            size_t count, size_t data_start, size_t data_endex) except -1
+cdef size_t Buffer_RevReplace_(byte_t* data_ptr, size_t data_size,
+                               const byte_t* old_ptr, size_t old_size,
+                               const byte_t* new_ptr,
+                               size_t count,
+                               size_t data_start, size_t data_endex) nogil
+cdef size_t Buffer_RevReplace(byte_t[:] data_view,
+                              const byte_t[:] old_view,
+                              const byte_t[:] new_view,
+                              size_t count,
+                              size_t data_start, size_t data_endex) except? -1
 
 cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil
 cdef bint Buffer_IsAlNum(const byte_t[:] data_view) nogil

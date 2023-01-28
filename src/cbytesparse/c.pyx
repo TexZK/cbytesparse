@@ -619,62 +619,79 @@ cdef ssize_t Buffer_RevIndex(const byte_t[:] data_view,
                                 data_start, data_endex)
 
 
-cdef vint Buffer_Replace_(byte_t* data_ptr, size_t data_size,
-                          const byte_t* old_ptr, size_t old_size,
-                          const byte_t* new_ptr, size_t count,
-                          size_t data_start, size_t data_endex) nogil:
-    cdef:
-        ssize_t index = Buffer_Find_(data_ptr, data_size,
-                                     old_ptr, old_size,
-                                     data_start, data_endex)
-
-    if index >= 0:
-        memcpy(&data_ptr[index], new_ptr, old_size)
-
-
-cdef vint Buffer_Replace(byte_t[:] data_view,
-                         const byte_t[:] old_view,
-                         const byte_t[:] new_view,
-                         size_t count, size_t data_start, size_t data_endex) except -1:
-
-    if len(old_view) != len(new_view):
-        raise ValueError('different old and new sizes')
-
-    with cython.boundscheck(False):
-        return Buffer_Replace_(&data_view[0], len(data_view),
-                               &old_view[0], len(old_view),
-                               &new_view[0], count,
-                               data_start, data_endex)
-
-
-cdef vint Buffer_ReplaceAll_(byte_t* data_ptr, size_t data_size,
-                             const byte_t* old_ptr, size_t old_size,
-                             const byte_t* new_ptr, size_t count,
-                             size_t data_start, size_t data_endex) nogil:
+cdef size_t Buffer_Replace_(byte_t* data_ptr, size_t data_size,
+                            const byte_t* old_ptr, size_t old_size,
+                            const byte_t* new_ptr,
+                            size_t count,
+                            size_t data_start, size_t data_endex) nogil:
     cdef:
         ssize_t index
+        size_t times = 0
 
-    while True:
+    while times < count:
         index = Buffer_Find_(data_ptr, data_size,
                              old_ptr, old_size,
                              data_start, data_endex)
         if index < 0: break
-        memcpy(&data_ptr[index], new_ptr, old_size)
-        data_start += old_size
+        memcpy(&data_ptr[<size_t>index], new_ptr, old_size)
+        data_start = <size_t>index + old_size
+        times += 1
+
+    return times
 
 
-cdef vint Buffer_ReplaceAll(byte_t[:] data_view,
-                            const byte_t[:] old_view,
-                            const byte_t[:] new_view,
-                            size_t count, size_t data_start, size_t data_endex) except -1:
+cdef size_t Buffer_Replace(byte_t[:] data_view,
+                           const byte_t[:] old_view,
+                           const byte_t[:] new_view,
+                           size_t count,
+                           size_t data_start, size_t data_endex) except? -1:
 
     if len(old_view) != len(new_view):
         raise ValueError('different sizes')
 
     with cython.boundscheck(False):
-        return Buffer_ReplaceAll_(&data_view[0], len(data_view),
+        return Buffer_Replace_(&data_view[0], len(data_view),
+                               &old_view[0], len(old_view),
+                               &new_view[0],
+                               count,
+                               data_start, data_endex)
+
+
+cdef size_t Buffer_RevReplace_(byte_t* data_ptr, size_t data_size,
+                               const byte_t* old_ptr, size_t old_size,
+                               const byte_t* new_ptr,
+                               size_t count,
+                               size_t data_start, size_t data_endex) nogil:
+    cdef:
+        ssize_t index
+        size_t times = 0
+
+    while times < count:
+        index = Buffer_RevFind_(data_ptr, data_size,
+                                old_ptr, old_size,
+                                data_start, data_endex)
+        if index < 0: break
+        memcpy(&data_ptr[<size_t>index], new_ptr, old_size)
+        data_endex = <size_t>index
+        times += 1
+
+    return times
+
+
+cdef size_t Buffer_RevReplace(byte_t[:] data_view,
+                              const byte_t[:] old_view,
+                              const byte_t[:] new_view,
+                              size_t count,
+                              size_t data_start, size_t data_endex) except? -1:
+
+    if len(old_view) != len(new_view):
+        raise ValueError('different sizes')
+
+    with cython.boundscheck(False):
+        return Buffer_RevReplace_(&data_view[0], len(data_view),
                                   &old_view[0], len(old_view),
-                                  &new_view[0], count,
+                                  &new_view[0],
+                                  count,
                                   data_start, data_endex)
 
 
