@@ -393,6 +393,55 @@ class TestInplaceView:
         instance = InplaceView(b'H3ll0W0rld!')
         assert instance.isalnum() is False
 
+    def test_isalpha(self):
+        instance = InplaceView(b'HelloWorld')
+        assert instance.isalpha() is True
+
+        instance = InplaceView(b'H3ll0W0rld')
+        assert instance.isalpha() is False
+
+    def test_isascii(self):
+        instance = InplaceView(bytes(range(128)))
+        assert instance.isascii() is True
+
+        instance = InplaceView(bytes(range(129)))
+        assert instance.isascii() is False
+
+    def test_isdigit(self, hexview):
+        instance = InplaceView(hexview[:10])
+        assert instance.isdigit() is True
+
+        instance = InplaceView(hexview)
+        assert instance.isdigit() is False
+
+    def test_islower(self, hexstr):
+        instance = InplaceView(hexstr.lower())
+        assert instance.islower() is True
+
+        instance = InplaceView(hexstr.upper())
+        assert instance.islower() is False
+
+    def test_isupper(self, hexstr):
+        instance = InplaceView(hexstr.upper())
+        assert instance.isupper() is True
+
+        instance = InplaceView(hexstr.lower())
+        assert instance.isupper() is False
+
+    def test_isspace(self):
+        instance = InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20')
+        assert instance.isspace() is True
+
+        instance = InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20\x00')
+        assert instance.isspace() is False
+
+    def test_istitle(self, loremstr):
+        instance = InplaceView(loremstr.title())
+        assert instance.istitle() is True
+
+        instance = InplaceView(loremstr.capitalize())
+        assert instance.istitle() is False
+
     def test_capitalize(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.capitalize() == bytestr.capitalize()
