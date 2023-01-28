@@ -1086,6 +1086,20 @@ cdef class InplaceView:
 
         self._wrapped = wrapped
 
+    def __getattr__(
+        self: InplaceView,
+        attr: str,
+    ) -> Any:
+
+        self.check_wrapped_()
+        return getattr(self._wrapped, attr)
+
+    def __sizeof__(
+        self: InplaceView,
+    ) -> int:
+
+        return sizeof(InplaceView)
+
     def count(
         self: InplaceView,
         token not None: ByteString,
