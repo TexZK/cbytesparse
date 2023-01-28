@@ -442,6 +442,7 @@ cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
             data_start += 1
         elif memcmp(&data_ptr[data_start], token_ptr, token_size):
             data_start += 1
+        else:
             count += 1
             if CannotAddSizeU(data_start, token_size): break
             data_start += token_size
