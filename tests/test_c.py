@@ -88,6 +88,17 @@ def hexview(hexstr):
     return memoryview(hexstr)
 
 
+@pytest.fixture()
+def bytestr():
+    return bytes(range(256))
+
+
+@pytest.fixture
+def loremstr():
+    return (b'Lorem ipsum dolor sit amet, consectetur adipisici elit, sed '
+            b'eiusmod tempor incidunt ut labore et dolore magna aliqua.')
+
+
 class TestInplaceView:
 
     def test___init__(self, hexview):
@@ -103,7 +114,7 @@ class TestInplaceView:
     def test_count(self, hexview, hexstr):
         instance = InplaceView(hexview)
         for i in range(len(hexstr)):
-            assert instance.count(hexstr[i:(i + 1)]) == 1, i
+            assert instance.count(hexstr[i:(i + 1)]) == 1
 
         view = memoryview(bytearray(10))
         instance = InplaceView(view)
@@ -153,6 +164,9 @@ class TestInplaceView:
         for i in range(len(zeroview)):
             assert instance.startswith(zeroview[:i]) is False
 
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.startswith(None)
+
     def test_endswith(self, hexview, hexstr):
         instance = InplaceView(hexview)
         assert instance.endswith(hexstr) is True
@@ -172,6 +186,220 @@ class TestInplaceView:
         zeroview = memoryview(zeros)
         for i in range(len(zeroview)):
             assert instance.endswith(zeroview[:i]) is False
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.endswith(None)
+
+    def test___contains__(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert hexview[start:endex] in instance
+
+        assert hexstr in instance
+        assert hexview in instance
+
+        assert hexview[0:0] not in instance
+        assert b'' not in instance
+        assert (hexstr + b'\0') not in instance
+
+        with pytest.raises(TypeError, match='must not be None'):
+            assert None not in instance
+
+    def test_contains(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.contains(hexview[start:endex]) is True
+                assert instance.contains(hexview[start:endex], start=start, endex=endex) is True
+                assert instance.contains(hexview[start:endex], start=start, endex=(endex + 1)) is True
+                assert instance.contains(hexview[start:endex], start=(start + 1), endex=endex) is False
+                if start:
+                    assert instance.contains(hexview[start:endex], start=(start - 1), endex=endex) is True
+                    assert instance.contains(hexview[start:endex], start=(start - 1), endex=(endex + 1)) is True
+                if endex:
+                    assert instance.contains(hexview[start:endex], start=start, endex=(endex - 1)) is False
+                    assert instance.contains(hexview[start:endex], start=(start + 1), endex=(endex - 1)) is False
+
+        assert instance.contains(hexstr) is True
+        assert instance.contains(hexview) is True
+
+        assert instance.contains(hexview[0:0]) is False
+        assert instance.contains(b'') is False
+        assert instance.contains(hexstr + b'\0') is False
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.contains(None)
+
+    def test_find(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.find(hexview[start:endex]) == start
+                assert instance.find(hexview[start:endex], start=start, endex=endex) == start
+                assert instance.find(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                assert instance.find(hexview[start:endex], start=(start + 1), endex=endex) < 0
+                if start:
+                    assert instance.find(hexview[start:endex], start=(start - 1), endex=endex) == start
+                    assert instance.find(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                if endex:
+                    assert instance.find(hexview[start:endex], start=start, endex=(endex - 1)) < 0
+                    assert instance.find(hexview[start:endex], start=(start + 1), endex=(endex - 1)) < 0
+
+        assert instance.find(hexstr) == 0
+        assert instance.find(hexview) == 0
+
+        assert instance.find(hexview[0:0]) < 0
+        assert instance.find(b'') < 0
+        assert instance.find(hexstr + b'\0') < 0
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.find(None)
+
+    def test_find_multi(self):
+        buffer = b'Hello, World!'
+        instance = InplaceView(memoryview(buffer))
+        chars = list(sorted(bytes([c]) for c in set(buffer)))
+        for c in chars:
+            assert instance.find(c) == buffer.find(c)
+
+    def test_rfind(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.rfind(hexview[start:endex]) == start
+                assert instance.rfind(hexview[start:endex], start=start, endex=endex) == start
+                assert instance.rfind(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                assert instance.rfind(hexview[start:endex], start=(start + 1), endex=endex) < 0
+                if start:
+                    assert instance.rfind(hexview[start:endex], start=(start - 1), endex=endex) == start
+                    assert instance.rfind(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                if endex:
+                    assert instance.rfind(hexview[start:endex], start=start, endex=(endex - 1)) < 0
+                    assert instance.rfind(hexview[start:endex], start=(start + 1), endex=(endex - 1)) < 0
+
+        assert instance.rfind(hexstr) == 0
+        assert instance.rfind(hexview) == 0
+
+        assert instance.rfind(hexview[0:0]) < 0
+        assert instance.rfind(b'') < 0
+        assert instance.rfind(hexstr + b'\0') < 0
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.rfind(None)
+
+    def test_rfind_multi(self):
+        buffer = b'Hello, World!'
+        instance = InplaceView(memoryview(buffer))
+        chars = list(sorted(bytes([c]) for c in set(buffer)))
+        for c in chars:
+            assert instance.rfind(c) == buffer.rfind(c)
+
+    def test_index(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.index(hexview[start:endex]) == start
+                assert instance.index(hexview[start:endex], start=start, endex=endex) == start
+                assert instance.index(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.index(hexview[start:endex], start=(start + 1), endex=endex)
+                if start:
+                    assert instance.index(hexview[start:endex], start=(start - 1), endex=endex) == start
+                    assert instance.index(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                if endex:
+                    with pytest.raises(ValueError, match='subsection not found'):
+                        assert instance.index(hexview[start:endex], start=start, endex=(endex - 1))
+                    with pytest.raises(ValueError, match='subsection not found'):
+                        assert instance.index(hexview[start:endex], start=(start + 1), endex=(endex - 1))
+
+        assert instance.index(hexstr) == 0
+        assert instance.index(hexview) == 0
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.index(hexview[0:0])
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.index(b'')
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.index(hexstr + b'\0')
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.index(None)
+
+    def test_index_multi(self):
+        buffer = b'Hello, World!'
+        instance = InplaceView(memoryview(buffer))
+        chars = list(sorted(bytes([c]) for c in set(buffer)))
+        for c in chars:
+            assert instance.index(c) == buffer.index(c)
+
+    def test_rindex(self, hexview, hexstr):
+        instance = InplaceView(hexview)
+
+        for start in range(len(hexview) - 1):
+            for endex in range(start + 1, len(hexview)):
+                assert instance.rindex(hexview[start:endex]) == start
+                assert instance.rindex(hexview[start:endex], start=start, endex=endex) == start
+                assert instance.rindex(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.rindex(hexview[start:endex], start=(start + 1), endex=endex)
+                if start:
+                    assert instance.rindex(hexview[start:endex], start=(start - 1), endex=endex) == start
+                    assert instance.rindex(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                if endex:
+                    with pytest.raises(ValueError, match='subsection not found'):
+                        assert instance.rindex(hexview[start:endex], start=start, endex=(endex - 1))
+                    with pytest.raises(ValueError, match='subsection not found'):
+                        assert instance.rindex(hexview[start:endex], start=(start + 1), endex=(endex - 1))
+
+        assert instance.rindex(hexstr) == 0
+        assert instance.rindex(hexview) == 0
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.rindex(hexview[0:0])
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.rindex(b'')
+        with pytest.raises(ValueError, match='subsection not found'):
+            assert instance.rindex(hexstr + b'\0')
+
+        with pytest.raises(TypeError, match='must not be None'):
+            instance.rindex(None)
+
+    def test_rindex_multi(self):
+        buffer = b'Hello, World!'
+        instance = InplaceView(memoryview(buffer))
+        chars = list(sorted(bytes([c]) for c in set(buffer)))
+        for c in chars:
+            assert instance.rindex(c) == buffer.rindex(c)
+
+    def test_replace(self, hexstr):
+        hexview = memoryview(hexstr)
+        instance = InplaceView(hexview)
+        negbytes = bytes(255 - c for c in hexstr)
+        negview = memoryview(negbytes)
+        for i in range(len(hexview)):
+            instance.replace(hexview[i:(i + 1)], negview[i:(i + 1)])
+        assert hexview == negbytes
+
+    def test_capitalize(self, bytestr, loremstr):
+        instance = InplaceView(memoryview(bytearray(bytestr)))
+        assert instance.capitalize() == bytestr.capitalize()
+
+        buffer = loremstr.lower()
+        instance = InplaceView(bytearray(buffer))
+        assert instance.capitalize() == buffer.capitalize()
+
+    def test_isalnum(self):
+        instance = InplaceView(b'H3ll0W0rld')
+        assert instance.isalnum() is True
+
+        instance = InplaceView(b'H3ll0W0rld!')
+        assert instance.isalnum() is False
 
 
 class TestMemory(BaseMemorySuite):
