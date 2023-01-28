@@ -1053,7 +1053,7 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 cdef class InplaceView:
 
-    cdef vint check_(InplaceView self) except -1:
+    cdef vint check_wrapped_(InplaceView self) except -1:
 
         if self._wrapped is None:
             raise RuntimeError('null internal wrapped reference')
@@ -1069,27 +1069,31 @@ cdef class InplaceView:
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
-            size_t start_ = 0 if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_Count(self._wrapped, token, start_, endex_)
 
     def release(
         self: InplaceView,
+        wrapped: bool = True,
     ) -> None:
 
-        self._wrapped = None
+        if self._wrapped is not None:
+            if wrapped:
+                self._wrapped.release()
+            self._wrapped = None
 
     def startswith(
         self: InplaceView,
         token not None: ByteString,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_StartsWith(self._wrapped, token)
 
     def endswith(
@@ -1097,80 +1101,80 @@ cdef class InplaceView:
         token not None: ByteString,
     ) -> bool:
 
-        self.check_()
         return Buffer_StartsWith(self._wrapped, token)
+        self.check_wrapped_()
 
     def __contains__(
         self: InplaceView,
         token not None: ByteString,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_Contains(self._wrapped, token, 0, SIZE_MAX)
 
     def contains(
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_Contains(self._wrapped, token, start_, endex_)
 
     def find(
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_Find(self._wrapped, token, start_, endex_)
 
     def rfind(
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_RevFind(self._wrapped, token, start_, endex_)
 
     def index(
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_Index(self._wrapped, token, start_, endex_)
 
     def rindex(
         self: InplaceView,
         token not None: ByteString,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> int:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_RevIndex(self._wrapped, token, start_, endex_)
 
     def replace(
@@ -1179,14 +1183,14 @@ cdef class InplaceView:
         new not None: ByteString,
         count: int = -1,
         start: Optional[int] = None,
-        end: Optional[int] = None,
+        endex: Optional[int] = None,
     ) -> InplaceView:
         cdef:
             size_t count_ = SIZE_MAX if count is None else <size_t>count
             size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if end is None else <size_t>end
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Replace(self._wrapped, old, new, count_, start_, endex_)
         return self
 
@@ -1194,7 +1198,7 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Capitalize(self._wrapped)
         return self
 
@@ -1202,63 +1206,63 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsAlNum(self._wrapped)
 
     def isalpha(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsAlpha(self._wrapped)
 
     def isascii(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsASCII(self._wrapped)
 
     def isdigit(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsDigit(self._wrapped)
 
     def islower(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsLower(self._wrapped)
 
     def isspace(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsSpace(self._wrapped)
 
     def istitle(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsTitle(self._wrapped)
 
     def isupper(
         self: InplaceView,
     ) -> bool:
 
-        self.check_()
+        self.check_wrapped_()
         return Buffer_IsUpper(self._wrapped)
 
     def lower(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Lower(self._wrapped)
         return self
 
@@ -1266,7 +1270,7 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Upper(self._wrapped)
         return self
 
@@ -1274,7 +1278,7 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_SwapCase(self._wrapped)
         return self
 
@@ -1282,7 +1286,7 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Title(self._wrapped)
         return self
 
@@ -1299,7 +1303,7 @@ cdef class InplaceView:
         table not None: ByteString,
     ) -> InplaceView:
 
-        self.check_()
+        self.check_wrapped_()
         Buffer_Translate(self._wrapped, table)
         return self
 
@@ -2723,7 +2727,7 @@ cdef class BlockView:
     protocol API.
     """
 
-    cdef vint check_(BlockView self) except -1:
+    cdef vint check_block_(BlockView self) except -1:
         cdef:
             Block_* block = self._block
 
@@ -2750,7 +2754,7 @@ cdef class BlockView:
             bool: Non-null slice length.
         """
 
-        self.check_()
+        self.check_block_()
         return self._start < self._endex
 
     def __bytes__(
@@ -2766,7 +2770,7 @@ cdef class BlockView:
             ssize_t size
             Block_* block = self._block
 
-        self.check_()
+        self.check_block_()
         ptr = <char*><void*>&block.data[self._start]
         size = <ssize_t>(self._endex - self._start)
         return PyBytes_FromStringAndSize(ptr, size)
@@ -2795,7 +2799,7 @@ cdef class BlockView:
         other: Any,
     ) -> bool:
 
-        self.check_()
+        self.check_block_()
         if other is None:
             return False
 
@@ -2809,7 +2813,7 @@ cdef class BlockView:
         attr: str,
     ) -> Any:
 
-        self.check_()
+        self.check_block_()
         return getattr(self._memoryview, attr)
 
     def __getbuffer__(
@@ -2823,7 +2827,7 @@ cdef class BlockView:
         # if flags & PyBUF_WRITABLE:
         #     raise ValueError('read only access')
 
-        self.check_()
+        self.check_block_()
         self._block = Block_Acquire(self._block)
 
         buffer.buf = &self._block.data[self._start]
@@ -2843,7 +2847,7 @@ cdef class BlockView:
         key: Union[Address, slice],
     ) -> Any:
 
-        self.check_()
+        self.check_block_()
         return self._memoryview[key]
 
     def __len__(
@@ -2851,7 +2855,7 @@ cdef class BlockView:
     ) -> Address:
         r"""int: Slice length."""
 
-        self.check_()
+        self.check_block_()
         return self._endex - self._start
 
     def __releasebuffer__(
@@ -2874,7 +2878,7 @@ cdef class BlockView:
         value: Optional[Union[AnyBytes, Value, ImmutableMemory]],
     ) -> None:
 
-        self.check_()
+        self.check_block_()
         self._memoryview[key] = value
 
     def __sizeof__(
@@ -2893,7 +2897,7 @@ cdef class BlockView:
             addr_t start
             addr_t endex
 
-        self.check_()
+        self.check_block_()
 
         if size > STR_MAX_CONTENT_SIZE:
             start = block.address
@@ -2917,7 +2921,7 @@ cdef class BlockView:
     ) -> None:
         r"""Checks for data consistency."""
 
-        self.check_()
+        self.check_block_()
 
     def release(
         self: BlockView,
@@ -2938,7 +2942,7 @@ cdef class BlockView:
     ) -> Address:
         r"""int: Slice exclusive end address."""
 
-        self.check_()
+        self.check_block_()
         return self._block.address + self._endex - self._start
 
     @property
@@ -2959,7 +2963,7 @@ cdef class BlockView:
             size_t size
             byte_t[:] view
 
-        self.check_()
+        self.check_block_()
 
         if self._memoryview_object is None:
             self._block = Block_Acquire(self._block)
@@ -2981,7 +2985,7 @@ cdef class BlockView:
     ) -> Address:
         r"""int: Slice inclusive start address."""
 
-        self.check_()
+        self.check_block_()
         return self._block.address
 
     def toreadonly(

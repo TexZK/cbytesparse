@@ -316,7 +316,7 @@ cdef class InplaceView:
     cdef:
         object _wrapped  # wrapped buffer object (e.g. memoryview, bytearray)
 
-    cdef vint check_(InplaceView self) except -1
+    cdef vint check_wrapped_(InplaceView self) except -1
 
 
 # =====================================================================================================================
@@ -493,7 +493,7 @@ cdef class BlockView:
         size_t _endex  # data slice endex
         object _memoryview_object  # shadow memoryview
 
-    cdef vint check_(BlockView self) except -1
+    cdef vint check_block_(BlockView self) except -1
     cdef vint release_(BlockView self) except -1
 
 
