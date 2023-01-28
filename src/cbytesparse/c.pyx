@@ -159,14 +159,15 @@ cdef size_t Upsize(size_t allocated, size_t requested) nogil:
 
 cdef const void* memrchr(const void *ptr, int ch, size_t count) nogil:
     cdef:
-        const byte_t* p = &(<const byte_t*>ptr)[count]
-        const byte_t* e = &(<const byte_t*>ptr)[0]
+        const byte_t* data_ptr = <const byte_t*>ptr
+        const byte_t* cur_ptr = &data_ptr[count]
+        const byte_t* end_ptr = &data_ptr[0]
         byte_t b = <byte_t>ch
 
-    while p != e:
-        p -= 1
-        if p[0] == b:
-            return p
+    while cur_ptr != end_ptr:
+        cur_ptr -= 1
+        if cur_ptr[0] == b:
+            return cur_ptr
     return NULL
 
 
@@ -521,7 +522,6 @@ cdef ssize_t Buffer_Find_(const byte_t* data_ptr, size_t data_size,
     if data_endex <= data_start: return -1
     if token_size == 0: return -1
     if token_size > data_endex - data_start: return -1
-    data_endex -= token_size
     data_cur = &data_ptr[data_start]
     data_end = &data_ptr[data_endex]
 
@@ -555,7 +555,7 @@ cdef ssize_t Buffer_RevFind_(const byte_t* data_ptr, size_t data_size,
     if data_endex <= data_start: return -1
     if token_size == 0: return -1
     if token_size > data_endex - data_start: return -1
-    data_endex -= token_size
+    data_endex -= token_size - 1
     data_cur = &data_ptr[data_endex]
     data_end = &data_ptr[data_start]
 
