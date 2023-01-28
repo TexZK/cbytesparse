@@ -316,11 +316,13 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class InplaceView:
+cdef class InplaceView:  # TODO: rename to BytesMethods
     cdef:
         object _wrapped  # wrapped buffer object (e.g. memoryview, bytearray)
 
     cdef vint check_wrapped_(InplaceView self) except -1
+    # TODO: add check_writable_(), to be called by mutable methods
+    # TODO: ("writable" flag retrieved via low-level buffer protocol)
 
 
 # =====================================================================================================================

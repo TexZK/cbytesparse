@@ -1057,6 +1057,8 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
+# TODO: add more bytes-compatible methods from Python strings, e.g. str.isidentifier()
+
 cdef class InplaceView:
 
     cdef vint check_wrapped_(InplaceView self) except -1:
