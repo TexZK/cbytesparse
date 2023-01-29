@@ -1172,6 +1172,11 @@ cdef class InplaceView:
         self: InplaceView,
         wrapped: ByteString,
     ):
+        cdef:
+            const byte_t[:] layout_test
+
+        if wrapped is not None:
+            layout_test = wrapped
 
         self._obj = wrapped
         self.update_readonly_()
@@ -1532,7 +1537,6 @@ cdef class InplaceView:
 
         self.check_obj_()
         return Buffer_StartsWith(self._obj, token)
-        return self
 
     @property
     def strides(
@@ -3234,6 +3238,7 @@ cdef class BlockView(InplaceView):
         r"""Checks for data consistency."""
 
         self.check_block_()
+        self.check_obj_()
 
     def release(
         self: BlockView,

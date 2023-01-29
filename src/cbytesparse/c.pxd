@@ -322,7 +322,7 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class InplaceView:  # TODO: rename to BytesMethods
+cdef class InplaceView:
     cdef:
         bint _readonly  # read-only flag (to be updated manually)
         object _obj  # wrapped buffer object (e.g. memoryview, bytearray)

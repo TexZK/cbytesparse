@@ -23,6 +23,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import array
 import importlib
 import inspect
 import sys
@@ -99,13 +100,20 @@ def loremstr():
             b'eiusmod tempor incidunt ut labore et dolore magna aliqua.')
 
 
-class TestInplaceView:
+class TestInplaceView:  # TODO: sort alphabetically
 
     def test___init__(self, hexview):
-        instance = InplaceView(hexview)
-        assert instance.obj is hexview
+        assert InplaceView(hexview).obj is hexview
+        assert InplaceView(None).obj is None
 
-        InplaceView(None)  # FIXME TODO
+        b = b'Hello, World!'
+        assert InplaceView(b).obj is b
+
+        a = array.array('B')
+        assert InplaceView(a).obj is a
+
+        with pytest.raises(ValueError, match='Buffer dtype mismatch'):
+            InplaceView(array.array('H'))
 
     def test___sizeof__(self, hexview):
         instance = InplaceView(hexview)
