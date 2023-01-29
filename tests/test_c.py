@@ -103,7 +103,7 @@ class TestInplaceView:
 
     def test___init__(self, hexview):
         instance = InplaceView(hexview)
-        assert instance.wrapped is hexview
+        assert instance.obj is hexview
 
         InplaceView(None)  # FIXME TODO
 
@@ -138,11 +138,11 @@ class TestInplaceView:
 
     def test_release(self, hexview):
         instance = InplaceView(hexview)
-        assert instance.wrapped is hexview
+        assert instance.obj is hexview
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
 
     def test_startswith(self, hexview, hexstr):
         instance = InplaceView(hexview)
@@ -541,23 +541,23 @@ class TestInplaceView:
         table = InplaceView.maketrans(b'', b'')
         instance = InplaceView(bytearray(bytestr))
         instance.translate(table)
-        assert instance.wrapped == bytestr
+        assert instance.obj == bytestr
 
         table = InplaceView.maketrans(bytestr, bytestr)
         instance = InplaceView(bytearray(bytestr))
         instance.translate(table)
-        assert instance.wrapped == bytestr
+        assert instance.obj == bytestr
 
         revbytes = bytes(reversed(bytestr))
         table = InplaceView.maketrans(bytestr, revbytes)
         instance = InplaceView(bytearray(bytestr))
         instance.translate(table)
-        assert instance.wrapped == revbytes
+        assert instance.obj == revbytes
 
         table = InplaceView.maketrans(revbytes, bytestr)
         instance = InplaceView(bytearray(revbytes))
         instance.translate(table)
-        assert instance.wrapped == bytestr
+        assert instance.obj == bytestr
 
         with pytest.raises(ValueError, match='translation table must be 256 characters long'):
             instance = InplaceView(bytearray(bytestr))
@@ -580,26 +580,66 @@ class TestInplaceView:
         assert instance.readonly is False
         instance[0] = 0
 
-    def test_wrapped(self, bytestr, hexstr, hexview):
+    def test_c_contiguous(self, hexview):
+        assert InplaceView(None).c_contiguous is True
+        assert InplaceView(hexview).c_contiguous is True
+
+    def test_contiguous(self, hexview):
+        assert InplaceView(None).contiguous is True
+        assert InplaceView(hexview).contiguous is True
+
+    def test_f_contiguous(self, hexview):
+        assert InplaceView(None).f_contiguous is True
+        assert InplaceView(hexview).f_contiguous is True
+
+    def test_format(self, hexview):
+        assert InplaceView(None).format == 'B'
+        assert InplaceView(hexview).format == 'B'
+
+    def test_itemsize(self, hexview):
+        assert InplaceView(None).itemsize == 1
+        assert InplaceView(hexview).itemsize == 1
+
+    def test_nbytes(self, hexview):
+        assert InplaceView(b'').nbytes == 0
+        assert InplaceView(hexview).nbytes == len(hexview)
+
+    def test_ndim(self, hexview):
+        assert InplaceView(None).ndim == 1
+        assert InplaceView(hexview).ndim == 1
+
+    def test_obj(self, bytestr, hexstr, hexview):
         instance = InplaceView(None)
-        assert instance.wrapped is None
+        assert instance.obj is None
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
 
         instance = InplaceView(bytestr)
-        assert instance.wrapped is bytestr
+        assert instance.obj is bytestr
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
 
         instance = InplaceView(hexstr)
-        assert instance.wrapped is hexstr
+        assert instance.obj is hexstr
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
 
         instance = InplaceView(hexview)
-        assert instance.wrapped is hexview
+        assert instance.obj is hexview
         instance.release()
-        assert instance.wrapped is None
+        assert instance.obj is None
+
+    def test_shape(self, hexview):
+        assert InplaceView(b'').shape == (0,)
+        assert InplaceView(hexview).shape == (len(hexview),)
+
+    def test_strides(self, hexview):
+        assert InplaceView(None).strides == (1,)
+        assert InplaceView(hexview).strides == (1,)
+
+    def test_suboffsets(self, hexview):
+        assert InplaceView(None).suboffsets == ()
+        assert InplaceView(hexview).suboffsets == ()
 
 
 class TestMemory(BaseMemorySuite):
