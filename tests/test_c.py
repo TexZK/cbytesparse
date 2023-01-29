@@ -393,11 +393,17 @@ class TestInplaceView:
         instance = InplaceView(b'H3ll0W0rld!')
         assert instance.isalnum() is False
 
+        instance = InplaceView(b'')
+        assert instance.isalnum() is False
+
     def test_isalpha(self):
         instance = InplaceView(b'HelloWorld')
         assert instance.isalpha() is True
 
         instance = InplaceView(b'H3ll0W0rld')
+        assert instance.isalpha() is False
+
+        instance = InplaceView(b'')
         assert instance.isalpha() is False
 
     def test_isascii(self):
@@ -407,11 +413,17 @@ class TestInplaceView:
         instance = InplaceView(bytes(range(129)))
         assert instance.isascii() is False
 
+        instance = InplaceView(b'')
+        assert instance.isascii() is False
+
     def test_isdigit(self, hexview):
         instance = InplaceView(hexview[:10])
         assert instance.isdigit() is True
 
         instance = InplaceView(hexview)
+        assert instance.isdigit() is False
+
+        instance = InplaceView(b'')
         assert instance.isdigit() is False
 
     def test_islower(self, hexstr):
@@ -421,11 +433,17 @@ class TestInplaceView:
         instance = InplaceView(hexstr.upper())
         assert instance.islower() is False
 
+        instance = InplaceView(b'')
+        assert instance.islower() is False
+
     def test_isupper(self, hexstr):
         instance = InplaceView(hexstr.upper())
         assert instance.isupper() is True
 
         instance = InplaceView(hexstr.lower())
+        assert instance.isupper() is False
+
+        instance = InplaceView(b'')
         assert instance.isupper() is False
 
     def test_isspace(self):
@@ -435,6 +453,9 @@ class TestInplaceView:
         instance = InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20\x00')
         assert instance.isspace() is False
 
+        instance = InplaceView(b'')
+        assert instance.isspace() is False
+
     def test_istitle(self, loremstr):
         instance = InplaceView(loremstr.title())
         assert instance.istitle() is True
@@ -442,21 +463,36 @@ class TestInplaceView:
         instance = InplaceView(loremstr.capitalize())
         assert instance.istitle() is False
 
+        instance = InplaceView(b'')
+        assert instance.istitle() is False
+
     def test_lower(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.lower() == bytestr.lower()
+        assert instance.islower() is True
 
         buffer = loremstr.upper()
         instance = InplaceView(bytearray(buffer))
         assert instance.lower() == buffer.lower()
+        assert instance.islower() is True
+
+        instance = InplaceView(bytearray())
+        assert instance.lower() == b''.lower()
+        assert instance.islower() is False
 
     def test_upper(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.upper() == bytestr.upper()
+        assert instance.isupper() is True
 
         buffer = loremstr.lower()
         instance = InplaceView(bytearray(buffer))
         assert instance.upper() == buffer.upper()
+        assert instance.isupper() is True
+
+        instance = InplaceView(bytearray())
+        assert instance.upper() == b''.upper()
+        assert instance.isupper() is False
 
     def test_swapcase(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
@@ -477,10 +513,16 @@ class TestInplaceView:
     def test_title(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.title() == bytestr.title()
+        assert instance.istitle() is True
 
         buffer = loremstr.title().swapcase()
         instance = InplaceView(bytearray(buffer))
         assert instance.title() == buffer.title()
+        assert instance.istitle() is True
+
+        instance = InplaceView(bytearray())
+        assert instance.title() == b''.title()
+        assert instance.istitle() is False
 
     def test_maketrans(self):
         pass  # TODO
@@ -488,8 +530,18 @@ class TestInplaceView:
     def test_translate(self):
         pass  # TODO
 
-    def test_readonly(self):
-        pass  # TODO
+    def test_readonly(self, bytestr, hexstr, hexview):
+        instance = InplaceView(None)
+        assert instance.readonly is True
+
+        instance = InplaceView(bytestr)
+        assert instance.readonly is True
+
+        instance = InplaceView(hexstr)
+        assert instance.readonly is False
+
+        instance = InplaceView(hexview)
+        assert instance.readonly is False
 
     def test_wrapped(self, bytestr, hexstr, hexview):
         instance = InplaceView(None)
