@@ -1112,7 +1112,8 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-# TODO: add more bytes-compatible methods from Python strings, e.g. str.isidentifier()
+# TODO: add more memoryview-like methods and properties
+# TODO: sort alphabetically
 
 cdef class InplaceView:
 
