@@ -524,11 +524,51 @@ class TestInplaceView:
         assert instance.title() == b''.title()
         assert instance.istitle() is False
 
-    def test_maketrans(self):
-        pass  # TODO
+    def test_maketrans(self, bytestr):
+        table = InplaceView.maketrans(b'', b'')
+        assert table == bytestr
 
-    def test_translate(self):
-        pass  # TODO
+        table = InplaceView.maketrans(bytestr, bytestr)
+        assert table == bytestr
+
+        revbytes = bytes(reversed(bytestr))
+        table = InplaceView.maketrans(bytestr, revbytes)
+        assert table == revbytes
+
+        table = InplaceView.maketrans(revbytes, bytestr)
+        assert table == revbytes
+
+        with pytest.raises(ValueError, match='different sizes'):
+            InplaceView.maketrans(b'', bytestr)
+
+        with pytest.raises(ValueError, match='different sizes'):
+            InplaceView.maketrans(bytestr, b'')
+
+    def test_translate(self, bytestr):
+        table = InplaceView.maketrans(b'', b'')
+        instance = InplaceView(bytearray(bytestr))
+        instance.translate(table)
+        assert instance.wrapped == bytestr
+
+        table = InplaceView.maketrans(bytestr, bytestr)
+        instance = InplaceView(bytearray(bytestr))
+        instance.translate(table)
+        assert instance.wrapped == bytestr
+
+        revbytes = bytes(reversed(bytestr))
+        table = InplaceView.maketrans(bytestr, revbytes)
+        instance = InplaceView(bytearray(bytestr))
+        instance.translate(table)
+        assert instance.wrapped == revbytes
+
+        table = InplaceView.maketrans(revbytes, bytestr)
+        instance = InplaceView(bytearray(revbytes))
+        instance.translate(table)
+        assert instance.wrapped == bytestr
+
+        with pytest.raises(ValueError, match='translation table must be 256 characters long'):
+            instance = InplaceView(bytearray(bytestr))
+            instance.translate(table[:-1])
 
     def test_readonly(self, bytestr, hexstr, hexview):
         instance = InplaceView(None)
