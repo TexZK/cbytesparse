@@ -30,7 +30,6 @@ import sys
 from typing import Type
 
 import pytest
-
 from _common import *
 
 # noinspection PyUnresolvedReferences
