@@ -1052,7 +1052,7 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
         raise ValueError('translation table must be 256 characters long')
 
     with cython.boundscheck(False):
-        return Buffer_MakeTrans_(&data_view[0], len(data_view), &table_view[0])
+        Buffer_Translate_(&data_view[0], len(data_view), &table_view[0])
 
 
 # ---------------------------------------------------------------------------------------------------------------------
