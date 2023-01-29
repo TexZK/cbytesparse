@@ -1112,14 +1112,13 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-# TODO: add more memoryview-like methods and properties
 # TODO: sort alphabetically
 
 cdef class InplaceView:
 
-    cdef vint check_wrapped_(InplaceView self) except -1:
+    cdef vint check_obj_(InplaceView self) except -1:
 
-        if self._wrapped is None:
+        if self._obj is None:
             raise RuntimeError('null internal wrapped reference')
 
     cdef vint check_readonly_(InplaceView self) except -1:
@@ -1131,11 +1130,11 @@ cdef class InplaceView:
         cdef:
             byte_t[:] writable
 
-        if self._wrapped is None:
+        if self._obj is None:
             self._readonly = True  # failsafe
         else:
             try:
-                writable = self._wrapped
+                writable = self._obj
             except BufferError as exc:
                 self._readonly = True
             else:
@@ -1146,7 +1145,7 @@ cdef class InplaceView:
         wrapped: ByteString,
     ):
 
-        self._wrapped = wrapped
+        self._obj = wrapped
         self.update_readonly_()
 
     def __getattr__(
@@ -1154,15 +1153,15 @@ cdef class InplaceView:
         attr: str,
     ) -> Any:
 
-        self.check_wrapped_()
-        return getattr(self._wrapped, attr)
+        self.check_obj_()
+        return getattr(self._obj, attr)
 
     def __getitem__(
         self: InplaceView,
         key: Any,
     ) -> Any:
 
-        return self._wrapped[key]
+        return self._obj[key]
 
     def __setitem__(
         self: InplaceView,
@@ -1175,7 +1174,7 @@ cdef class InplaceView:
             endex = key.stop
             step = key.step
             value_size = len(value)
-            wrapped_size = len(self._wrapped)
+            wrapped_size = len(self._obj)
 
             start = 0 if start is None else start.__index__()
             if start < 0:
@@ -1198,7 +1197,7 @@ cdef class InplaceView:
             if slice_size != value_size:
                 raise IndexError('cannot resize view')
 
-        self._wrapped[key] = value
+        self._obj[key] = value
 
     def __delitem__(
         self: InplaceView,
@@ -1219,13 +1218,13 @@ cdef class InplaceView:
         op: int,
     ) -> bool:
 
-        self.check_wrapped_()
-        if op == Py_EQ: return self._wrapped == other
-        if op == Py_NE: return self._wrapped != other
-        if op == Py_LT: return self._wrapped < other
-        if op == Py_LE: return self._wrapped <= other
-        if op == Py_GE: return self._wrapped >= other
-        if op == Py_GT: return self._wrapped > other
+        self.check_obj_()
+        if op == Py_EQ: return self._obj == other
+        if op == Py_NE: return self._obj != other
+        if op == Py_LT: return self._obj < other
+        if op == Py_LE: return self._obj <= other
+        if op == Py_GE: return self._obj >= other
+        if op == Py_GT: return self._obj > other
         raise RuntimeError('unsupported rich comparison operation')
 
     def count(
@@ -1238,16 +1237,16 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_Count(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_Count(self._obj, token, start_, endex_)
 
     def release(
         self: InplaceView,
         wrapped: bool = True,
     ) -> None:
 
-        if self._wrapped is not None:
-            self._wrapped = None
+        if self._obj is not None:
+            self._obj = None
             self.update_readonly_()
 
     def startswith(
@@ -1255,24 +1254,24 @@ cdef class InplaceView:
         token not None: ByteString,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_StartsWith(self._wrapped, token)
+        self.check_obj_()
+        return Buffer_StartsWith(self._obj, token)
 
     def endswith(
         self: InplaceView,
         token not None: ByteString,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_EndsWith(self._wrapped, token)
+        self.check_obj_()
+        return Buffer_EndsWith(self._obj, token)
 
     def __contains__(
         self: InplaceView,
         token not None: ByteString,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_Contains(self._wrapped, token, 0, SIZE_MAX)
+        self.check_obj_()
+        return Buffer_Contains(self._obj, token, 0, SIZE_MAX)
 
     def contains(
         self: InplaceView,
@@ -1284,8 +1283,8 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_Contains(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_Contains(self._obj, token, start_, endex_)
 
     def find(
         self: InplaceView,
@@ -1297,8 +1296,8 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_Find(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_Find(self._obj, token, start_, endex_)
 
     def rfind(
         self: InplaceView,
@@ -1310,8 +1309,8 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_RevFind(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_RevFind(self._obj, token, start_, endex_)
 
     def index(
         self: InplaceView,
@@ -1323,8 +1322,8 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_Index(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_Index(self._obj, token, start_, endex_)
 
     def rindex(
         self: InplaceView,
@@ -1336,8 +1335,8 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
-        return Buffer_RevIndex(self._wrapped, token, start_, endex_)
+        self.check_obj_()
+        return Buffer_RevIndex(self._obj, token, start_, endex_)
 
     def replace(
         self: InplaceView,
@@ -1352,38 +1351,38 @@ cdef class InplaceView:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Replace(self._wrapped, old, new, count_, start_, endex_)
+        Buffer_Replace(self._obj, old, new, count_, start_, endex_)
         return self
 
     def isalnum(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsAlNum(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsAlNum(self._obj)
 
     def isalpha(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsAlpha(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsAlpha(self._obj)
 
     def isascii(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsASCII(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsASCII(self._obj)
 
     def isdigit(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsDigit(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsDigit(self._obj)
 
     def isdecimal(
         self: InplaceView,
@@ -1401,87 +1400,87 @@ cdef class InplaceView:
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsIdentifier(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsIdentifier(self._obj)
 
     def islower(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsLower(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsLower(self._obj)
 
     def isupper(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsUpper(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsUpper(self._obj)
 
     def isprintable(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsPrintable(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsPrintable(self._obj)
 
     def isspace(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsSpace(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsSpace(self._obj)
 
     def istitle(
         self: InplaceView,
     ) -> bool:
 
-        self.check_wrapped_()
-        return Buffer_IsTitle(self._wrapped)
+        self.check_obj_()
+        return Buffer_IsTitle(self._obj)
 
     def lower(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Lower(self._wrapped)
+        Buffer_Lower(self._obj)
         return self
 
     def upper(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Upper(self._wrapped)
+        Buffer_Upper(self._obj)
         return self
 
     def swapcase(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_SwapCase(self._wrapped)
+        Buffer_SwapCase(self._obj)
         return self
 
     def capitalize(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Capitalize(self._wrapped)
+        Buffer_Capitalize(self._obj)
         return self
 
     def title(
         self: InplaceView,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Title(self._wrapped)
+        Buffer_Title(self._obj)
         return self
 
     @staticmethod
@@ -1497,10 +1496,67 @@ cdef class InplaceView:
         table not None: ByteString,
     ) -> InplaceView:
 
-        self.check_wrapped_()
+        self.check_obj_()
         self.check_readonly_()
-        Buffer_Translate(self._wrapped, table)
+        Buffer_Translate(self._obj, table)
         return self
+
+    @property
+    def c_contiguous(
+        self: InplaceView,
+    ) -> bool:
+
+        return True
+
+    @property
+    def contiguous(
+        self: InplaceView,
+    ) -> bool:
+
+        return True
+
+    @property
+    def f_contiguous(
+        self: InplaceView,
+    ) -> bool:
+
+        return True
+
+    @property
+    def format(
+        self: InplaceView,
+    ) -> str:
+
+        return 'B'
+
+    @property
+    def itemsize(
+        self: InplaceView,
+    ) -> int:
+
+        return 1
+
+    @property
+    def nbytes(
+        self: InplaceView,
+    ) -> int:
+
+        self.check_obj_()
+        return len(self._obj)
+
+    @property
+    def ndim(
+        self: InplaceView,
+    ) -> int:
+
+        return 1
+
+    @property
+    def obj(
+        self: InplaceView,
+    ) -> Optional[ByteString]:
+
+        return self._obj
 
     @property
     def readonly(
@@ -1510,11 +1566,51 @@ cdef class InplaceView:
         return self._readonly
 
     @property
-    def wrapped(
+    def shape(
         self: InplaceView,
-    ) -> Optional[memoryview]:
+    ) -> Tuple[int]:
 
-        return self._wrapped
+        self.check_obj_()
+        return (len(self._obj),)
+
+    @property
+    def strides(
+        self: InplaceView,
+    ) -> Tuple[int]:
+
+        return (1,)
+
+    @property
+    def suboffsets(
+        self: InplaceView,
+    ) -> Tuple:
+
+        return ()
+
+    def tobytes(
+        self: InplaceView,
+    ) -> bytes:
+
+        self.check_obj_()
+        return bytes(self._obj)
+
+    def tolist(
+        self: InplaceView,
+    ) -> List[int]:
+
+        self.check_obj_()
+        return list(self._obj)
+
+    def toreadonly(
+        self: InplaceView,
+    ) -> InplaceView:
+        cdef:
+            InplaceView readonly
+
+        self.check_obj_()
+        readonly = InplaceView(self._obj)
+        readonly._readonly = True
+        return readonly
 
 
 # =====================================================================================================================
@@ -2933,7 +3029,7 @@ cdef class BlockView(InplaceView):
         view._block = Block_Acquire(block)
         view._start = start
         view._endex = endex
-        view._wrapped = view._memoryview
+        view._obj = view._memoryview
         view.update_readonly_()
         return view
 
