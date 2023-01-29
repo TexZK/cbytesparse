@@ -107,20 +107,22 @@ cdef:
 
 cdef extern from *:
     r"""
-    #define _0_ ((byte_t)'0')
-    #define _9_ ((byte_t)'9')
-    #define _A_ ((byte_t)'A')
-    #define _Z_ ((byte_t)'Z')
-    #define _a_ ((byte_t)'a')
-    #define _z_ ((byte_t)'z')
+    #define ASCII_0 ((byte_t)'0')
+    #define ASCII_9 ((byte_t)'9')
+    #define ASCII_A_UPPER ((byte_t)'A')
+    #define ASCII_Z_UPPER ((byte_t)'Z')
+    #define ASCII_A_LOWER ((byte_t)'a')
+    #define ASCII_Z_LOWER ((byte_t)'z')
+    #define ASCII_UNDERSCORE ((byte_t)'_')
     """
 
-    byte_t _0_
-    byte_t _9_
-    byte_t _A_
-    byte_t _Z_
-    byte_t _a_
-    byte_t _z_
+    byte_t ASCII_0
+    byte_t ASCII_9
+    byte_t ASCII_A_UPPER
+    byte_t ASCII_Z_UPPER
+    byte_t ASCII_A_LOWER
+    byte_t ASCII_Z_LOWER
+    byte_t ASCII_UNDERSCORE
 
 
 # =====================================================================================================================
@@ -731,9 +733,9 @@ cdef bint Buffer_IsAlNum_(const byte_t* data_ptr, size_t data_size) nogil:
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if _0_ <= c <= _9_: continue
-            if _A_ <= c <= _Z_: continue
-            if _a_ <= c <= _z_: continue
+            if ASCII_0 <= c <= ASCII_9: continue
+            if ASCII_A_UPPER <= c <= ASCII_Z_UPPER: continue
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER: continue
             return False
         return True
     else:
@@ -754,8 +756,8 @@ cdef bint Buffer_IsAlpha_(const byte_t* data_ptr, size_t data_size) nogil:
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if _A_ <= c <= _Z_: continue
-            if _a_ <= c <= _z_: continue
+            if ASCII_A_UPPER <= c <= ASCII_Z_UPPER: continue
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER: continue
             return False
         return True
     else:
@@ -797,7 +799,7 @@ cdef bint Buffer_IsDigit_(const byte_t* data_ptr, size_t data_size) nogil:
     if data_size:
         for i in range(data_size):
             c = data_ptr[i]
-            if _0_ <= c <= _9_: continue
+            if ASCII_0 <= c <= ASCII_9: continue
             return False
         return True
     else:
@@ -810,6 +812,38 @@ cdef bint Buffer_IsDigit(const byte_t[:] data_view) nogil:
         return Buffer_IsDigit_(&data_view[0], len(data_view))
 
 
+cdef bint Buffer_IsIdentifier_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(1):
+            c = data_ptr[i]
+            if ASCII_A_UPPER <= c <= ASCII_Z_UPPER: continue
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER: continue
+            if c == ASCII_UNDERSCORE: continue
+            return False
+
+        for i in range(1, data_size):
+            c = data_ptr[i]
+            if ASCII_0 <= c <= ASCII_9: continue
+            if ASCII_A_UPPER <= c <= ASCII_Z_UPPER: continue
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER: continue
+            if c == ASCII_UNDERSCORE: continue
+            return False
+
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsIdentifier(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsIdentifier_(&data_view[0], len(data_view))
+
+
 cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
         size_t i
@@ -818,10 +852,10 @@ cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil:
 
     for i in range(data_size):
         c = data_ptr[i]
-        if _A_ <= c <= _Z_:
+        if ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
             return False
         if not cased:
-            if _a_ <= c <= _z_:
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
                 cased = True
     return cased
 
@@ -840,10 +874,10 @@ cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil:
 
     for i in range(data_size):
         c = data_ptr[i]
-        if _a_ <= c <= _z_:
+        if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
             return False
         if not cased:
-            if _A_ <= c <= _Z_:
+            if ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
                 cased = True
     return cased
 
@@ -852,6 +886,27 @@ cdef bint Buffer_IsUpper(const byte_t[:] data_view) nogil:
 
     with cython.boundscheck(False):
         return Buffer_IsUpper_(&data_view[0], len(data_view))
+
+
+cdef bint Buffer_IsPrintable_(const byte_t* data_ptr, size_t data_size) nogil:
+    cdef:
+        size_t i
+        byte_t c
+
+    if data_size:
+        for i in range(data_size):
+            c = data_ptr[i]
+            if 0x20 <= c <= 0x7E: continue
+            return False
+        return True
+    else:
+        return False
+
+
+cdef bint Buffer_IsPrintable(const byte_t[:] data_view) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_IsPrintable_(&data_view[0], len(data_view))
 
 
 cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil:
@@ -886,12 +941,12 @@ cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
         for i in range(data_size):
             c = data_ptr[i]
 
-            if _a_ <= c <= _z_:
+            if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
                 if not inside:
                     return False
                 inside = True
 
-            elif _A_ <= c <= _Z_:
+            elif ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
                 if inside:
                     return False
                 inside = True
@@ -917,8 +972,8 @@ cdef void Buffer_Lower_(byte_t* data_ptr, size_t data_size) nogil:
 
     for i in range(data_size):
         c = data_ptr[i]
-        if _A_ <= c <= _Z_:
-            data_ptr[i] += _a_ - _A_
+        if ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
+            data_ptr[i] += ASCII_A_LOWER - ASCII_A_UPPER
 
 
 cdef void Buffer_Lower(byte_t[:] data_view) nogil:
@@ -934,8 +989,8 @@ cdef void Buffer_Upper_(byte_t* data_ptr, size_t data_size) nogil:
 
     for i in range(data_size):
         c = data_ptr[i]
-        if _a_ <= c <= _z_:
-            data_ptr[i] -= _a_ - _A_
+        if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
+            data_ptr[i] -= ASCII_A_LOWER - ASCII_A_UPPER
 
 
 cdef void Buffer_Upper(byte_t[:] data_view) nogil:
@@ -952,11 +1007,11 @@ cdef void Buffer_SwapCase_(byte_t* data_ptr, size_t data_size) nogil:
     for i in range(data_size):
         c = data_ptr[i]
 
-        if _A_ <= c <= _Z_:
-            data_ptr[i] += _a_ - _A_
+        if ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
+            data_ptr[i] += ASCII_A_LOWER - ASCII_A_UPPER
 
-        elif _a_ <= c <= _z_:
-            data_ptr[i] -= _a_ - _A_
+        elif ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
+            data_ptr[i] -= ASCII_A_LOWER - ASCII_A_UPPER
 
 
 cdef void Buffer_SwapCase(byte_t[:] data_view) nogil:
@@ -972,13 +1027,13 @@ cdef void Buffer_Capitalize_(byte_t* data_ptr, size_t data_size) nogil:
 
     if data_size:
         c = data_ptr[0]
-        if _a_ <= c <= _z_:
-            data_ptr[0] -= _a_ - _A_
+        if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
+            data_ptr[0] -= ASCII_A_LOWER - ASCII_A_UPPER
 
     for i in range(1, data_size):
         c = data_ptr[i]
-        if _A_ <= c <= _Z_:
-            data_ptr[i] += _a_ - _A_
+        if ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
+            data_ptr[i] += ASCII_A_LOWER - ASCII_A_UPPER
 
 
 cdef void Buffer_Capitalize(byte_t[:] data_view) nogil:
@@ -996,14 +1051,14 @@ cdef void Buffer_Title_(byte_t* data_ptr, size_t data_size) nogil:
     for i in range(data_size):
         c = data_ptr[i]
 
-        if _a_ <= c <= _z_:
+        if ASCII_A_LOWER <= c <= ASCII_Z_LOWER:
             if not inside:
-                data_ptr[i] -= _a_ - _A_
+                data_ptr[i] -= ASCII_A_LOWER - ASCII_A_UPPER
             inside = True
 
-        elif _A_ <= c <= _Z_:
+        elif ASCII_A_UPPER <= c <= ASCII_Z_UPPER:
             if inside:
-                data_ptr[i] += _a_ - _A_
+                data_ptr[i] += ASCII_A_LOWER - ASCII_A_UPPER
             inside = True
 
         else:
@@ -1329,6 +1384,25 @@ cdef class InplaceView:
         self.check_wrapped_()
         return Buffer_IsDigit(self._wrapped)
 
+    def isdecimal(
+        self: InplaceView,
+    ) -> bool:
+
+        return self.isdigit()
+
+    def isnumeric(
+        self: InplaceView,
+    ) -> bool:
+
+        return self.isdigit()
+
+    def isidentifier(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_wrapped_()
+        return Buffer_IsIdentifier(self._wrapped)
+
     def islower(
         self: InplaceView,
     ) -> bool:
@@ -1342,6 +1416,13 @@ cdef class InplaceView:
 
         self.check_wrapped_()
         return Buffer_IsUpper(self._wrapped)
+
+    def isprintable(
+        self: InplaceView,
+    ) -> bool:
+
+        self.check_wrapped_()
+        return Buffer_IsPrintable(self._wrapped)
 
     def isspace(
         self: InplaceView,

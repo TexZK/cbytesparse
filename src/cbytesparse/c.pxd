@@ -278,11 +278,17 @@ cdef bint Buffer_IsASCII(const byte_t[:] data_view) nogil
 cdef bint Buffer_IsDigit_(const byte_t* data_ptr, size_t data_size) nogil
 cdef bint Buffer_IsDigit(const byte_t[:] data_view) nogil
 
+cdef bint Buffer_IsIdentifier_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsIdentifier(const byte_t[:] data_view) nogil
+
 cdef bint Buffer_IsLower_(const byte_t* data_ptr, size_t data_size) nogil
 cdef bint Buffer_IsLower(const byte_t[:] data_view) nogil
 
 cdef bint Buffer_IsUpper_(const byte_t* data_ptr, size_t data_size) nogil
 cdef bint Buffer_IsUpper(const byte_t[:] data_view) nogil
+
+cdef bint Buffer_IsPrintable_(const byte_t* data_ptr, size_t data_size) nogil
+cdef bint Buffer_IsPrintable(const byte_t[:] data_view) nogil
 
 cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil
 cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil
