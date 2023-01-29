@@ -442,6 +442,30 @@ class TestInplaceView:
         instance = InplaceView(loremstr.capitalize())
         assert instance.istitle() is False
 
+    def test_lower(self, bytestr, loremstr):
+        instance = InplaceView(memoryview(bytearray(bytestr)))
+        assert instance.lower() == bytestr.lower()
+
+        buffer = loremstr.upper()
+        instance = InplaceView(bytearray(buffer))
+        assert instance.lower() == buffer.lower()
+
+    def test_upper(self, bytestr, loremstr):
+        instance = InplaceView(memoryview(bytearray(bytestr)))
+        assert instance.upper() == bytestr.upper()
+
+        buffer = loremstr.lower()
+        instance = InplaceView(bytearray(buffer))
+        assert instance.upper() == buffer.upper()
+
+    def test_swapcase(self, bytestr, loremstr):
+        instance = InplaceView(memoryview(bytearray(bytestr)))
+        assert instance.swapcase() == bytestr.swapcase()
+
+        buffer = loremstr.title()
+        instance = InplaceView(bytearray(buffer))
+        assert instance.swapcase() == buffer.swapcase()
+
     def test_capitalize(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
         assert instance.capitalize() == bytestr.capitalize()
@@ -449,6 +473,44 @@ class TestInplaceView:
         buffer = loremstr.lower()
         instance = InplaceView(bytearray(buffer))
         assert instance.capitalize() == buffer.capitalize()
+
+    def test_title(self, bytestr, loremstr):
+        instance = InplaceView(memoryview(bytearray(bytestr)))
+        assert instance.title() == bytestr.title()
+
+        buffer = loremstr.title().swapcase()
+        instance = InplaceView(bytearray(buffer))
+        assert instance.title() == buffer.title()
+
+    def test_maketrans(self):
+        pass  # TODO
+
+    def test_translate(self):
+        pass  # TODO
+
+    def test_readonly(self):
+        pass  # TODO
+
+    def test_wrapped(self, bytestr, hexstr, hexview):
+        instance = InplaceView(None)
+        assert instance.wrapped is None
+        instance.release()
+        assert instance.wrapped is None
+
+        instance = InplaceView(bytestr)
+        assert instance.wrapped is bytestr
+        instance.release()
+        assert instance.wrapped is None
+
+        instance = InplaceView(hexstr)
+        assert instance.wrapped is hexstr
+        instance.release()
+        assert instance.wrapped is None
+
+        instance = InplaceView(hexview)
+        assert instance.wrapped is hexview
+        instance.release()
+        assert instance.wrapped is None
 
 
 class TestMemory(BaseMemorySuite):
