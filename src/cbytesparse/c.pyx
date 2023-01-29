@@ -1101,6 +1101,56 @@ cdef class InplaceView:
         self.check_wrapped_()
         return getattr(self._wrapped, attr)
 
+    def __getitem__(
+        self: InplaceView,
+        key: Any,
+    ) -> Any:
+
+        return self._wrapped[key]
+
+    def __setitem__(
+        self: InplaceView,
+        key: Any,
+        value: Any,
+    ) -> None:
+
+        if isinstance(key, slice):
+            start = key.start
+            endex = key.stop
+            step = key.step
+            value_size = len(value)
+            wrapped_size = len(self._wrapped)
+
+            start = 0 if start is None else start.__index__()
+            if start < 0:
+                start = wrapped_size
+                if start < 0:
+                    raise IndexError('index out of range')
+
+            endex = wrapped_size if endex is None else endex.__index__()
+            if endex < 0:
+                endex = wrapped_size
+                if endex < 0:
+                    raise IndexError('index out of range')
+
+            step = 1 if step is None else step.__index__()
+            if step <= 1:
+                slice_size = endex - start
+            else:
+                slice_size = (endex - start) // step
+
+            if slice_size != value_size:
+                raise IndexError('cannot resize view')
+
+        self._wrapped[key] = value
+
+    def __delitem__(
+        self: InplaceView,
+        key: Any,
+    ) -> None:
+
+        raise IndexError('cannot resize view')
+
     def __sizeof__(
         self: InplaceView,
     ) -> int:
