@@ -387,84 +387,77 @@ class TestInplaceView:
         assert hexview == negbytes
 
     def test_isalnum(self):
-        instance = InplaceView(b'H3ll0W0rld')
-        assert instance.isalnum() is True
-
-        instance = InplaceView(b'H3ll0W0rld!')
-        assert instance.isalnum() is False
-
-        instance = InplaceView(b'')
-        assert instance.isalnum() is False
+        assert InplaceView(b'H3ll0W0rld').isalnum() is True
+        assert InplaceView(b'H3ll0W0rld!').isalnum() is False
+        assert InplaceView(b'').isalnum() is False
 
     def test_isalpha(self):
-        instance = InplaceView(b'HelloWorld')
-        assert instance.isalpha() is True
-
-        instance = InplaceView(b'H3ll0W0rld')
-        assert instance.isalpha() is False
-
-        instance = InplaceView(b'')
-        assert instance.isalpha() is False
+        assert InplaceView(b'HelloWorld').isalpha() is True
+        assert InplaceView(b'H3ll0W0rld').isalpha() is False
+        assert InplaceView(b'').isalpha() is False
 
     def test_isascii(self):
-        instance = InplaceView(bytes(range(128)))
-        assert instance.isascii() is True
-
-        instance = InplaceView(bytes(range(129)))
-        assert instance.isascii() is False
-
-        instance = InplaceView(b'')
-        assert instance.isascii() is False
+        assert InplaceView(bytes(range(128))).isascii() is True
+        assert InplaceView(bytes(range(129))).isascii() is False
+        assert InplaceView(b'').isascii() is False
 
     def test_isdigit(self, hexview):
-        instance = InplaceView(hexview[:10])
-        assert instance.isdigit() is True
+        assert InplaceView(hexview[:10]).isdigit() is True
+        assert InplaceView(hexview).isdigit() is False
+        assert InplaceView(b'').isdigit() is False
 
-        instance = InplaceView(hexview)
-        assert instance.isdigit() is False
+    def test_isdecimal(self, hexview):
+        assert InplaceView(hexview[:10]).isdecimal() is True
+        assert InplaceView(hexview).isdecimal() is False
+        assert InplaceView(b'').isdecimal() is False
 
-        instance = InplaceView(b'')
-        assert instance.isdigit() is False
+    def test_isnumeric(self, hexview):
+        assert InplaceView(hexview[:10]).isnumeric() is True
+        assert InplaceView(hexview).isnumeric() is False
+        assert InplaceView(b'').isnumeric() is False
+
+    def test_isidentifier(self, hexstr, bytestr):
+        assert InplaceView(hexstr[::-1]).isidentifier() is True
+        assert InplaceView(hexstr).isidentifier() is False
+        assert InplaceView(bytestr).isidentifier() is False
+
+        assert InplaceView(b'a').isidentifier() is True
+        assert InplaceView(b'_').isidentifier() is True
+        assert InplaceView(b'a_').isidentifier() is True
+        assert InplaceView(b'a0').isidentifier() is True
+        assert InplaceView(b'_a').isidentifier() is True
+        assert InplaceView(b'_0').isidentifier() is True
+
+        assert InplaceView(b'').isidentifier() is False
+        assert InplaceView(b'0').isidentifier() is False
+        assert InplaceView(b'0a').isidentifier() is False
+        assert InplaceView(b'0_').isidentifier() is False
+
+        table = memoryview(bytestr)
+        for i in range(128):
+            assert InplaceView(table[i:(i + 1)]).isidentifier() is chr(i).isidentifier()
+        for i in range(128, 256):
+            assert InplaceView(table[i:(i + 1)]).isidentifier() is False
 
     def test_islower(self, hexstr):
-        instance = InplaceView(hexstr.lower())
-        assert instance.islower() is True
-
-        instance = InplaceView(hexstr.upper())
-        assert instance.islower() is False
-
-        instance = InplaceView(b'')
-        assert instance.islower() is False
+        assert InplaceView(hexstr.lower()).islower() is True
+        assert InplaceView(hexstr.upper()).islower() is False
+        assert InplaceView(b'').islower() is False
 
     def test_isupper(self, hexstr):
-        instance = InplaceView(hexstr.upper())
-        assert instance.isupper() is True
-
-        instance = InplaceView(hexstr.lower())
-        assert instance.isupper() is False
-
-        instance = InplaceView(b'')
-        assert instance.isupper() is False
+        assert InplaceView(hexstr.upper()).isupper() is True
+        assert InplaceView(hexstr.lower()).isupper() is False
+        assert InplaceView(b'').isupper() is False
 
     def test_isspace(self):
-        instance = InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20')
-        assert instance.isspace() is True
-
-        instance = InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20\x00')
-        assert instance.isspace() is False
-
-        instance = InplaceView(b'')
-        assert instance.isspace() is False
+        assert InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20').isspace() is True
+        assert InplaceView(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20\x00').isspace() is False
+        assert InplaceView(b'').isspace() is False
 
     def test_istitle(self, loremstr):
-        instance = InplaceView(loremstr.title())
-        assert instance.istitle() is True
-
-        instance = InplaceView(loremstr.capitalize())
-        assert instance.istitle() is False
-
-        instance = InplaceView(b'')
-        assert instance.istitle() is False
+        assert InplaceView(loremstr.title()).istitle() is True
+        assert InplaceView(loremstr.capitalize()).istitle() is False
+        assert InplaceView(b'').istitle() is False
 
     def test_lower(self, bytestr, loremstr):
         instance = InplaceView(memoryview(bytearray(bytestr)))
