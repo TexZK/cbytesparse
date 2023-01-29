@@ -576,12 +576,16 @@ class TestInplaceView:
 
         instance = InplaceView(bytestr)
         assert instance.readonly is True
+        with pytest.raises(TypeError, match='object does not support item assignment'):
+            instance[0] = 0
 
         instance = InplaceView(hexstr)
         assert instance.readonly is False
+        instance[0] = 0
 
         instance = InplaceView(hexview)
         assert instance.readonly is False
+        instance[0] = 0
 
     def test_wrapped(self, bytestr, hexstr, hexview):
         instance = InplaceView(None)
