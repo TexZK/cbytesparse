@@ -1066,12 +1066,32 @@ cdef class InplaceView:
         if self._wrapped is None:
             raise RuntimeError('null internal wrapped reference')
 
+    cdef vint check_readonly_(InplaceView self) except -1:
+
+        if self._readonly:
+            raise TypeError('wrapped object does not support item assignment')
+
+    cdef vint update_readonly_(InplaceView self) except -1:
+        cdef:
+            byte_t[:] writable
+
+        if self._wrapped is None:
+            self._readonly = True  # failsafe
+        else:
+            try:
+                writable = self._wrapped
+            except BufferError as exc:
+                self._readonly = True
+            else:
+                self._readonly = False
+
     def __init__(
         self: InplaceView,
         wrapped: ByteString,
     ):
 
         self._wrapped = wrapped
+        self.update_readonly_()
 
     def __getattr__(
         self: InplaceView,
@@ -1124,6 +1144,7 @@ cdef class InplaceView:
             if wrapped:
                 self._wrapped.release()
             self._wrapped = None
+            self.update_readonly_()
 
     def startswith(
         self: InplaceView,
@@ -1228,6 +1249,7 @@ cdef class InplaceView:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Replace(self._wrapped, old, new, count_, start_, endex_)
         return self
 
@@ -1292,6 +1314,7 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Lower(self._wrapped)
         return self
 
@@ -1300,6 +1323,7 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Upper(self._wrapped)
         return self
 
@@ -1308,6 +1332,7 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_SwapCase(self._wrapped)
         return self
 
@@ -1316,6 +1341,7 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Capitalize(self._wrapped)
         return self
 
@@ -1324,6 +1350,7 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Title(self._wrapped)
         return self
 
@@ -1341,8 +1368,16 @@ cdef class InplaceView:
     ) -> InplaceView:
 
         self.check_wrapped_()
+        self.check_readonly_()
         Buffer_Translate(self._wrapped, table)
         return self
+
+    @property
+    def readonly(
+        self: InplaceView,
+    ) -> bool:
+
+        return self._readonly
 
     @property
     def wrapped(
@@ -2769,6 +2804,7 @@ cdef class BlockView(InplaceView):
         view._start = start
         view._endex = endex
         view._wrapped = view._memoryview
+        view.update_readonly_()
         return view
 
     cdef vint check_block_(BlockView self) except -1:
