@@ -1141,8 +1141,6 @@ cdef class InplaceView:
     ) -> None:
 
         if self._wrapped is not None:
-            if wrapped:
-                self._wrapped.release()
             self._wrapped = None
             self.update_readonly_()
 
