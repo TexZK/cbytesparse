@@ -106,6 +106,11 @@ def loremstr():
 
 class TestInplaceView:
 
+    def test___bool__(self, hexview):
+        assert bool(InplaceView(hexview)) is True
+        assert bool(InplaceView(b'')) is False
+        assert bool(InplaceView(None)) is False
+
     def test___contains__(self, hexview, hexstr):
         instance = InplaceView(hexview)
 

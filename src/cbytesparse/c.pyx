@@ -1138,6 +1138,12 @@ cdef class InplaceView:
             else:
                 self._readonly = False
 
+    def __bool__(
+        self: InplaceView,
+    ) -> bool:
+
+        return bool(self._obj)
+
     def __contains__(
         self: InplaceView,
         token not None: ByteString,
