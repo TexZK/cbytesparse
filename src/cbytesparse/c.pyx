@@ -452,6 +452,61 @@ cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD:
 
 # =====================================================================================================================
 
+cdef bint Buffer_RichCmp_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          int op) nogil:
+
+    if op == Py_EQ:
+        if data_size != token_size:
+            return False
+        return memcmp(data_ptr, token_ptr, data_size) == 0
+
+    if op == Py_NE:
+        if data_size != token_size:
+            return True
+        return memcmp(data_ptr, token_ptr, data_size) != 0
+
+    if op == Py_LT:
+        if data_size > token_size:
+            return False
+        elif data_size == token_size:
+            return memcmp(data_ptr, token_ptr, data_size) < 0
+        else:
+            return memcmp(data_ptr, token_ptr, data_size) <= 0
+
+    if op == Py_LE:
+        if data_size > token_size:
+            return False
+        else:
+            return memcmp(data_ptr, token_ptr, data_size) <= 0
+
+    if op == Py_GE:
+        if data_size < token_size:
+            return False
+        else:
+            return memcmp(data_ptr, token_ptr, token_size) >= 0
+
+    if op == Py_GT:
+        if data_size < token_size:
+            return False
+        elif data_size == token_size:
+            return memcmp(data_ptr, token_ptr, token_size) > 0
+        else:
+            return memcmp(data_ptr, token_ptr, token_size) >= 0
+
+    return False
+
+
+cdef bint Buffer_RichCmp(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         int op) nogil:
+
+    with cython.boundscheck(False):
+        return Buffer_RichCmp_(&data_view[0], len(data_view),
+                               &token_view[0], len(token_view),
+                               op)
+
+
 cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
                           const byte_t* token_ptr, size_t token_size,
                           size_t data_start, size_t data_endex) nogil:
@@ -1211,14 +1266,25 @@ cdef class InplaceView:
         op: int,
     ) -> bool:
 
-        self.check_obj_()
-        if op == Py_EQ: return self._obj == other
-        if op == Py_NE: return self._obj != other
-        if op == Py_LT: return self._obj < other
-        if op == Py_LE: return self._obj <= other
-        if op == Py_GE: return self._obj >= other
-        if op == Py_GT: return self._obj > other
-        raise RuntimeError('unsupported rich comparison operation')
+        obj = self._obj
+
+        if op == Py_EQ:
+            if (obj is None) and (other is None):
+                return True
+            if (obj is None) != (other is None):
+                return False
+
+        elif op == Py_NE:
+            if (obj is None) and (other is None):
+                return False
+            if (obj is None) != (other is None):
+                return True
+
+        else:
+            if (obj is None) or (other is None):
+                raise TypeError("operation not supported against instances of 'NoneType'")
+
+        return Buffer_RichCmp(self._obj, other, op)
 
     def __setitem__(
         self: InplaceView,

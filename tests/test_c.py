@@ -189,16 +189,89 @@ class TestInplaceView:
 
     def test___richcmp__(self):
         instance = InplaceView(b'def')
-        assert (instance < b'ghi') is True
-        assert (instance <= b'ghi') is True
-        assert (instance <= b'deg') is True
-        assert (instance <= b'def') is True
+
+        assert (instance == b'de') is False
         assert (instance == b'def') is True
+        assert (instance == b'def_') is False
+
+        assert (instance != b'de') is True
+        assert (instance != b'def') is False
+        assert (instance != b'def_') is True
+
+        assert (instance < b'de') is False
+        assert (instance < b'def') is False
+        assert (instance < b'def_') is True
+        assert (instance < b'dea') is False
+        assert (instance < b'dez') is True
+        assert (instance < b'ghi') is True
+
+        assert (instance <= b'de') is False
+        assert (instance <= b'def') is True
+        assert (instance <= b'def_') is True
+        assert (instance <= b'dea') is False
+        assert (instance <= b'dez') is True
+        assert (instance <= b'ghi') is True
+
+        assert (instance >= b'de') is True
         assert (instance >= b'def') is True
-        assert (instance >= b'dee') is True
+        assert (instance >= b'def_') is False
+        assert (instance >= b'dea') is True
+        assert (instance >= b'dez') is False
         assert (instance >= b'abc') is True
+
+        assert (instance > b'de') is True
+        assert (instance > b'def') is False
+        assert (instance > b'def_') is False
+        assert (instance > b'dea') is True
+        assert (instance > b'dez') is False
         assert (instance > b'abc') is True
-        assert (instance != b'abc') is True
+
+    def test___richcmp___none(self, hexview):
+        instance_some = InplaceView(hexview)
+        instance_none = InplaceView(None)
+        object_none = None
+
+        assert (instance_some == object_none) is False
+        assert (instance_none == object_none) is True
+
+        assert (instance_some != object_none) is True
+        assert (instance_none != object_none) is False
+
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_some < object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_some <= object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_some >= object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_some > object_none
+
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_none < object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_none <= object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_none >= object_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert instance_none > object_none
+
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none < instance_some
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none <= instance_some
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none >= instance_some
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none > instance_some
+
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none < instance_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none <= instance_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none >= instance_none
+        with pytest.raises(TypeError, match='not supported'):
+            assert object_none > instance_none
 
     def test___setitem__(self, hexview):
         instance = InplaceView(hexview)

@@ -192,6 +192,13 @@ cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD
 
 # =====================================================================================================================
 
+cdef bint Buffer_RichCmp_(const byte_t* data_ptr, size_t data_size,
+                          const byte_t* token_ptr, size_t token_size,
+                          int op) nogil
+cdef bint Buffer_RichCmp(const byte_t[:] data_view,
+                         const byte_t[:] token_view,
+                         int op) nogil
+
 cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
                           const byte_t* token_ptr, size_t token_size,
                           size_t data_start, size_t data_endex) nogil
