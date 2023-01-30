@@ -39,6 +39,11 @@ from cbytesparse.c import Memory as _Memory  # isort:skip
 # noinspection PyUnresolvedReferences
 from cbytesparse.c import bytesparse as _bytesparse  # isort:skip
 
+try:
+    import numpy
+except ImportError:  # pragma: no cover
+    numpy = None
+
 
 # Patch inspect.isfunction() to allow Cython functions to be discovered
 def _patch_inspect_isfunction():  # pragma: no cover
@@ -136,6 +141,18 @@ class TestInplaceView:  # TODO: sort alphabetically
 
         with pytest.raises(ValueError, match='Buffer dtype mismatch'):
             InplaceView(array.array('H'))
+
+        with pytest.raises(ValueError, match='Buffer dtype mismatch'):
+            InplaceView(array.array('L'))
+
+        if numpy is not None:  # pragma: no cover
+            InplaceView(numpy.array([1, 2, 3], dtype=numpy.ubyte))
+
+            with pytest.raises(ValueError, match='Buffer dtype mismatch'):
+                InplaceView(numpy.array([1, 2, 3], dtype=numpy.ushort))
+
+            with pytest.raises(ValueError, match='Buffer dtype mismatch'):
+                InplaceView(numpy.array([1, 2, 3], dtype=numpy.uint))
 
     def test___richcmp__(self):
         pass  # TODO
