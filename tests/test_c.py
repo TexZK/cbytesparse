@@ -104,7 +104,7 @@ def loremstr():
             b'eiusmod tempor incidunt ut labore et dolore magna aliqua.')
 
 
-class TestInplaceView:  # TODO: sort alphabetically
+class TestInplaceView:
 
     def test___contains__(self, hexview, hexstr):
         instance = InplaceView(hexview)
@@ -123,11 +123,21 @@ class TestInplaceView:  # TODO: sort alphabetically
         with pytest.raises(TypeError, match='must not be None'):
             assert None not in instance
 
-    def test___delitem__(self):
-        pass  # TODO
+    def test___delitem__(self, hexview):
+        with pytest.raises(IndexError, match='cannot resize view'):
+            instance = InplaceView(hexview)
+            del instance[0]
 
-    def test___getitem__(self):
-        pass  # TODO
+    def test___getitem__(self, hexview):
+        instance = InplaceView(hexview)
+        size = len(hexview)
+
+        for i in range(size):
+            assert instance[i] == hexview[i]
+
+        for start in range(-size, size):
+            for endex in range(-size, size):
+                assert instance[start:endex] == hexview[start:endex]
 
     def test___init__(self, hexview):
         assert InplaceView(hexview).obj is hexview
@@ -154,11 +164,41 @@ class TestInplaceView:  # TODO: sort alphabetically
             with pytest.raises(ValueError, match='Buffer dtype mismatch'):
                 InplaceView(numpy.array([1, 2, 3], dtype=numpy.uint))
 
+    def test___iter__(self, hexview):
+        for start in range(len(hexview)):
+            for endex in range(len(hexview)):
+                subview = hexview[start:endex]
+                assert list(InplaceView(subview)) == list(subview)
+
+    def test___len__(self, hexview):
+        for start in range(len(hexview)):
+            for endex in range(len(hexview)):
+                subview = hexview[start:endex]
+                assert len(InplaceView(subview)) == len(subview)
+
+    def test___reversed__(self, hexview):
+        for start in range(len(hexview)):
+            for endex in range(len(hexview)):
+                subview = hexview[start:endex]
+                assert list(reversed(InplaceView(subview))) == list(reversed(subview))
+
     def test___richcmp__(self):
         pass  # TODO
 
-    def test___setitem(self):
-        pass  # TODO
+    def test___setitem__(self, hexview):
+        instance = InplaceView(hexview)
+        size = len(hexview)
+
+        for i in range(size):
+            before = hexview[i]
+            instance[i] = 255 - i
+            after = hexview[i]
+            assert before != after
+            assert after == 255 - i
+
+        instance = InplaceView(b'abc')
+        with pytest.raises(TypeError, match='object does not support item assignment'):
+            instance[0] = 0
 
     def test___sizeof__(self, hexview):
         instance = InplaceView(hexview)

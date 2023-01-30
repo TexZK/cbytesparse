@@ -1181,6 +1181,24 @@ cdef class InplaceView:
         self._obj = wrapped
         self.update_readonly_()
 
+    def __iter__(
+        self: InplaceView,
+    ) -> Iterable[int]:
+
+        yield from self._obj
+
+    def __len__(
+        self: InplaceView,
+    ) -> int:
+
+        return len(self._obj)
+
+    def __reversed__(
+        self: InplaceView,
+    ) -> Iterable[int]:
+
+        yield from reversed(self._obj)
+
     def __richcmp__(
         self: InplaceView,
         other: ByteString,
@@ -3092,13 +3110,6 @@ cdef class BlockView(InplaceView):
     ):
 
         self._block = NULL
-
-    def __delitem__(
-        self: BlockView,
-        key: Any,
-    ) -> None:
-
-        raise TypeError('cannot delete memory')
 
     def __dealloc__(
         self: BlockView,
