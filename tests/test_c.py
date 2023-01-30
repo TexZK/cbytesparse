@@ -183,7 +183,17 @@ class TestInplaceView:
                 assert list(reversed(InplaceView(subview))) == list(reversed(subview))
 
     def test___richcmp__(self):
-        pass  # TODO
+        instance = InplaceView(b'def')
+        assert (instance < b'ghi') is True
+        assert (instance <= b'ghi') is True
+        assert (instance <= b'deg') is True
+        assert (instance <= b'def') is True
+        assert (instance == b'def') is True
+        assert (instance >= b'def') is True
+        assert (instance >= b'dee') is True
+        assert (instance >= b'abc') is True
+        assert (instance > b'abc') is True
+        assert (instance != b'abc') is True
 
     def test___setitem__(self, hexview):
         instance = InplaceView(hexview)
