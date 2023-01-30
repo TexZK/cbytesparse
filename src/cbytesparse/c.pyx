@@ -1202,6 +1202,8 @@ cdef class InplaceView:
         value: Any,
     ) -> None:
 
+        self.check_readonly_()
+
         if isinstance(key, slice):
             start = key.start
             endex = key.stop

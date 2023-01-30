@@ -648,7 +648,8 @@ class TestInplaceView:  # TODO: sort alphabetically
         instance[0] = 0
         readonly = instance.toreadonly()
         assert readonly.readonly is True
-        readonly[1] = 1  # FIXME
+        with pytest.raises(TypeError, match='wrapped object does not support item assignment'):
+            readonly[1] = 1
 
     def test_translate(self, bytestr):
         table = InplaceView.maketrans(b'', b'')
