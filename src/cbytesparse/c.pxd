@@ -329,14 +329,21 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class InplaceView:
+cdef class BytesMethods:
     cdef:
         bint _readonly  # read-only flag (to be updated manually)
         object _obj  # wrapped buffer object (e.g. memoryview, bytearray)
 
-    cdef vint check_obj_(InplaceView self) except -1
+    cdef vint check_obj_(BytesMethods self) except -1
 
-    cdef vint check_readonly_(InplaceView self) except -1
+    cdef vint check_readonly_(BytesMethods self) except -1
+    cdef vint update_readonly_(BytesMethods self) except -1
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+cdef class InplaceView(BytesMethods):
+
     cdef vint update_readonly_(InplaceView self) except -1
 
 

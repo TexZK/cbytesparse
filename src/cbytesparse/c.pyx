@@ -1167,40 +1167,27 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-cdef class InplaceView:
+cdef class BytesMethods:
 
-    cdef vint check_obj_(InplaceView self) except -1:
-
+    cdef vint check_obj_(BytesMethods self) except -1:
         if self._obj is None:
             raise RuntimeError('null internal wrapped reference')
 
-    cdef vint check_readonly_(InplaceView self) except -1:
-
+    cdef vint check_readonly_(BytesMethods self) except -1:
         if self._readonly:
             raise TypeError('wrapped object does not support item assignment')
 
-    cdef vint update_readonly_(InplaceView self) except -1:
-        cdef:
-            byte_t[:] writable
-
-        if self._obj is None:
-            self._readonly = True  # failsafe
-        else:
-            try:
-                writable = self._obj
-            except BufferError as exc:
-                self._readonly = True
-            else:
-                self._readonly = False
+    cdef vint update_readonly_(BytesMethods self) except -1:
+        self._readonly = True  # ensure
 
     def __bool__(
-        self: InplaceView,
+        self: BytesMethods,
     ) -> bool:
 
         return bool(self._obj)
 
     def __contains__(
-        self: InplaceView,
+        self: BytesMethods,
         token not None: ByteString,
     ) -> bool:
 
@@ -1208,14 +1195,14 @@ cdef class InplaceView:
         return Buffer_Contains(self._obj, token, 0, SIZE_MAX)
 
     def __delitem__(
-        self: InplaceView,
+        self: BytesMethods,
         key: Any,
     ) -> None:
 
         raise IndexError('cannot resize view')
 
     def __getattr__(
-        self: InplaceView,
+        self: BytesMethods,
         attr: str,
     ) -> Any:
 
@@ -1223,14 +1210,14 @@ cdef class InplaceView:
         return getattr(self._obj, attr)
 
     def __getitem__(
-        self: InplaceView,
+        self: BytesMethods,
         key: Any,
     ) -> Any:
 
         return self._obj[key]
 
     def __init__(
-        self: InplaceView,
+        self: BytesMethods,
         wrapped: ByteString,
     ):
         cdef:
@@ -1243,25 +1230,25 @@ cdef class InplaceView:
         self.update_readonly_()
 
     def __iter__(
-        self: InplaceView,
+        self: BytesMethods,
     ) -> Iterable[int]:
 
         yield from self._obj
 
     def __len__(
-        self: InplaceView,
+        self: BytesMethods,
     ) -> int:
 
         return len(self._obj)
 
     def __reversed__(
-        self: InplaceView,
+        self: BytesMethods,
     ) -> Iterable[int]:
 
         yield from reversed(self._obj)
 
     def __richcmp__(
-        self: InplaceView,
+        self: BytesMethods,
         other: ByteString,
         op: int,
     ) -> bool:
@@ -1285,6 +1272,408 @@ cdef class InplaceView:
                 raise TypeError("operation not supported against instances of 'NoneType'")
 
         return Buffer_RichCmp(self._obj, other, op)
+
+    def __setitem__(
+        self: BytesMethods,
+        key: Any,
+        value: Any,
+    ) -> None:
+
+        self.check_readonly_()  # should fail
+
+    def __sizeof__(
+        self: BytesMethods,
+    ) -> int:
+
+        return sizeof(BytesMethods)
+
+    @property
+    def c_contiguous(
+        self: BytesMethods,
+    ) -> bool:
+
+        return True
+
+    def capitalize(
+        self: BytesMethods,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Capitalize(obj)
+        return obj
+
+    def contains(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_Contains(self._obj, token, start_, endex_)
+
+    @property
+    def contiguous(
+        self: BytesMethods,
+    ) -> bool:
+
+        return True
+
+    def count(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_Count(self._obj, token, start_, endex_)
+
+    def endswith(
+        self: BytesMethods,
+        token not None: ByteString,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_EndsWith(self._obj, token)
+
+    @property
+    def f_contiguous(
+        self: BytesMethods,
+    ) -> bool:
+
+        return True
+
+    def find(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_Find(self._obj, token, start_, endex_)
+
+    @property
+    def format(
+        self: BytesMethods,
+    ) -> str:
+
+        return 'B'
+
+    def index(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_Index(self._obj, token, start_, endex_)
+
+    def isalnum(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsAlNum(self._obj)
+
+    def isalpha(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsAlpha(self._obj)
+
+    def isascii(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsASCII(self._obj)
+
+    def isdecimal(
+        self: BytesMethods,
+    ) -> bool:
+
+        return self.isdigit()
+
+    def isdigit(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsDigit(self._obj)
+
+    def isidentifier(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsIdentifier(self._obj)
+
+    def islower(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsLower(self._obj)
+
+    def isnumeric(
+        self: BytesMethods,
+    ) -> bool:
+
+        return self.isdigit()
+
+    def isprintable(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsPrintable(self._obj)
+
+    def isspace(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsSpace(self._obj)
+
+    def istitle(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsTitle(self._obj)
+
+    def isupper(
+        self: BytesMethods,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_IsUpper(self._obj)
+
+    @property
+    def itemsize(
+        self: BytesMethods,
+    ) -> int:
+
+        return 1
+
+    def lower(
+        self: BytesMethods,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Lower(obj)
+        return obj
+
+    @staticmethod
+    def maketrans(
+        chars_from not None: ByteString,
+        chars_to not None: ByteString,
+    ) -> bytes:
+
+        return Buffer_MakeTrans(chars_from, chars_to)
+
+    @property
+    def nbytes(
+        self: BytesMethods,
+    ) -> int:
+
+        self.check_obj_()
+        return len(self._obj)
+
+    @property
+    def ndim(
+        self: BytesMethods,
+    ) -> int:
+
+        return 1
+
+    @property
+    def obj(
+        self: BytesMethods,
+    ) -> Optional[ByteString]:
+
+        return self._obj
+
+    @property
+    def readonly(
+        self: BytesMethods,
+    ) -> bool:
+
+        return self._readonly
+
+    def release(
+        self: BytesMethods,
+        wrapped: bool = True,
+    ) -> None:
+
+        if self._obj is not None:
+            self._obj = None
+            self.update_readonly_()
+
+    def replace(
+        self: BytesMethods,
+        old not None: ByteString,
+        new not None: ByteString,
+        count: Optional[int] = None,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> ByteString:
+        cdef:
+            size_t count_ = SIZE_MAX if count is None else <size_t>count
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Replace(obj, old, new, count_, start_, endex_)
+        return obj
+
+    def rfind(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_RevFind(self._obj, token, start_, endex_)
+
+    def rindex(
+        self: BytesMethods,
+        token not None: ByteString,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        cdef:
+            size_t start_ = SIZE_MIN if start is None else <size_t>start
+            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
+
+        self.check_obj_()
+        return Buffer_RevIndex(self._obj, token, start_, endex_)
+
+    @property
+    def shape(
+        self: BytesMethods,
+    ) -> Tuple[int]:
+
+        self.check_obj_()
+        return (len(self._obj),)
+
+    def startswith(
+        self: BytesMethods,
+        token not None: ByteString,
+    ) -> bool:
+
+        self.check_obj_()
+        return Buffer_StartsWith(self._obj, token)
+
+    @property
+    def strides(
+        self: BytesMethods,
+    ) -> Tuple[int]:
+
+        return (1,)
+
+    @property
+    def suboffsets(
+        self: BytesMethods,
+    ) -> Tuple:
+
+        return ()
+
+    def swapcase(
+        self: BytesMethods,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_SwapCase(obj)
+        return obj
+
+    def title(
+        self: BytesMethods,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Title(obj)
+        return obj
+
+    def tobytes(
+        self: BytesMethods,
+    ) -> bytes:
+
+        self.check_obj_()
+        return bytes(self._obj)
+
+    def tolist(
+        self: BytesMethods,
+    ) -> List[int]:
+
+        self.check_obj_()
+        return list(self._obj)
+
+    def translate(
+        self: BytesMethods,
+        table not None: ByteString,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Translate(obj, table)
+        return obj
+
+    def upper(
+        self: BytesMethods,
+    ) -> ByteString:
+
+        self.check_obj_()
+        obj = bytearray(self._obj)
+        Buffer_Upper(obj)
+        return obj
+
+
+ByteString.register(BytesMethods)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+cdef class InplaceView(BytesMethods):
+
+    cdef vint update_readonly_(InplaceView self) except -1:
+        cdef:
+            byte_t[:] writable
+
+        if self._obj is None:
+            self._readonly = True  # failsafe
+        else:
+            try:
+                writable = self._obj
+            except BufferError as exc:
+                self._readonly = True
+            else:
+                self._readonly = False
 
     def __setitem__(
         self: InplaceView,
@@ -1324,19 +1713,6 @@ cdef class InplaceView:
 
         self._obj[key] = value
 
-    def __sizeof__(
-        self: InplaceView,
-    ) -> int:
-
-        return sizeof(InplaceView)
-
-    @property
-    def c_contiguous(
-        self: InplaceView,
-    ) -> bool:
-
-        return True
-
     def capitalize(
         self: InplaceView,
     ) -> InplaceView:
@@ -1346,176 +1722,6 @@ cdef class InplaceView:
         Buffer_Capitalize(self._obj)
         return self
 
-    def contains(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_Contains(self._obj, token, start_, endex_)
-
-    @property
-    def contiguous(
-        self: InplaceView,
-    ) -> bool:
-
-        return True
-
-    def count(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_Count(self._obj, token, start_, endex_)
-
-    def endswith(
-        self: InplaceView,
-        token not None: ByteString,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_EndsWith(self._obj, token)
-
-    @property
-    def f_contiguous(
-        self: InplaceView,
-    ) -> bool:
-
-        return True
-
-    def find(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_Find(self._obj, token, start_, endex_)
-
-    @property
-    def format(
-        self: InplaceView,
-    ) -> str:
-
-        return 'B'
-
-    def index(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_Index(self._obj, token, start_, endex_)
-
-    def isalnum(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsAlNum(self._obj)
-
-    def isalpha(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsAlpha(self._obj)
-
-    def isascii(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsASCII(self._obj)
-
-    def isdecimal(
-        self: InplaceView,
-    ) -> bool:
-
-        return self.isdigit()
-
-    def isdigit(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsDigit(self._obj)
-
-    def isidentifier(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsIdentifier(self._obj)
-
-    def islower(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsLower(self._obj)
-
-    def isnumeric(
-        self: InplaceView,
-    ) -> bool:
-
-        return self.isdigit()
-
-    def isprintable(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsPrintable(self._obj)
-
-    def isspace(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsSpace(self._obj)
-
-    def istitle(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsTitle(self._obj)
-
-    def isupper(
-        self: InplaceView,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_IsUpper(self._obj)
-
-    @property
-    def itemsize(
-        self: InplaceView,
-    ) -> int:
-
-        return 1
-
     def lower(
         self: InplaceView,
     ) -> InplaceView:
@@ -1524,52 +1730,6 @@ cdef class InplaceView:
         self.check_readonly_()
         Buffer_Lower(self._obj)
         return self
-
-    @staticmethod
-    def maketrans(
-        chars_from not None: ByteString,
-        chars_to not None: ByteString,
-    ) -> bytes:
-
-        return Buffer_MakeTrans(chars_from, chars_to)
-
-    @property
-    def nbytes(
-        self: InplaceView,
-    ) -> int:
-
-        self.check_obj_()
-        return len(self._obj)
-
-    @property
-    def ndim(
-        self: InplaceView,
-    ) -> int:
-
-        return 1
-
-    @property
-    def obj(
-        self: InplaceView,
-    ) -> Optional[ByteString]:
-
-        return self._obj
-
-    @property
-    def readonly(
-        self: InplaceView,
-    ) -> bool:
-
-        return self._readonly
-
-    def release(
-        self: InplaceView,
-        wrapped: bool = True,
-    ) -> None:
-
-        if self._obj is not None:
-            self._obj = None
-            self.update_readonly_()
 
     def replace(
         self: InplaceView,
@@ -1587,62 +1747,7 @@ cdef class InplaceView:
         self.check_obj_()
         self.check_readonly_()
         Buffer_Replace(self._obj, old, new, count_, start_, endex_)
-
-    def rfind(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_RevFind(self._obj, token, start_, endex_)
-
-    def rindex(
-        self: InplaceView,
-        token not None: ByteString,
-        start: Optional[int] = None,
-        endex: Optional[int] = None,
-    ) -> int:
-        cdef:
-            size_t start_ = SIZE_MIN if start is None else <size_t>start
-            size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
-
-        self.check_obj_()
-        return Buffer_RevIndex(self._obj, token, start_, endex_)
-
-    @property
-    def shape(
-        self: InplaceView,
-    ) -> Tuple[int]:
-
-        self.check_obj_()
-        return (len(self._obj),)
-
-    def startswith(
-        self: InplaceView,
-        token not None: ByteString,
-    ) -> bool:
-
-        self.check_obj_()
-        return Buffer_StartsWith(self._obj, token)
-
-    @property
-    def strides(
-        self: InplaceView,
-    ) -> Tuple[int]:
-
-        return (1,)
-
-    @property
-    def suboffsets(
-        self: InplaceView,
-    ) -> Tuple:
-
-        return ()
+        return self
 
     def swapcase(
         self: InplaceView,
@@ -1661,20 +1766,6 @@ cdef class InplaceView:
         self.check_readonly_()
         Buffer_Title(self._obj)
         return self
-
-    def tobytes(
-        self: InplaceView,
-    ) -> bytes:
-
-        self.check_obj_()
-        return bytes(self._obj)
-
-    def tolist(
-        self: InplaceView,
-    ) -> List[int]:
-
-        self.check_obj_()
-        return list(self._obj)
 
     def toreadonly(
         self: InplaceView,
