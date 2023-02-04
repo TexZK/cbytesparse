@@ -24,7 +24,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import array
+from typing import ByteString
 from typing import Type
+from typing import cast as _cast
 
 import pytest
 
@@ -61,34 +63,35 @@ def loremstr():
 class BytesMethodsSuite:
 
     BytesMethods: Type['_BytesMethods'] = _BytesMethods
+    SUPPORTS_NONE: bool = True
 
     def test___bool__(self, hexview):
         BytesMethods = self.BytesMethods
         assert bool(BytesMethods(hexview)) is True
         assert bool(BytesMethods(b'')) is False
-        assert bool(BytesMethods(None)) is False
+        if self.SUPPORTS_NONE:
+            assert bool(BytesMethods(None)) is False
 
     def test___contains__(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(hexview)
+        instance = BytesMethods(hexstr)
 
-        for start in range(len(hexview) - 1):
-            for endex in range(start + 1, len(hexview)):
-                assert hexview[start:endex] in instance
+        for start in range(len(hexstr) - 1):
+            for endex in range(start + 1, len(hexstr)):
+                assert hexstr[start:endex] in instance
 
         assert hexstr in instance
         assert hexview in instance
-
-        assert hexview[0:0] not in instance
-        assert b'' not in instance
+        assert hexstr[0:0] in instance
+        assert b'' in instance
         assert (hexstr + b'\0') not in instance
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             assert None not in instance
 
     def test___delitem__(self, hexview):
         BytesMethods = self.BytesMethods
-        with pytest.raises(IndexError, match='cannot resize view'):
+        with pytest.raises(TypeError):
             instance = BytesMethods(hexview)
             del instance[0]
 
@@ -104,31 +107,32 @@ class BytesMethodsSuite:
             for endex in range(-size, size):
                 assert instance[start:endex] == hexview[start:endex]
 
-    def test___init__(self, hexview):
+    def test___init__(self, hexstr):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(hexview).obj is hexview
-        assert BytesMethods(None).obj is None
+        if self.SUPPORTS_NONE:
+            BytesMethods(None)
 
-        b = b'Hello, World!'
-        assert BytesMethods(b).obj is b
+        BytesMethods(hexstr)
+        BytesMethods(b'Hello, World!')
 
-        a = memoryview(array.array('B'))
-        assert BytesMethods(a).obj is a
+        a = array.array('B')
+        BytesMethods(_cast(ByteString, a))
 
-        with pytest.raises(ValueError, match='Buffer dtype mismatch'):
-            BytesMethods(memoryview(array.array('H')))
+        a = array.array('H')
+        BytesMethods(_cast(ByteString, a))
 
-        with pytest.raises(ValueError, match='Buffer dtype mismatch'):
-            BytesMethods(memoryview(array.array('L')))
+        a = array.array('L')
+        BytesMethods(_cast(ByteString, a))
 
         if numpy is not None:  # pragma: no cover
-            BytesMethods(memoryview(numpy.array([1, 2, 3], dtype=numpy.ubyte)))
+            a = numpy.array([1, 2, 3], dtype=numpy.ubyte)
+            BytesMethods(_cast(ByteString, a))
 
-            with pytest.raises(ValueError, match='Buffer dtype mismatch'):
-                BytesMethods(memoryview(numpy.array([1, 2, 3], dtype=numpy.ushort)))
+            a = numpy.array([1, 2, 3], dtype=numpy.ushort)
+            BytesMethods(_cast(ByteString, a))
 
-            with pytest.raises(ValueError, match='Buffer dtype mismatch'):
-                BytesMethods(memoryview(numpy.array([1, 2, 3], dtype=numpy.uint)))
+            a = numpy.array([1, 2, 3], dtype=numpy.uint)
+            BytesMethods(_cast(ByteString, a))
 
     def test___iter__(self, hexview):
         BytesMethods = self.BytesMethods
@@ -151,18 +155,23 @@ class BytesMethodsSuite:
                 subview = hexview[start:endex]
                 assert list(reversed(BytesMethods(subview))) == list(reversed(subview))
 
-    def test___richcmp__(self):
+    def test___eq__(self):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(b'def')
-
         assert (instance == b'de') is False
         assert (instance == b'def') is True
         assert (instance == b'def_') is False
 
+    def test___ne__(self):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'def')
         assert (instance != b'de') is True
         assert (instance != b'def') is False
         assert (instance != b'def_') is True
 
+    def test___lt__(self):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'def')
         assert (instance < b'de') is False
         assert (instance < b'def') is False
         assert (instance < b'def_') is True
@@ -170,6 +179,9 @@ class BytesMethodsSuite:
         assert (instance < b'dez') is True
         assert (instance < b'ghi') is True
 
+    def test___le__(self):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'def')
         assert (instance <= b'de') is False
         assert (instance <= b'def') is True
         assert (instance <= b'def_') is True
@@ -177,6 +189,9 @@ class BytesMethodsSuite:
         assert (instance <= b'dez') is True
         assert (instance <= b'ghi') is True
 
+    def test___ge__(self):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'def')
         assert (instance >= b'de') is True
         assert (instance >= b'def') is True
         assert (instance >= b'def_') is False
@@ -184,6 +199,9 @@ class BytesMethodsSuite:
         assert (instance >= b'dez') is False
         assert (instance >= b'abc') is True
 
+    def test___gt__(self):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'def')
         assert (instance > b'de') is True
         assert (instance > b'def') is False
         assert (instance > b'def_') is False
@@ -194,14 +212,9 @@ class BytesMethodsSuite:
     def test___richcmp___none(self, hexview):
         BytesMethods = self.BytesMethods
         instance_some = BytesMethods(hexview)
-        instance_none = BytesMethods(None)
         object_none = None
-
         assert (instance_some == object_none) is False
-        assert (instance_none == object_none) is True
-
         assert (instance_some != object_none) is True
-        assert (instance_none != object_none) is False
 
         with pytest.raises(TypeError, match='not supported'):
             assert instance_some < object_none
@@ -213,15 +226,6 @@ class BytesMethodsSuite:
             assert instance_some > object_none
 
         with pytest.raises(TypeError, match='not supported'):
-            assert instance_none < object_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert instance_none <= object_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert instance_none >= object_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert instance_none > object_none
-
-        with pytest.raises(TypeError, match='not supported'):
             assert object_none < instance_some
         with pytest.raises(TypeError, match='not supported'):
             assert object_none <= instance_some
@@ -230,19 +234,33 @@ class BytesMethodsSuite:
         with pytest.raises(TypeError, match='not supported'):
             assert object_none > instance_some
 
-        with pytest.raises(TypeError, match='not supported'):
-            assert object_none < instance_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert object_none <= instance_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert object_none >= instance_none
-        with pytest.raises(TypeError, match='not supported'):
-            assert object_none > instance_none
+        if self.SUPPORTS_NONE:
+            instance_none = BytesMethods(None)
+            assert (instance_none == object_none) is True
+            assert (instance_none != object_none) is False
+
+            with pytest.raises(TypeError, match='not supported'):
+                assert instance_none < object_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert instance_none <= object_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert instance_none >= object_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert instance_none > object_none
+
+            with pytest.raises(TypeError, match='not supported'):
+                assert object_none < instance_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert object_none <= instance_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert object_none >= instance_none
+            with pytest.raises(TypeError, match='not supported'):
+                assert object_none > instance_none
 
     def test___setitem__(self, hexview):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(b'abc')
-        with pytest.raises(TypeError, match='object does not support item assignment'):
+        with pytest.raises(TypeError):
             instance[0] = 0
 
     def test___sizeof__(self, hexview):
@@ -252,8 +270,9 @@ class BytesMethodsSuite:
 
     def test_c_contiguous(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).c_contiguous is True
         assert BytesMethods(hexview).c_contiguous is True
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).c_contiguous is True
 
     def test_capitalize(self, bytestr, loremstr):
         BytesMethods = self.BytesMethods
@@ -271,31 +290,32 @@ class BytesMethodsSuite:
         for start in range(len(hexview) - 1):
             for endex in range(start + 1, len(hexview)):
                 assert instance.contains(hexview[start:endex]) is True
-                assert instance.contains(hexview[start:endex], start=start, endex=endex) is True
-                assert instance.contains(hexview[start:endex], start=start, endex=(endex + 1)) is True
-                assert instance.contains(hexview[start:endex], start=(start + 1), endex=endex) is False
+                assert instance.contains(hexview[start:endex], start, endex) is True
+                assert instance.contains(hexview[start:endex], start, (endex + 1)) is True
+                assert instance.contains(hexview[start:endex], (start + 1), endex) is False
                 if start:
-                    assert instance.contains(hexview[start:endex], start=(start - 1), endex=endex) is True
-                    assert instance.contains(hexview[start:endex], start=(start - 1), endex=(endex + 1)) is True
+                    assert instance.contains(hexview[start:endex], (start - 1), endex) is True
+                    assert instance.contains(hexview[start:endex], (start - 1), (endex + 1)) is True
                 if endex:
-                    assert instance.contains(hexview[start:endex], start=start, endex=(endex - 1)) is False
-                    assert instance.contains(hexview[start:endex], start=(start + 1), endex=(endex - 1)) is False
+                    assert instance.contains(hexview[start:endex], start, (endex - 1)) is False
+                    assert instance.contains(hexview[start:endex], (start + 1), (endex - 1)) is False
 
         assert instance.contains(hexstr) is True
         assert instance.contains(hexview) is True
 
-        assert instance.contains(hexview[0:0]) is False
-        assert instance.contains(b'') is False
+        assert instance.contains(hexview[0:0]) is True
+        assert instance.contains(b'') is True
         assert instance.contains(hexstr + b'\0') is False
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.contains(None)
 
     def test_contiguous(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).contiguous is True
         assert BytesMethods(hexview).contiguous is True
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).contiguous is True
 
     def test_count(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
@@ -305,13 +325,14 @@ class BytesMethodsSuite:
 
         view = memoryview(bytearray(10))
         instance = BytesMethods(view)
+        assert instance.count(b'') == 11
         assert instance.count(b'\0') == 10
         assert instance.count(b'\0' * 5) == 2
         assert instance.count(b'\0' * 3) == 3
         assert instance.count(b'\0' * 10) == 1
         for start in range(10):
             for endex in range(start, 10):
-                assert instance.count(b'\0', start=start, endex=endex) == endex - start
+                assert instance.count(b'\0', start, endex) == endex - start
 
         view = memoryview(bytearray(b'Hello, World!'))
         instance = BytesMethods(view)
@@ -320,17 +341,20 @@ class BytesMethodsSuite:
         assert instance.count(b'o') == 2
         assert instance.count(b'World') == 1
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.count(None)
 
     def test_endswith(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
+        assert BytesMethods(b'').endswith(b'') is True
+
         instance = BytesMethods(hexview)
         assert instance.endswith(hexstr) is True
         assert instance.endswith(b'\0' + hexstr) is False
+        assert instance.endswith(b'') is True
 
-        for endex in range(len(hexview) - 1):
+        for endex in range(1, len(hexview) - 1):
             assert instance.endswith(hexview[:endex]) is False
 
         for start in range(len(hexview) - 1):
@@ -342,17 +366,18 @@ class BytesMethodsSuite:
 
         zeros = bytes(len(hexview) * 2)
         zeroview = memoryview(zeros)
-        for i in range(len(zeroview)):
+        for i in range(1, len(zeroview)):
             assert instance.endswith(zeroview[:i]) is False
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.endswith(None)
 
     def test_f_contiguous(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).f_contiguous is True
         assert BytesMethods(hexview).f_contiguous is True
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).f_contiguous is True
 
     def test_find(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
@@ -361,24 +386,23 @@ class BytesMethodsSuite:
         for start in range(len(hexview) - 1):
             for endex in range(start + 1, len(hexview)):
                 assert instance.find(hexview[start:endex]) == start
-                assert instance.find(hexview[start:endex], start=start, endex=endex) == start
-                assert instance.find(hexview[start:endex], start=start, endex=(endex + 1)) == start
-                assert instance.find(hexview[start:endex], start=(start + 1), endex=endex) < 0
+                assert instance.find(hexview[start:endex], start, endex) == start
+                assert instance.find(hexview[start:endex], start, (endex + 1)) == start
+                assert instance.find(hexview[start:endex], (start + 1), endex) < 0
                 if start:
-                    assert instance.find(hexview[start:endex], start=(start - 1), endex=endex) == start
-                    assert instance.find(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                    assert instance.find(hexview[start:endex], (start - 1), endex) == start
+                    assert instance.find(hexview[start:endex], (start - 1), (endex + 1)) == start
                 if endex:
-                    assert instance.find(hexview[start:endex], start=start, endex=(endex - 1)) < 0
-                    assert instance.find(hexview[start:endex], start=(start + 1), endex=(endex - 1)) < 0
+                    assert instance.find(hexview[start:endex], start, (endex - 1)) < 0
+                    assert instance.find(hexview[start:endex], (start + 1), (endex - 1)) < 0
 
         assert instance.find(hexstr) == 0
         assert instance.find(hexview) == 0
-
-        assert instance.find(hexview[0:0]) < 0
-        assert instance.find(b'') < 0
+        assert instance.find(hexview[0:0]) == 0
+        assert instance.find(b'') == 0
         assert instance.find(hexstr + b'\0') < 0
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.find(None)
 
@@ -392,8 +416,9 @@ class BytesMethodsSuite:
 
     def test_format(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).format == 'B'
         assert BytesMethods(hexview).format == 'B'
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).format == 'B'
 
     def test_index(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
@@ -402,30 +427,28 @@ class BytesMethodsSuite:
         for start in range(len(hexview) - 1):
             for endex in range(start + 1, len(hexview)):
                 assert instance.index(hexview[start:endex]) == start
-                assert instance.index(hexview[start:endex], start=start, endex=endex) == start
-                assert instance.index(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                assert instance.index(hexview[start:endex], start, endex) == start
+                assert instance.index(hexview[start:endex], start, (endex + 1)) == start
                 with pytest.raises(ValueError, match='subsection not found'):
-                    assert instance.index(hexview[start:endex], start=(start + 1), endex=endex)
+                    assert instance.index(hexview[start:endex], (start + 1), endex)
                 if start:
-                    assert instance.index(hexview[start:endex], start=(start - 1), endex=endex) == start
-                    assert instance.index(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                    assert instance.index(hexview[start:endex], (start - 1), endex) == start
+                    assert instance.index(hexview[start:endex], (start - 1), (endex + 1)) == start
                 if endex:
                     with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.index(hexview[start:endex], start=start, endex=(endex - 1))
+                        assert instance.index(hexview[start:endex], start, (endex - 1))
                     with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.index(hexview[start:endex], start=(start + 1), endex=(endex - 1))
+                        assert instance.index(hexview[start:endex], (start + 1), (endex - 1))
 
         assert instance.index(hexstr) == 0
         assert instance.index(hexview) == 0
+        assert instance.index(hexview[0:0]) == 0
+        assert instance.index(b'') == 0
 
-        with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.index(hexview[0:0])
-        with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.index(b'')
         with pytest.raises(ValueError, match='subsection not found'):
             assert instance.index(hexstr + b'\0')
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.index(None)
 
@@ -443,17 +466,29 @@ class BytesMethodsSuite:
         assert BytesMethods(b'H3ll0W0rld!').isalnum() is False
         assert BytesMethods(b'').isalnum() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isalnum() is False
+
     def test_isalpha(self):
         BytesMethods = self.BytesMethods
         assert BytesMethods(b'HelloWorld').isalpha() is True
         assert BytesMethods(b'H3ll0W0rld').isalpha() is False
         assert BytesMethods(b'').isalpha() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isalpha() is False
+
     def test_isascii(self):
         BytesMethods = self.BytesMethods
         assert BytesMethods(bytes(range(128))).isascii() is True
         assert BytesMethods(bytes(range(129))).isascii() is False
-        assert BytesMethods(b'').isascii() is False
+        assert BytesMethods(b'').isascii() is True
+
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isascii() is False
 
     def test_isdecimal(self, hexview):
         BytesMethods = self.BytesMethods
@@ -461,17 +496,29 @@ class BytesMethodsSuite:
         assert BytesMethods(hexview).isdecimal() is False
         assert BytesMethods(b'').isdecimal() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isdecimal() is False
+
     def test_isdigit(self, hexview):
         BytesMethods = self.BytesMethods
         assert BytesMethods(hexview[:10]).isdigit() is True
         assert BytesMethods(hexview).isdigit() is False
         assert BytesMethods(b'').isdigit() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isdigit() is False
+
     def test_isidentifier(self, hexstr, bytestr):
         BytesMethods = self.BytesMethods
         assert BytesMethods(hexstr[::-1]).isidentifier() is True
         assert BytesMethods(hexstr).isidentifier() is False
         assert BytesMethods(bytestr).isidentifier() is False
+
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isidentifier() is False
 
         assert BytesMethods(b'a').isidentifier() is True
         assert BytesMethods(b'_').isidentifier() is True
@@ -497,11 +544,19 @@ class BytesMethodsSuite:
         assert BytesMethods(hexstr.upper()).islower() is False
         assert BytesMethods(b'').islower() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).islower() is False
+
     def test_isnumeric(self, hexview):
         BytesMethods = self.BytesMethods
         assert BytesMethods(hexview[:10]).isnumeric() is True
         assert BytesMethods(hexview).isnumeric() is False
         assert BytesMethods(b'').isnumeric() is False
+
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isnumeric() is False
 
     def test_isprintable(self):
         BytesMethods = self.BytesMethods
@@ -514,11 +569,19 @@ class BytesMethodsSuite:
         for i in range(0x7E + 1, 256):
             assert BytesMethods(bytes([i])).isprintable() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isprintable() is False
+
     def test_isspace(self):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20').isspace() is True
-        assert BytesMethods(b'\x09\x0A\x0B\x0C\x0D\x1C\x1D\x1E\x1F\x20\x00').isspace() is False
+        assert BytesMethods(b'\x09\x0A\x0B\x0C\x0D\x20').isspace() is True
+        assert BytesMethods(b'\x09\x0A\x0B\x0C\x0D\x20\x00').isspace() is False
         assert BytesMethods(b'').isspace() is False
+
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isspace() is False
 
     def test_istitle(self, loremstr):
         BytesMethods = self.BytesMethods
@@ -526,16 +589,25 @@ class BytesMethodsSuite:
         assert BytesMethods(loremstr.capitalize()).istitle() is False
         assert BytesMethods(b'').istitle() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).istitle() is False
+
     def test_isupper(self, hexstr):
         BytesMethods = self.BytesMethods
         assert BytesMethods(hexstr.upper()).isupper() is True
         assert BytesMethods(hexstr.lower()).isupper() is False
         assert BytesMethods(b'').isupper() is False
 
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                assert BytesMethods(None).isupper() is False
+
     def test_itemsize(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).itemsize == 1
         assert BytesMethods(hexview).itemsize == 1
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).itemsize == 1
 
     def test_lower(self, bytestr, loremstr):
         BytesMethods = self.BytesMethods
@@ -570,10 +642,10 @@ class BytesMethodsSuite:
         table = BytesMethods.maketrans(revbytes, bytestr)
         assert table == revbytes
 
-        with pytest.raises(ValueError, match='different sizes'):
+        with pytest.raises(ValueError, match='maketrans arguments must have same length'):
             BytesMethods.maketrans(b'', bytestr)
 
-        with pytest.raises(ValueError, match='different sizes'):
+        with pytest.raises(ValueError, match='maketrans arguments must have same length'):
             BytesMethods.maketrans(bytestr, b'')
 
     def test_nbytes(self, hexview):
@@ -583,59 +655,48 @@ class BytesMethodsSuite:
 
     def test_ndim(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).ndim == 1
         assert BytesMethods(hexview).ndim == 1
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).ndim == 1
 
     def test_obj(self, bytestr, hexstr, hexview):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(None)
-        assert instance.obj is None
-        instance.release()
-        assert instance.obj is None
 
         instance = BytesMethods(bytestr)
         assert instance.obj is bytestr
         instance.release()
-        assert instance.obj is None
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            assert instance.obj is None
 
         instance = BytesMethods(hexstr)
         assert instance.obj is hexstr
         instance.release()
-        assert instance.obj is None
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            assert instance.obj is None
 
         instance = BytesMethods(hexview)
-        assert instance.obj is hexview
         instance.release()
-        assert instance.obj is None
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            assert instance.obj is None
 
     def test_readonly(self, bytestr, hexstr, hexview):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(None)
-        assert instance.readonly is True
+        if self.SUPPORTS_NONE:
+            instance = BytesMethods(None)
+            assert instance.readonly is True
 
         instance = BytesMethods(bytestr)
         assert instance.readonly is True
-        with pytest.raises(TypeError, match='object does not support item assignment'):
+        with pytest.raises(TypeError):
             instance[0] = 0
 
-        instance = BytesMethods(hexstr)
-        assert instance.readonly is True
-        with pytest.raises(TypeError, match='object does not support item assignment'):
-            instance[0] = 0
-
-        instance = BytesMethods(hexview)
-        assert instance.readonly is True
-        with pytest.raises(TypeError, match='object does not support item assignment'):
-            instance[0] = 0
-
-    def test_release(self, hexview):
+    def test_release(self, hexstr):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(hexview)
-        assert instance.obj is hexview
+        instance = BytesMethods(hexstr)
+        assert instance.obj is hexstr
         instance.release()
-        assert instance.obj is None
-        instance.release()
-        assert instance.obj is None
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            assert instance.obj is None
 
     def test_replace(self, hexstr):
         BytesMethods = self.BytesMethods
@@ -655,24 +716,23 @@ class BytesMethodsSuite:
         for start in range(len(hexview) - 1):
             for endex in range(start + 1, len(hexview)):
                 assert instance.rfind(hexview[start:endex]) == start
-                assert instance.rfind(hexview[start:endex], start=start, endex=endex) == start
-                assert instance.rfind(hexview[start:endex], start=start, endex=(endex + 1)) == start
-                assert instance.rfind(hexview[start:endex], start=(start + 1), endex=endex) < 0
+                assert instance.rfind(hexview[start:endex], start, endex) == start
+                assert instance.rfind(hexview[start:endex], start, (endex + 1)) == start
+                assert instance.rfind(hexview[start:endex], (start + 1), endex) < 0
                 if start:
-                    assert instance.rfind(hexview[start:endex], start=(start - 1), endex=endex) == start
-                    assert instance.rfind(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                    assert instance.rfind(hexview[start:endex], (start - 1), endex) == start
+                    assert instance.rfind(hexview[start:endex], (start - 1), (endex + 1)) == start
                 if endex:
-                    assert instance.rfind(hexview[start:endex], start=start, endex=(endex - 1)) < 0
-                    assert instance.rfind(hexview[start:endex], start=(start + 1), endex=(endex - 1)) < 0
+                    assert instance.rfind(hexview[start:endex], start, (endex - 1)) < 0
+                    assert instance.rfind(hexview[start:endex], (start + 1), (endex - 1)) < 0
 
         assert instance.rfind(hexstr) == 0
         assert instance.rfind(hexview) == 0
-
-        assert instance.rfind(hexview[0:0]) < 0
-        assert instance.rfind(b'') < 0
+        assert instance.rfind(hexview[0:0]) == len(instance)
+        assert instance.rfind(b'') == len(instance)
         assert instance.rfind(hexstr + b'\0') < 0
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.rfind(None)
 
@@ -691,30 +751,28 @@ class BytesMethodsSuite:
         for start in range(len(hexview) - 1):
             for endex in range(start + 1, len(hexview)):
                 assert instance.rindex(hexview[start:endex]) == start
-                assert instance.rindex(hexview[start:endex], start=start, endex=endex) == start
-                assert instance.rindex(hexview[start:endex], start=start, endex=(endex + 1)) == start
+                assert instance.rindex(hexview[start:endex], start, endex) == start
+                assert instance.rindex(hexview[start:endex], start, (endex + 1)) == start
                 with pytest.raises(ValueError, match='subsection not found'):
-                    assert instance.rindex(hexview[start:endex], start=(start + 1), endex=endex)
+                    assert instance.rindex(hexview[start:endex], (start + 1), endex)
                 if start:
-                    assert instance.rindex(hexview[start:endex], start=(start - 1), endex=endex) == start
-                    assert instance.rindex(hexview[start:endex], start=(start - 1), endex=(endex + 1)) == start
+                    assert instance.rindex(hexview[start:endex], (start - 1), endex) == start
+                    assert instance.rindex(hexview[start:endex], (start - 1), (endex + 1)) == start
                 if endex:
                     with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.rindex(hexview[start:endex], start=start, endex=(endex - 1))
+                        assert instance.rindex(hexview[start:endex], start, (endex - 1))
                     with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.rindex(hexview[start:endex], start=(start + 1), endex=(endex - 1))
+                        assert instance.rindex(hexview[start:endex], (start + 1), (endex - 1))
 
         assert instance.rindex(hexstr) == 0
         assert instance.rindex(hexview) == 0
+        assert instance.rindex(hexview[0:0]) == len(instance)
+        assert instance.rindex(b'') == len(instance)
 
-        with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.rindex(hexview[0:0])
-        with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.rindex(b'')
         with pytest.raises(ValueError, match='subsection not found'):
             assert instance.rindex(hexstr + b'\0')
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.rindex(None)
 
@@ -733,9 +791,12 @@ class BytesMethodsSuite:
 
     def test_startswith(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
+        assert BytesMethods(b'').startswith(b'') is True
+
         instance = BytesMethods(hexview)
         assert instance.startswith(hexstr) is True
         assert instance.startswith(hexstr + b'\0') is False
+        assert instance.startswith(b'') is True
 
         for endex in range(1, len(hexview)):
             assert instance.startswith(hexview[:endex]) is True
@@ -744,27 +805,29 @@ class BytesMethodsSuite:
             assert instance.startswith(hexview[start:]) is False
 
         for start in range(1, len(hexview)):
-            for endex in range(start, len(hexview)):
+            for endex in range(start + 1, len(hexview)):
                 assert instance.startswith(hexview[start:endex]) is False
 
         zeros = bytes(len(hexview) * 2)
         zeroview = memoryview(zeros)
-        for i in range(len(zeroview)):
+        for i in range(1, len(zeroview)):
             assert instance.startswith(zeroview[:i]) is False
 
-        with pytest.raises(TypeError, match='must not be None'):
+        with pytest.raises(TypeError):
             # noinspection PyTypeChecker
             instance.startswith(None)
 
     def test_strides(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).strides == (1,)
         assert BytesMethods(hexview).strides == (1,)
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).strides == (1,)
 
     def test_suboffsets(self, hexview):
         BytesMethods = self.BytesMethods
-        assert BytesMethods(None).suboffsets == ()
         assert BytesMethods(hexview).suboffsets == ()
+        if self.SUPPORTS_NONE:
+            assert BytesMethods(None).suboffsets == ()
 
     def test_swapcase(self, bytestr, loremstr):
         BytesMethods = self.BytesMethods
@@ -877,8 +940,9 @@ class InplaceViewSuite(BytesMethodsSuite):
 
     def test_readonly(self, bytestr, hexstr, hexview):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(None)
-        assert instance.readonly is True
+        if self.SUPPORTS_NONE:
+            instance = BytesMethods(None)
+            assert instance.readonly is True
 
         instance = BytesMethods(bytestr)
         assert instance.readonly is True
