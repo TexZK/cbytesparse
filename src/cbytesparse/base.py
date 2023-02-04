@@ -32,6 +32,7 @@ from typing import ByteString
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import SupportsBytes
 from typing import Tuple
 from typing import Union
 
@@ -43,7 +44,41 @@ except ImportError:  # pragma: no cover
 BytesLike: TypeAlias = Union[ByteString, memoryview]
 
 
-class BaseBytesMethods(ByteString, collections.abc.Sequence):  # TODO: docstrings
+class BaseBytesMethods(ByteString,
+                       collections.abc.Sequence,
+                       SupportsBytes):
+    r"""Provides useful methods to a byte buffer.
+
+    Python's :obj:`memoryview` and most *byte-like* objects do not provide many
+    useful methods found instead within the :obj:`bytes` or :obj:`str` APIs.
+
+    This wrapper class adds a low-level implementation of those methods to
+    anything supporting the *buffer protocol*.
+
+    Arguments:
+        wrapped (*byte-like*): The target object supporting the
+            *buffer protocol*.
+
+    Examples:
+        >>> from cbytesparse import BytesMethods
+        >>> import numpy
+        >>> numbers = list(b'ABC')
+        >>> numbers
+        [65, 66, 67]
+        >>> data = numpy.array(numbers, dtype=numpy.ubyte)
+        >>> data
+        array([65, 66, 67], dtype=uint8)
+        >>> data.lower()  # noqa
+        Traceback (most recent call last):
+            ...
+        AttributeError: 'numpy.ndarray' object has no attribute 'lower'
+        >>> wrapped = BytesMethods(data)  # noqa
+        >>> bytes(wrapped.lower())
+        b'abc'
+        >>> wrapped = BytesMethods(memoryview(data))
+        >>> bytes(wrapped.lower())
+        b'abc'
+    """
 
     @abc.abstractmethod
     def __bool__(
@@ -457,7 +492,49 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):  # TODO: docstring
         ...
 
 
-class BaseInplaceView(BaseBytesMethods):  # TODO: docstrings
+class BaseInplaceView(BaseBytesMethods):
+    r"""Provides inplace methods to a byte buffer.
+
+    Standard Python *byte-like* objects (e.g. :obj:`memoryview` and
+    :obj:`bytearray`) only provide a very small set of methods for
+    *inplace* editing of their underlying bytes buffer.
+
+    This wrapper class adds a low-level implementation of those methods to
+    anything supporting the *buffer protocol* with a mutable buffer.
+
+    Note:
+        Editing support is only limited to the exising buffer items, i.e. the
+        wrapper and its underlying buffer cannot be resized via the methods
+        provided by this class, just like with standard memory views.
+
+    Arguments:
+        wrapped (*byte-like*): The target object supporting the
+            *buffer protocol*.
+
+    Examples:
+        >>> from cbytesparse import InplaceView
+        >>> buffer = bytearray(b'Hello, World!')
+        >>> wrapped = InplaceView(buffer)
+        >>> wrapped.lower()
+        >>> buffer
+        bytearray(b'hello, world!')
+        >>> wrapped.replace(b'l', b'p')
+        >>> buffer
+        bytearray(b'heppo, worpd!')
+        >>> wrapped.find(b'w')
+        7
+        >>> wrapped.rfind(b'o')
+        8
+        >>> wrapped.count(b'o')
+        2
+    """
+
+    @abc.abstractmethod
+    def __init__(
+        self,
+        wrapped: Optional[BytesLike],
+    ):
+        ...
 
     @abc.abstractmethod
     def toreadonly(
