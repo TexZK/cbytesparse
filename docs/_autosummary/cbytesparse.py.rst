@@ -20,6 +20,10 @@ cbytesparse.py
       :template: custom-class-template.rst
       :nosignatures:
    
+      BaseBytesMethods
+      BaseInplaceView
+      BytesMethods
+      InplaceView
       Memory
       bytesparse
    

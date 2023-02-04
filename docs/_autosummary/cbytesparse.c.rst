@@ -21,6 +21,8 @@ cbytesparse.c
       :nosignatures:
    
       BlockView
+      BytesMethods
+      InplaceView
       Memory
       bytesparse
    

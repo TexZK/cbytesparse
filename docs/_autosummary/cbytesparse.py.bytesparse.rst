@@ -68,7 +68,6 @@ cbytesparse.py.bytesparse
       ~bytesparse.intervals
       ~bytesparse.items
       ~bytesparse.keys
-      ~bytesparse.ofind
       ~bytesparse.peek
       ~bytesparse.poke
       ~bytesparse.poke_backup
@@ -89,7 +88,6 @@ cbytesparse.py.bytesparse
       ~bytesparse.reverse
       ~bytesparse.rfind
       ~bytesparse.rindex
-      ~bytesparse.rofind
       ~bytesparse.rvalues
       ~bytesparse.setdefault
       ~bytesparse.setdefault_backup
