@@ -515,7 +515,7 @@ cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
 
     if data_endex > data_size: data_endex = data_size
     if data_endex < data_start: return 0
-    if token_size == 0: return data_endex - data_start
+    if token_size == 0: return data_endex - data_start + 1
     if token_size > data_endex - data_start: return 0
     data_endex -= token_size
 
