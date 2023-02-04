@@ -1,7 +1,7 @@
-cbytesparse.py.BaseInplaceView
-==============================
+cbytesparse.base.BaseInplaceView
+================================
 
-.. currentmodule:: cbytesparse.py
+.. currentmodule:: cbytesparse.base
 
 .. autoclass:: BaseInplaceView
    :members:

@@ -1,7 +1,7 @@
-cbytesparse.py
-==============
+cbytesparse.base
+================
 
-.. automodule:: cbytesparse.py
+.. automodule:: cbytesparse.base
 
    
    
@@ -20,10 +20,8 @@ cbytesparse.py
       :template: custom-class-template.rst
       :nosignatures:
    
-      BytesMethods
-      InplaceView
-      Memory
-      bytesparse
+      BaseBytesMethods
+      BaseInplaceView
    
    
 

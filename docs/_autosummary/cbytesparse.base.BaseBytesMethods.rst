@@ -1,7 +1,7 @@
-cbytesparse.py.BaseBytesMethods
-===============================
+cbytesparse.base.BaseBytesMethods
+=================================
 
-.. currentmodule:: cbytesparse.py
+.. currentmodule:: cbytesparse.base
 
 .. autoclass:: BaseBytesMethods
    :members:
