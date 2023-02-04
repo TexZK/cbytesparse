@@ -124,7 +124,7 @@ class TestInplaceView(InplaceViewSuite):
     BytesMethods: Type['_InplaceView'] = _InplaceView
 
 
-class DONT_TestMemory(BaseMemorySuite):  # FIXME
+class TestMemory(BaseMemorySuite):
     Memory: Type['_Memory'] = _Memory
     ADDR_NEG: bool = False
 
