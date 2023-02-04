@@ -1215,14 +1215,6 @@ cdef class BytesMethods:
 
         raise TypeError("readonly object doesn't support item deletion")
 
-    def __getattr__(
-        self: BytesMethods,
-        attr: str,
-    ) -> Any:
-
-        self.check_obj_()
-        return getattr(self._obj, attr)
-
     def __getitem__(
         self: BytesMethods,
         key: Any,

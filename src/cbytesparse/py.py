@@ -116,13 +116,6 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl == other
 
-    def __getattr__(
-        self,
-        attr: str,
-    ) -> Any:
-
-        return self._impl.__getattr__(attr)
-
     def __ge__(
         self,
         other: Any,
