@@ -27,8 +27,9 @@ r"""Python wrappers.
 
 Useful for dynamically declared stuff, e.g. docstrings and return types.
 """
-
+import abc
 from typing import Any
+from typing import ByteString
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -57,9 +58,18 @@ from bytesparse.base import OpenInterval
 from bytesparse.base import Value
 
 # noinspection PyUnresolvedReferences,PyPackageRequirements
+from .c import BytesMethods as _CythonBytesMethods  # isort:skip
+# noinspection PyUnresolvedReferences,PyPackageRequirements
+from .c import InplaceView as _CythonInplaceView  # isort:skip
+# noinspection PyUnresolvedReferences,PyPackageRequirements
 from .c import Memory as _CythonMemory  # isort:skip
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 from .c import bytesparse as _CythonBytesparse  # isort:skip
+
+try:
+    from typing import TypeAlias
+except ImportError:  # pragma: no cover
+    TypeAlias = Any  # Python < 3.10
 
 try:
     __SELF_WORKAROUND = False
@@ -67,6 +77,863 @@ try:
 except ImportError:  # pragma: no cover
     __SELF_WORKAROUND = True  # Python < 3.11
     Self = None  # dummy
+
+BytesLike: TypeAlias = Union[ByteString, memoryview]
+
+
+class BaseBytesMethods(ByteString, abc.ABC):  # TODO: docstrings
+
+    @abc.abstractmethod
+    def __bool__(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __contains__(
+        self,
+        token: BytesLike,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __delitem__(
+        self,
+        key: Any,
+    ) -> None:
+        ...
+
+    @abc.abstractmethod
+    def __eq__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __getattr__(
+        self,
+        attr: str,
+    ) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def __ge__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __getitem__(
+        self,
+        key: Any,
+    ) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def __gt__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __init__(
+        self,
+        wrapped: Optional[BytesLike],
+    ):
+        ...
+
+    @abc.abstractmethod
+    def __iter__(
+        self,
+    ) -> Iterable[int]:
+        ...
+
+    @abc.abstractmethod
+    def __le__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __len__(
+        self,
+    ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def __lt__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __ne__(
+        self,
+        other: Any,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def __reversed__(
+        self,
+    ) -> Iterable[int]:
+        ...
+
+    @abc.abstractmethod
+    def __setitem__(
+        self,
+        key: Any,
+        value: Any,
+    ) -> None:
+        ...
+
+    @abc.abstractmethod
+    def __sizeof__(
+        self,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def c_contiguous(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def capitalize(
+        self,
+    ) -> 'BytesMethods':
+        ...
+
+    @abc.abstractmethod
+    def contains(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def contiguous(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def count(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def endswith(
+        self,
+        token: BytesLike,
+    ) -> bool:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def f_contiguous(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def find(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def format(
+        self,
+    ) -> str:
+        ...
+
+    @abc.abstractmethod
+    def index(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def isalnum(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isalpha(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isascii(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isdecimal(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isdigit(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isidentifier(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def islower(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isnumeric(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isprintable(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isspace(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def istitle(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def isupper(
+        self,
+    ) -> bool:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def itemsize(
+        self,
+    ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def lower(
+        self,
+    ) -> 'BytesMethods':
+        ...
+
+    @property
+    @abc.abstractmethod
+    def nbytes(
+        self,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def ndim(
+        self,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def obj(
+        self,
+    ) -> Optional[BytesLike]:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def readonly(
+        self,
+    ) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def release(
+        self,
+        wrapped: bool = True,
+    ) -> None:
+        ...
+
+    @abc.abstractmethod
+    def replace(
+        self,
+        old: BytesLike,
+        new: BytesLike,
+        count: Optional[int] = None,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> 'BytesMethods':
+        ...
+
+    @abc.abstractmethod
+    def rfind(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def rindex(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def shape(
+        self,
+    ) -> Tuple[int]:
+        ...
+
+    @abc.abstractmethod
+    def startswith(
+        self,
+        token: BytesLike,
+    ) -> bool:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def strides(
+        self,
+    ) -> Tuple[int]:
+        ...
+
+    @property
+    @abc.abstractmethod
+    def suboffsets(
+        self,
+    ) -> Tuple:
+        ...
+
+    @abc.abstractmethod
+    def swapcase(
+        self,
+    ) -> 'BytesMethods':
+        ...
+
+    @abc.abstractmethod
+    def title(
+        self,
+    ) -> 'BytesMethods':
+        ...
+
+    @abc.abstractmethod
+    def tobytes(
+        self,
+    ) -> bytes:
+        ...
+
+    @abc.abstractmethod
+    def tolist(
+        self,
+    ) -> List[int]:
+        ...
+
+    @abc.abstractmethod
+    def translate(
+        self,
+        table: BytesLike,
+    ) -> 'BytesMethods':
+        ...
+
+    @abc.abstractmethod
+    def upper(
+        self,
+    ) -> 'BytesMethods':
+        ...
+
+
+class BaseInplaceView(BaseBytesMethods, abc.ABC):  # TODO: docstrings
+
+    @abc.abstractmethod
+    def toreadonly(
+        self,
+    ) -> 'BaseInplaceView':
+        ...
+
+
+class BytesMethods(BaseBytesMethods):
+
+    def __bool__(
+        self,
+    ) -> bool:
+
+        return self._impl.__bool__()
+
+    def __contains__(
+        self,
+        token: BytesLike,
+    ) -> bool:
+
+        return self._impl.__contains__(token)
+
+    def __delitem__(
+        self,
+        key: Any,
+    ) -> None:
+
+        self._impl.__delitem__(key)
+
+    def __eq__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl == other
+
+    def __getattr__(
+        self,
+        attr: str,
+    ) -> Any:
+
+        return self._impl.__getattr__(attr)
+
+    def __ge__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl >= other
+
+    def __getitem__(
+        self,
+        key: Any,
+    ) -> Any:
+
+        return self._impl.__getitem__(key)
+
+    def __gt__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl > other
+
+    def __init__(
+        self,
+        wrapped: Optional[BytesLike],
+    ):
+
+        self._impl: _CythonBytesMethods = _CythonBytesMethods(wrapped)
+
+    def __iter__(
+        self,
+    ) -> Iterable[int]:
+
+        yield from self._impl.__iter__()
+
+    def __le__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl <= other
+
+    def __len__(
+        self,
+    ) -> int:
+
+        return self._impl.__len__()
+
+    def __lt__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl < other
+
+    def __ne__(
+        self,
+        other: Any,
+    ) -> bool:
+
+        return self._impl != other
+
+    def __reversed__(
+        self,
+    ) -> Iterable[int]:
+
+        yield from self._impl.__reversed__()
+
+    def __setitem__(
+        self,
+        key: Any,
+        value: Any,
+    ) -> None:
+
+        self._impl.__setitem__(key, value)
+
+    def __sizeof__(
+        self,
+    ) -> int:
+
+        return self._impl.__sizeof__()
+
+    @property
+    def c_contiguous(
+        self,
+    ) -> bool:
+
+        return self._impl.c_contiguous
+
+    def capitalize(
+        self,
+    ) -> 'BytesMethods':
+
+        return self._impl.capitalize()
+
+    def contains(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.contains(token, start=start, endex=endex)
+
+    @property
+    def contiguous(
+        self,
+    ) -> bool:
+
+        return self._impl.contiguous
+
+    def count(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.count(token, start=start, endex=endex)
+
+    def endswith(
+        self,
+        token: BytesLike,
+    ) -> bool:
+
+        return self._impl.endswith(token)
+
+    @property
+    def f_contiguous(
+        self,
+    ) -> bool:
+
+        return self._impl.f_contiguous
+
+    def find(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.find(token, start=start, endex=endex)
+
+    @property
+    def format(
+        self,
+    ) -> str:
+
+        return self._impl.format
+
+    def index(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.index(token, start=start, endex=endex)
+
+    def isalnum(
+        self,
+    ) -> bool:
+
+        return self._impl.isalnum()
+
+    def isalpha(
+        self,
+    ) -> bool:
+
+        return self._impl.isalpha()
+
+    def isascii(
+        self,
+    ) -> bool:
+
+        return self._impl.isascii()
+
+    def isdecimal(
+        self,
+    ) -> bool:
+
+        return self._impl.isdecimal()
+
+    def isdigit(
+        self,
+    ) -> bool:
+
+        return self._impl.isdigit()
+
+    def isidentifier(
+        self,
+    ) -> bool:
+
+        return self._impl.isidentifier()
+
+    def islower(
+        self,
+    ) -> bool:
+
+        return self._impl.islower()
+
+    def isnumeric(
+        self,
+    ) -> bool:
+
+        return self._impl.isnumeric()
+
+    def isprintable(
+        self,
+    ) -> bool:
+
+        return self._impl.isprintable()
+
+    def isspace(
+        self,
+    ) -> bool:
+
+        return self._impl.isspace()
+
+    def istitle(
+        self,
+    ) -> bool:
+
+        return self._impl.istitle()
+
+    def isupper(
+        self,
+    ) -> bool:
+
+        return self._impl.isupper()
+
+    @property
+    def itemsize(
+        self,
+    ) -> int:
+
+        return self._impl.itemsize
+
+    def lower(
+        self,
+    ) -> 'BytesMethods':
+
+        return self._impl.lower()
+
+    @staticmethod
+    def maketrans(
+        chars_from: BytesLike,
+        chars_to: BytesLike,
+    ) -> bytes:
+
+        return _CythonBytesMethods.maketrans(chars_from, chars_to)
+
+    @property
+    def nbytes(
+        self,
+    ) -> int:
+
+        return self._impl.nbytes
+
+    @property
+    def ndim(
+        self,
+    ) -> int:
+
+        return self._impl.ndim
+
+    @property
+    def obj(
+        self,
+    ) -> Optional[BytesLike]:
+
+        return self._impl.obj
+
+    @property
+    def readonly(
+        self,
+    ) -> bool:
+
+        return self._impl.readonly
+
+    def release(
+        self,
+        wrapped: bool = True,
+    ) -> None:
+
+        self._impl.release(wrapped=wrapped)
+
+    def replace(
+        self,
+        old: BytesLike,
+        new: BytesLike,
+        count: Optional[int] = None,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> 'BytesMethods':
+
+        return self._impl.replace(old, new, count=count, start=start, endex=endex)
+
+    def rfind(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.rfind(token, start=start, endex=endex)
+
+    def rindex(
+        self,
+        token: BytesLike,
+        start: Optional[int] = None,
+        endex: Optional[int] = None,
+    ) -> int:
+
+        return self._impl.rindex(token, start=start, endex=endex)
+
+    @property
+    def shape(
+        self,
+    ) -> Tuple[int]:
+
+        return self._impl.shape
+
+    def startswith(
+        self,
+        token: BytesLike,
+    ) -> bool:
+
+        return self._impl.startswith(token)
+
+    @property
+    def strides(
+        self,
+    ) -> Tuple[int]:
+
+        return self._impl.strides
+
+    @property
+    def suboffsets(
+        self,
+    ) -> Tuple:
+
+        return self._impl.suboffsets
+
+    def swapcase(
+        self,
+    ) -> 'BytesMethods':
+
+        return self._impl.swapcase()
+
+    def title(
+        self,
+    ) -> 'BytesMethods':
+
+        return self._impl.title()
+
+    def tobytes(
+        self,
+    ) -> bytes:
+
+        return self._impl.tobytes()
+
+    def tolist(
+        self,
+    ) -> List[int]:
+
+        return self._impl.tolist()
+
+    def translate(
+        self,
+        table: BytesLike,
+    ) -> 'BytesMethods':
+
+        return self._impl.translate(table)
+
+    def upper(
+        self,
+    ) -> 'BytesMethods':
+
+        return self._impl.upper()
+
+
+class InplaceView(BytesMethods, BaseInplaceView):
+
+    def __init__(
+        self,
+        wrapped: Optional[BytesLike],
+    ):
+
+        super().__init__(None)  # dummy
+        self._impl: _CythonInplaceView = _CythonInplaceView(wrapped)
+
+    def toreadonly(
+        self,
+    ) -> 'InplaceView':
+
+        readonly = self.__class__(None)
+        readonly._impl = self._impl.toreadonly()
+        return readonly
+
 
 if __SELF_WORKAROUND:  # pragma: no cover
     del Self
