@@ -114,5 +114,7 @@ True
 
 __version__ = '0.0.6'
 
+from .py import BytesMethods  # noqa F401
+from .py import InplaceView  # noqa F401
 from .py import Memory  # noqa F401
 from .py import bytesparse  # noqa F401
