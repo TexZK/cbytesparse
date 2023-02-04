@@ -830,14 +830,11 @@ cdef bint Buffer_IsASCII_(const byte_t* data_ptr, size_t data_size) nogil:
         size_t i
         byte_t c
 
-    if data_size:
-        for i in range(data_size):
-            c = data_ptr[i]
-            if c < 128: continue
-            return False
-        return True
-    else:
+    for i in range(data_size):
+        c = data_ptr[i]
+        if c < 128: continue
         return False
+    return True
 
 
 cdef bint Buffer_IsASCII(const byte_t[:] data_view) nogil:
