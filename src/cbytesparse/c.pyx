@@ -1171,7 +1171,7 @@ cdef class BytesMethods:
 
     cdef vint check_obj_(BytesMethods self) except -1:
         if self._obj is None:
-            raise RuntimeError('null internal wrapped reference')
+            raise ValueError('operation forbidden on released memoryview object')
 
     cdef vint check_readonly_(BytesMethods self) except -1:
         if self._readonly:
