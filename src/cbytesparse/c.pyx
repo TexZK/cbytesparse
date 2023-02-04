@@ -514,8 +514,8 @@ cdef size_t Buffer_Count_(const byte_t* data_ptr, size_t data_size,
         size_t count = 0
 
     if data_endex > data_size: data_endex = data_size
-    if data_endex <= data_start: return 0
-    if token_size == 0: return 0
+    if data_endex < data_start: return 0
+    if token_size == 0: return data_endex - data_start
     if token_size > data_endex - data_start: return 0
     data_endex -= token_size
 
@@ -544,7 +544,7 @@ cdef size_t Buffer_Count(const byte_t[:] data_view,
 cdef bint Buffer_StartsWith_(const byte_t* data_ptr, size_t data_size,
                              const byte_t* token_ptr, size_t token_size) nogil:
 
-    if token_size == 0: return False
+    if token_size == 0: return True
     if data_size < token_size: return False
     return memcmp(&data_ptr[0], token_ptr, token_size) == 0
 
@@ -560,7 +560,7 @@ cdef bint Buffer_StartsWith(const byte_t[:] data_view,
 cdef bint Buffer_EndsWith_(const byte_t* data_ptr, size_t data_size,
                            const byte_t* token_ptr, size_t token_size) nogil:
 
-    if token_size == 0: return False
+    if token_size == 0: return True
     if data_size < token_size: return False
     return memcmp(&data_ptr[data_size - token_size], token_ptr, token_size) == 0
 
@@ -600,8 +600,8 @@ cdef ssize_t Buffer_Find_(const byte_t* data_ptr, size_t data_size,
         const byte_t* data_end
 
     if data_endex > data_size: data_endex = data_size
-    if data_endex <= data_start: return -1
-    if token_size == 0: return -1
+    if data_endex < data_start: return -1
+    if token_size == 0: return data_start
     if token_size > data_endex - data_start: return -1
     data_cur = &data_ptr[data_start]
     data_end = &data_ptr[data_endex]
@@ -633,8 +633,8 @@ cdef ssize_t Buffer_RevFind_(const byte_t* data_ptr, size_t data_size,
         const byte_t* data_end
 
     if data_endex > data_size: data_endex = data_size
-    if data_endex <= data_start: return -1
-    if token_size == 0: return -1
+    if data_endex < data_start: return -1
+    if token_size == 0: return data_endex
     if token_size > data_endex - data_start: return -1
     data_endex -= token_size - 1
     data_cur = &data_ptr[data_endex]
@@ -1199,7 +1199,7 @@ cdef class BytesMethods:
         key: Any,
     ) -> None:
 
-        raise IndexError('cannot resize view')
+        raise IndexError("readonly object doesn't support item deletion")
 
     def __getattr__(
         self: BytesMethods,
