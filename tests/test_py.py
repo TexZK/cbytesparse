@@ -34,6 +34,88 @@ from cbytesparse.py import Memory as _Memory
 from cbytesparse.py import bytesparse as _bytesparse
 
 
+# Check tests against `bytes` for more consistency with Python
+class TestBytesMethods_bytes(BytesMethodsSuite):
+    BytesMethods: Type[bytes] = bytes
+    SUPPORTS_NONE: bool = False
+
+    # Delete incompatible tests
+    test___delitem__ = None
+    test_contains = None
+    test_c_contiguous = None
+    test_contiguous = None
+    test_f_contiguous = None
+    test_format = None
+    test_isdecimal = None
+    test_isidentifier = None
+    test_isnumeric = None
+    test_isprintable = None
+    test_itemsize = None
+    test_nbytes = None
+    test_ndim = None
+    test_obj = None
+    test_readonly = None
+    test_release = None
+    test_shape = None
+    test_strides = None
+    test_suboffsets = None
+    test_tobytes = None
+    test_tolist = None
+
+
+# Check tests against `bytearray` for more consistency with Python
+class TestBytesMethods_bytearray(TestBytesMethods_bytes):
+    BytesMethods: Type[bytearray] = bytearray
+
+    # Delete incompatible tests
+    test___setitem__ = None
+
+
+# Check tests against `memoryview` for more consistency with Python
+class TestBytesMethods_memoryview(BytesMethodsSuite):
+    BytesMethods: Type[memoryview] = memoryview
+    SUPPORTS_NONE: bool = False
+
+    # Delete incompatible tests
+    test___contains__ = None
+    test___lt__ = None
+    test___le__ = None
+    test___ge__ = None
+    test___gt__ = None
+    test_capitalize = None
+    test_contains = None
+    test_count = None
+    test_endswith = None
+    test_find = None
+    test_find_multi = None
+    test_index = None
+    test_index_multi = None
+    test_isalnum = None
+    test_isalpha = None
+    test_isascii = None
+    test_isdecimal = None
+    test_isdigit = None
+    test_isidentifier = None
+    test_islower = None
+    test_isnumeric = None
+    test_isprintable = None
+    test_isspace = None
+    test_istitle = None
+    test_isupper = None
+    test_lower = None
+    test_maketrans = None
+    test_replace = None
+    test_rfind = None
+    test_rfind_multi = None
+    test_rindex = None
+    test_rindex_multi = None
+    test_startswith = None
+    test_swapcase = None
+    test_title = None
+    test_translate = None
+    test_upper = None
+
+
 class TestBytesMethods(BytesMethodsSuite):
     BytesMethods: Type['_BytesMethods'] = _BytesMethods
 
