@@ -1406,7 +1406,8 @@ cdef class BytesMethods:
         self: BytesMethods,
     ) -> bool:
 
-        return self.isdigit()
+        self.check_obj_()
+        return Buffer_IsDigit(self._obj)
 
     def isdigit(
         self: BytesMethods,
@@ -1433,6 +1434,7 @@ cdef class BytesMethods:
         self: BytesMethods,
     ) -> bool:
 
+        self.check_obj_()
         return self.isdigit()
 
     def isprintable(
@@ -1507,6 +1509,7 @@ cdef class BytesMethods:
         self: BytesMethods,
     ) -> Optional[ByteString]:
 
+        self.check_obj_()
         return self._obj
 
     @property
@@ -1518,12 +1521,11 @@ cdef class BytesMethods:
 
     def release(
         self: BytesMethods,
-        wrapped: bool = True,
     ) -> None:
 
-        if self._obj is not None:
-            self._obj = None
-            self.update_readonly_()
+        self.check_obj_()
+        self._obj = None
+        self.update_readonly_()
 
     def replace(
         self: BytesMethods,
