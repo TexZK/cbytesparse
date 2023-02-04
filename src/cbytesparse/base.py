@@ -52,6 +52,12 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):  # TODO: docstring
         ...
 
     @abc.abstractmethod
+    def __bytes__(
+        self,
+    ) -> bytes:
+        ...
+
+    @abc.abstractmethod
     def __contains__(
         self,
         token: BytesLike,

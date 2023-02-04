@@ -1189,6 +1189,17 @@ cdef class BytesMethods:
 
         return bool(self._obj)
 
+    def __bytes__(
+        self,
+    ) -> bytes:
+        cdef:
+            const byte_t[:] view
+            bytes exported
+
+        self.check_obj_()
+        view = self._obj
+        return bytes(view)
+
     def __contains__(
         self: BytesMethods,
         token not None: ByteString,

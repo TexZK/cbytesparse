@@ -72,6 +72,15 @@ class BytesMethodsSuite:
         if self.SUPPORTS_NONE:
             assert bool(BytesMethods(None)) is False
 
+    def test___bytes__(self, hexview):
+        BytesMethods = self.BytesMethods
+        assert bytes(BytesMethods(hexview)) == hexview
+        assert bytes(BytesMethods(b'')) == b''
+
+        if self.SUPPORTS_NONE:
+            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+                bytes(BytesMethods(None))
+
     def test___contains__(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(hexstr)

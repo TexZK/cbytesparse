@@ -88,6 +88,12 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.__bool__()
 
+    def __bytes__(
+        self,
+    ) -> bytes:
+
+        return self._impl.__bytes__()
+
     def __contains__(
         self,
         token: BytesLike,
