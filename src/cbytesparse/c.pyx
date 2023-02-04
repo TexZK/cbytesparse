@@ -1199,7 +1199,7 @@ cdef class BytesMethods:
         key: Any,
     ) -> None:
 
-        raise IndexError("readonly object doesn't support item deletion")
+        raise TypeError("readonly object doesn't support item deletion")
 
     def __getattr__(
         self: BytesMethods,
