@@ -25,13 +25,24 @@
 
 from typing import Type
 
+from _buffers import *
 from _common import *
 
+from cbytesparse.py import BytesMethods as _BytesMethods
+from cbytesparse.py import InplaceView as _InplaceView
 from cbytesparse.py import Memory as _Memory
 from cbytesparse.py import bytesparse as _bytesparse
 
 
-class TestMemory(BaseMemorySuite):
+class TestBytesMethods(BytesMethodsSuite):
+    BytesMethods: Type['_BytesMethods'] = _BytesMethods
+
+
+class TestInplaceView(InplaceViewSuite):
+    BytesMethods: Type['_InplaceView'] = _InplaceView
+
+
+class DONT_TestMemory(BaseMemorySuite):  # FIXME
     Memory: Type['_Memory'] = _Memory
     ADDR_NEG: bool = False
 
