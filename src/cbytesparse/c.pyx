@@ -1141,7 +1141,7 @@ cdef bytes Buffer_MakeTrans(const byte_t[:] in_view,
                             const byte_t[:] out_view):
 
     if len(in_view) != len(out_view):
-        raise ValueError('different sizes')
+        raise ValueError('maketrans arguments must have same length')
 
     with cython.boundscheck(False):
         return Buffer_MakeTrans_(&in_view[0], len(in_view), &out_view[0])
