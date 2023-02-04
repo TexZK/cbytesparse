@@ -973,7 +973,7 @@ cdef bint Buffer_IsSpace_(const byte_t* data_ptr, size_t data_size) nogil:
         for i in range(data_size):
             c = data_ptr[i]
             if 0x09 <= c <= 0x0D: continue
-            if 0x1C <= c <= 0x20: continue
+            if c == 0x20: continue
             return False
         return True
     else:
