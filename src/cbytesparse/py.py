@@ -59,6 +59,7 @@ from bytesparse.base import Value
 from .base import BaseBytesMethods
 from .base import BaseInplaceView
 from .base import BytesLike
+
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 from .c import BytesMethods as _CythonBytesMethods  # isort:skip
 # noinspection PyUnresolvedReferences,PyPackageRequirements
