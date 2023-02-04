@@ -713,6 +713,9 @@ cdef size_t Buffer_Replace_(byte_t* data_ptr, size_t data_size,
         ssize_t index
         size_t times = 0
 
+    if old_size == 0:
+        count = 0  # early pruning
+
     while times < count:
         index = Buffer_Find_(data_ptr, data_size,
                              old_ptr, old_size,
@@ -750,6 +753,9 @@ cdef size_t Buffer_RevReplace_(byte_t* data_ptr, size_t data_size,
     cdef:
         ssize_t index
         size_t times = 0
+
+    if old_size == 0:
+        count = 0  # early pruning
 
     while times < count:
         index = Buffer_RevFind_(data_ptr, data_size,
