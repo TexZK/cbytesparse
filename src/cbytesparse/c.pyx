@@ -1221,7 +1221,10 @@ cdef class BytesMethods:
             const byte_t[:] layout_test
 
         if wrapped is not None:
-            layout_test = wrapped
+            try:
+                layout_test = wrapped
+            except ValueError:
+                wrapped = memoryview(wrapped).cast('B')
 
         self._obj = wrapped
         self.update_readonly_()
