@@ -391,7 +391,6 @@ class BaseBytesMethods(ByteString, abc.ABC):  # TODO: docstrings
     @abc.abstractmethod
     def release(
         self,
-        wrapped: bool = True,
     ) -> None:
         ...
 
@@ -816,10 +815,9 @@ class BytesMethods(BaseBytesMethods):
 
     def release(
         self,
-        wrapped: bool = True,
     ) -> None:
 
-        self._impl.release(wrapped=wrapped)
+        self._impl.release()
 
     def replace(
         self,
