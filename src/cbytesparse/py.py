@@ -27,9 +27,8 @@ r"""Python wrappers.
 
 Useful for dynamically declared stuff, e.g. docstrings and return types.
 """
-import abc
+
 from typing import Any
-from typing import ByteString
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -66,15 +65,18 @@ from .c import BytesMethods as _CythonBytesMethods  # isort:skip
 from .c import InplaceView as _CythonInplaceView  # isort:skip
 # noinspection PyUnresolvedReferences,PyPackageRequirements
 from .c import Memory as _CythonMemory  # isort:skip
-# noinspection PyUnresolvedReferences,PyPackageRequirements
+# noinspection PyUnresolvedReferences,PyPackageRequirements,PyPep8Naming
 from .c import bytesparse as _CythonBytesparse  # isort:skip
 
 try:
-    __SELF_WORKAROUND = False
     from typing import Self
-except ImportError:  # pragma: no cover
-    __SELF_WORKAROUND = True  # Python < 3.11
+except ImportError:  # pragma: no cover  # Python < 3.11
     Self = None  # dummy
+    _MemorySelf = TypeVar('_MemorySelf', bound='Memory')
+    _BytesparseSelf = TypeVar('_BytesparseSelf', bound='bytesparse')
+else:  # pragma: no cover
+    _MemorySelf = Self
+    _BytesparseSelf = Self
 
 
 class BytesMethods(BaseBytesMethods):
@@ -514,11 +516,6 @@ class InplaceView(BytesMethods, BaseInplaceView):
         return readonly
 
 
-if __SELF_WORKAROUND:  # pragma: no cover
-    del Self
-    Self = TypeVar('Self', bound='Memory')
-
-
 class Memory(MutableMemory):
     __doc__ = MutableMemory.__doc__
 
@@ -527,7 +524,7 @@ class Memory(MutableMemory):
     def __add__(
         self,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Self:
+    ) -> _MemorySelf:
 
         impl = self._impl.__add__(value)
         return self._wrap_impl(impl)
@@ -553,14 +550,14 @@ class Memory(MutableMemory):
 
     def __copy__(
         self,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         impl = self._impl.__copy__()
         return self._wrap_impl(impl)
 
     def __deepcopy__(
         self,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         impl = self._impl.__deepcopy__()
         return self._wrap_impl(impl)
@@ -592,7 +589,7 @@ class Memory(MutableMemory):
     def __iadd__(
         self,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Self:
+    ) -> _MemorySelf:
 
         self._impl.__iadd__(value)
         return self
@@ -600,7 +597,7 @@ class Memory(MutableMemory):
     def __imul__(
         self,
         times: int,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         self._impl.__imul__(times)
         return self
@@ -629,7 +626,7 @@ class Memory(MutableMemory):
     def __mul__(
         self,
         times: int,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         impl = self._impl.__mul__(times)
         return self._wrap_impl(impl)
@@ -729,7 +726,7 @@ class Memory(MutableMemory):
     def _wrap_impl(
         cls,
         impl: MutableMemory,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         memory = cls()  # FIXME: use cls.__new__ ???
         memory._impl = impl
@@ -951,7 +948,7 @@ class Memory(MutableMemory):
 
     def copy(
         self,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return self.__deepcopy__()
 
@@ -984,7 +981,7 @@ class Memory(MutableMemory):
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         memory = self._impl.cut(start=start, endex=endex, bound=bound)
         memory = _cast(MutableMemory, memory)
@@ -1063,7 +1060,7 @@ class Memory(MutableMemory):
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         memory = self._impl.extract(start=start, endex=endex, pattern=pattern, step=step, bound=bound)
         return self._wrap_impl(memory)
@@ -1134,7 +1131,7 @@ class Memory(MutableMemory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         memory = cls._Memory.from_blocks(
             blocks,
@@ -1155,7 +1152,7 @@ class Memory(MutableMemory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return cls._wrap_impl(cls._Memory.from_bytes(
             data,
@@ -1177,7 +1174,7 @@ class Memory(MutableMemory):
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return cls._wrap_impl(cls._Memory.from_items(
             items,
@@ -1196,7 +1193,7 @@ class Memory(MutableMemory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return cls._wrap_impl(cls._Memory.from_memory(
             memory,
@@ -1215,7 +1212,7 @@ class Memory(MutableMemory):
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return cls._wrap_impl(cls._Memory.from_values(
             values,
@@ -1229,7 +1226,7 @@ class Memory(MutableMemory):
     def fromhex(
         cls,
         string: str,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return cls._wrap_impl(cls._Memory.fromhex(string))
 
@@ -1632,11 +1629,6 @@ class Memory(MutableMemory):
         self._impl.write_restore(backups)
 
 
-if __SELF_WORKAROUND:  # pragma: no cover
-    del Self
-    Self = TypeVar('Self', bound='bytesparse')
-
-
 # noinspection PyPep8Naming
 class bytesparse(Memory, MutableBytesparse):
     __doc__ = MutableBytesparse.__doc__
@@ -1668,7 +1660,3 @@ class bytesparse(Memory, MutableBytesparse):
     ) -> OpenInterval:
 
         return self._impl._rectify_span(start, endex)
-
-
-if __SELF_WORKAROUND:  # pragma: no cover
-    del Self

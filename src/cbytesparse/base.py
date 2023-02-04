@@ -26,6 +26,7 @@
 r"""Common stuff, shared across modules."""
 
 import abc
+import collections.abc
 from typing import Any
 from typing import ByteString
 from typing import Iterable
@@ -42,7 +43,7 @@ except ImportError:  # pragma: no cover
 BytesLike: TypeAlias = Union[ByteString, memoryview]
 
 
-class BaseBytesMethods(ByteString, abc.ABC):  # TODO: docstrings
+class BaseBytesMethods(ByteString, collections.abc.Sequence):  # TODO: docstrings
 
     @abc.abstractmethod
     def __bool__(
@@ -318,7 +319,7 @@ class BaseBytesMethods(ByteString, abc.ABC):  # TODO: docstrings
     @abc.abstractmethod
     def lower(
         self,
-    ) -> 'BytesMethods':
+    ) -> 'BaseBytesMethods':
         ...
 
     @property
@@ -450,7 +451,7 @@ class BaseBytesMethods(ByteString, abc.ABC):  # TODO: docstrings
         ...
 
 
-class BaseInplaceView(BaseBytesMethods, abc.ABC):  # TODO: docstrings
+class BaseInplaceView(BaseBytesMethods):  # TODO: docstrings
 
     @abc.abstractmethod
     def toreadonly(
