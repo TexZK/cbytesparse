@@ -1591,6 +1591,7 @@ cdef class BytesMethods:
 
         size = len(sep)
         if size:
+            self.check_obj_()
             view = memoryview(self._obj)
             index = self.find(sep)
             if index < 0:
@@ -1691,6 +1692,7 @@ cdef class BytesMethods:
         if len(fillchar) != 1:
             raise ValueError('ljust() argument 2 must be a byte string of length 1')
 
+        self.check_obj_()
         size = len(self._obj)
         if width < size:
             return factory(self._obj)
@@ -1708,6 +1710,7 @@ cdef class BytesMethods:
 
         size = len(sep)
         if size:
+            self.check_obj_()
             view = memoryview(self._obj)
             index = self.rfind(sep)
             if index < 0:
