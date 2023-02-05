@@ -211,6 +211,15 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.capitalize()
 
+    def center(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.center(width, fillchar, factory=factory)
+
     def contains(
         self,
         token: BytesLike,
@@ -362,6 +371,15 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.itemsize
 
+    def ljust(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.ljust(width, fillchar, factory=factory)
+
     def lower(
         self,
     ) -> BaseBytesMethods:
@@ -462,6 +480,15 @@ class BytesMethods(BaseBytesMethods):
     ) -> int:
 
         return self._impl.rindex(token, start=start, endex=endex)
+
+    def rjust(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.rjust(width, fillchar, factory=factory)
 
     def rpartition(
         self,

@@ -292,6 +292,15 @@ class BytesMethodsSuite:
         instance = BytesMethods(bytearray(buffer))
         assert instance.capitalize() == buffer.capitalize()
 
+    def test_center(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'abc'
+        instance = BytesMethods(buffer)
+        assert instance.center(9) == buffer.center(9)
+        assert instance.center(10) == buffer.center(10)
+        assert instance.center(9, b'.') == buffer.center(9, b'.')
+        assert instance.center(10, b'.') == buffer.center(10, b'.')
+
     def test_contains(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(hexview)
@@ -637,6 +646,15 @@ class BytesMethodsSuite:
         if self.SUPPORTS_NONE:
             assert BytesMethods(None).itemsize == 1
 
+    def test_ljust(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'abc'
+        instance = BytesMethods(buffer)
+        assert instance.ljust(9) == buffer.ljust(9)
+        assert instance.ljust(10) == buffer.ljust(10)
+        assert instance.ljust(9, b'.') == buffer.ljust(9, b'.')
+        assert instance.ljust(10, b'.') == buffer.ljust(10, b'.')
+
     def test_lower(self, bytestr, loremstr):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(memoryview(bytearray(bytestr)))
@@ -842,6 +860,15 @@ class BytesMethodsSuite:
         chars = list(sorted(bytes([c]) for c in set(buffer)))
         for c in chars:
             assert instance.rindex(c) == buffer.rindex(c)
+
+    def test_rjust(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'abc'
+        instance = BytesMethods(buffer)
+        assert instance.rjust(9) == buffer.rjust(9)
+        assert instance.rjust(10) == buffer.rjust(10)
+        assert instance.rjust(9, b'.') == buffer.rjust(9, b'.')
+        assert instance.rjust(10, b'.') == buffer.rjust(10, b'.')
 
     def test_rpartition(self, hexstr):
         BytesMethods = self.BytesMethods

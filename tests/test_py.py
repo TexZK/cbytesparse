@@ -83,6 +83,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test___ge__ = None
     test___gt__ = None
     test_capitalize = None
+    test_center = None
     test_contains = None
     test_count = None
     test_decode = None
@@ -103,6 +104,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_isspace = None
     test_istitle = None
     test_isupper = None
+    test_ljust = None
     test_lower = None
     test_maketrans = None
     test_partition = None
@@ -113,6 +115,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_rfind_multi = None
     test_rindex = None
     test_rindex_multi = None
+    test_rjust = None
     test_rpartition = None
     test_startswith = None
     test_swapcase = None

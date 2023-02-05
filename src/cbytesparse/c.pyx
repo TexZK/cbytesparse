@@ -1318,6 +1318,29 @@ cdef class BytesMethods:
         Buffer_Capitalize(obj)
         return obj
 
+    def center(
+        self: BytesMethods,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        if len(fillchar) != 1:
+            raise ValueError('center() argument 2 must be a byte string of length 1')
+
+        size = len(self._obj)
+        if width < size:
+            return factory(self._obj)
+        empty = width - size
+        left = empty >> 1
+        right = empty - left
+
+        result = factory(b'')
+        result += fillchar * left
+        result += self._obj
+        result += fillchar * right
+        return result
+
     def contains(
         self: BytesMethods,
         token not None: ByteString,
@@ -1498,6 +1521,25 @@ cdef class BytesMethods:
 
         return 1
 
+    def ljust(
+        self: BytesMethods,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        if len(fillchar) != 1:
+            raise ValueError('ljust() argument 2 must be a byte string of length 1')
+
+        size = len(self._obj)
+        if width < size:
+            return factory(self._obj)
+
+        result = factory(b'')
+        result += self._obj
+        result += fillchar * (width - size)
+        return result
+
     def lower(
         self: BytesMethods,
     ) -> ByteString:
@@ -1635,6 +1677,25 @@ cdef class BytesMethods:
 
         self.check_obj_()
         return Buffer_RevIndex(self._obj, token, start_, endex_)
+
+    def rjust(
+        self: BytesMethods,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        if len(fillchar) != 1:
+            raise ValueError('ljust() argument 2 must be a byte string of length 1')
+
+        size = len(self._obj)
+        if width < size:
+            return factory(self._obj)
+
+        result = factory(b'')
+        result += fillchar * (width - size)
+        result += self._obj
+        return result
 
     def rpartition(
         self,

@@ -210,6 +210,15 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
+    def center(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        ...
+
+    @abc.abstractmethod
     def contains(
         self,
         token: BytesLike,
@@ -361,6 +370,15 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
+    def ljust(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        ...
+
+    @abc.abstractmethod
     def lower(
         self,
     ) -> 'BaseBytesMethods':
@@ -451,6 +469,15 @@ class BaseBytesMethods(ByteString,
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def rjust(
+        self,
+        width: int,
+        fillchar: BytesLike = b' ',
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
         ...
 
     @abc.abstractmethod
