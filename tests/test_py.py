@@ -35,6 +35,7 @@ from cbytesparse.py import bytesparse as _bytesparse
 
 
 # Check tests against `bytes` for more consistency with Python
+# noinspection PyPep8Naming
 class TestBytesMethods_bytes(BytesMethodsSuite):
     BytesMethods: Type[bytes] = bytes
     SUPPORTS_NONE: bool = False
@@ -64,6 +65,7 @@ class TestBytesMethods_bytes(BytesMethodsSuite):
 
 
 # Check tests against `bytearray` for more consistency with Python
+# noinspection PyPep8Naming
 class TestBytesMethods_bytearray(TestBytesMethods_bytes):
     BytesMethods: Type[bytearray] = bytearray
 
@@ -72,6 +74,7 @@ class TestBytesMethods_bytearray(TestBytesMethods_bytes):
 
 
 # Check tests against `memoryview` for more consistency with Python
+# noinspection PyPep8Naming
 class TestBytesMethods_memoryview(BytesMethodsSuite):
     BytesMethods: Type[memoryview] = memoryview
     SUPPORTS_NONE: bool = False
@@ -134,6 +137,64 @@ class TestBytesMethods(BytesMethodsSuite):
 
 class TestInplaceView(InplaceViewSuite):
     BytesMethods: Type['_InplaceView'] = _InplaceView
+
+
+# Check tests against `memoryview` for more consistency with Python
+# noinspection PyPep8Naming
+class TestInplaceView_memoryview(InplaceViewSuite):
+    BytesMethods: Type[memoryview] = memoryview
+    SUPPORTS_NONE: bool = False
+
+    # Delete incompatible tests
+    test___contains__ = None
+    test___lt__ = None
+    test___le__ = None
+    test___ge__ = None
+    test___gt__ = None
+    test_capitalize = None
+    test_center = None
+    test_contains = None
+    test_count = None
+    test_decode = None
+    test_endswith = None
+    test_find = None
+    test_find_multi = None
+    test_index = None
+    test_index_multi = None
+    test_isalnum = None
+    test_isalpha = None
+    test_isascii = None
+    test_isdecimal = None
+    test_isdigit = None
+    test_isidentifier = None
+    test_islower = None
+    test_isnumeric = None
+    test_isprintable = None
+    test_isspace = None
+    test_istitle = None
+    test_isupper = None
+    test_ljust = None
+    test_lstrip = None
+    test_lower = None
+    test_maketrans = None
+    test_partition = None
+    test_replace = None
+    test_removeprefix = None
+    test_removesuffix = None
+    test_rfind = None
+    test_rfind_multi = None
+    test_rindex = None
+    test_rindex_multi = None
+    test_rjust = None
+    test_rpartition = None
+    test_rstrip = None
+    test_startswith = None
+    test_strip = None
+    test_swapcase = None
+    test_title = None
+    test_translate = None
+    test_upper = None
+    test_zfill = None
 
 
 class TestMemory(BaseMemorySuite):

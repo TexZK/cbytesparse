@@ -314,9 +314,8 @@ class BytesMethodsSuite:
                 if start:
                     assert instance.contains(hexview[start:endex], (start - 1), endex) is True
                     assert instance.contains(hexview[start:endex], (start - 1), (endex + 1)) is True
-                if endex:
-                    assert instance.contains(hexview[start:endex], start, (endex - 1)) is False
-                    assert instance.contains(hexview[start:endex], (start + 1), (endex - 1)) is False
+                assert instance.contains(hexview[start:endex], start, (endex - 1)) is False
+                assert instance.contains(hexview[start:endex], (start + 1), (endex - 1)) is False
 
         assert instance.contains(hexstr) is True
         assert instance.contains(hexview) is True
@@ -429,9 +428,8 @@ class BytesMethodsSuite:
                 if start:
                     assert instance.find(hexview[start:endex], (start - 1), endex) == start
                     assert instance.find(hexview[start:endex], (start - 1), (endex + 1)) == start
-                if endex:
-                    assert instance.find(hexview[start:endex], start, (endex - 1)) < 0
-                    assert instance.find(hexview[start:endex], (start + 1), (endex - 1)) < 0
+                assert instance.find(hexview[start:endex], start, (endex - 1)) < 0
+                assert instance.find(hexview[start:endex], (start + 1), (endex - 1)) < 0
 
         assert instance.find(hexstr) == 0
         assert instance.find(hexview) == 0
@@ -471,11 +469,10 @@ class BytesMethodsSuite:
                 if start:
                     assert instance.index(hexview[start:endex], (start - 1), endex) == start
                     assert instance.index(hexview[start:endex], (start - 1), (endex + 1)) == start
-                if endex:
-                    with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.index(hexview[start:endex], start, (endex - 1))
-                    with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.index(hexview[start:endex], (start + 1), (endex - 1))
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.index(hexview[start:endex], start, (endex - 1))
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.index(hexview[start:endex], (start + 1), (endex - 1))
 
         assert instance.index(hexstr) == 0
         assert instance.index(hexview) == 0
@@ -533,9 +530,8 @@ class BytesMethodsSuite:
         assert BytesMethods(hexview).isdecimal() is False
         assert BytesMethods(b'').isdecimal() is False
 
-        if self.SUPPORTS_NONE:
-            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
-                assert BytesMethods(None).isdecimal() is False
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            BytesMethods(None).isdecimal()
 
     def test_isdigit(self, hexview):
         BytesMethods = self.BytesMethods
@@ -553,9 +549,8 @@ class BytesMethodsSuite:
         assert BytesMethods(hexstr).isidentifier() is False
         assert BytesMethods(bytestr).isidentifier() is False
 
-        if self.SUPPORTS_NONE:
-            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
-                assert BytesMethods(None).isidentifier() is False
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            BytesMethods(None).isidentifier()
 
         assert BytesMethods(b'a').isidentifier() is True
         assert BytesMethods(b'_').isidentifier() is True
@@ -591,9 +586,8 @@ class BytesMethodsSuite:
         assert BytesMethods(hexview).isnumeric() is False
         assert BytesMethods(b'').isnumeric() is False
 
-        if self.SUPPORTS_NONE:
-            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
-                assert BytesMethods(None).isnumeric() is False
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            BytesMethods(None).isnumeric()
 
     def test_isprintable(self):
         BytesMethods = self.BytesMethods
@@ -606,9 +600,8 @@ class BytesMethodsSuite:
         for i in range(0x7E + 1, 256):
             assert BytesMethods(bytes([i])).isprintable() is False
 
-        if self.SUPPORTS_NONE:
-            with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
-                assert BytesMethods(None).isprintable() is False
+        with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
+            BytesMethods(None).isprintable()
 
     def test_isspace(self):
         BytesMethods = self.BytesMethods
@@ -825,9 +818,8 @@ class BytesMethodsSuite:
                 if start:
                     assert instance.rfind(hexview[start:endex], (start - 1), endex) == start
                     assert instance.rfind(hexview[start:endex], (start - 1), (endex + 1)) == start
-                if endex:
-                    assert instance.rfind(hexview[start:endex], start, (endex - 1)) < 0
-                    assert instance.rfind(hexview[start:endex], (start + 1), (endex - 1)) < 0
+                assert instance.rfind(hexview[start:endex], start, (endex - 1)) < 0
+                assert instance.rfind(hexview[start:endex], (start + 1), (endex - 1)) < 0
 
         assert instance.rfind(hexstr) == 0
         assert instance.rfind(hexview) == 0
@@ -861,11 +853,10 @@ class BytesMethodsSuite:
                 if start:
                     assert instance.rindex(hexview[start:endex], (start - 1), endex) == start
                     assert instance.rindex(hexview[start:endex], (start - 1), (endex + 1)) == start
-                if endex:
-                    with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.rindex(hexview[start:endex], start, (endex - 1))
-                    with pytest.raises(ValueError, match='subsection not found'):
-                        assert instance.rindex(hexview[start:endex], (start + 1), (endex - 1))
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.rindex(hexview[start:endex], start, (endex - 1))
+                with pytest.raises(ValueError, match='subsection not found'):
+                    assert instance.rindex(hexview[start:endex], (start + 1), (endex - 1))
 
         assert instance.rindex(hexstr) == 0
         assert instance.rindex(hexview) == 0
@@ -1126,7 +1117,7 @@ class InplaceViewSuite(BytesMethodsSuite):
             assert after == 255 - i
 
         instance = BytesMethods(b'abc')
-        with pytest.raises(TypeError, match='object does not support item assignment'):
+        with pytest.raises(TypeError):
             instance[0] = 0
 
     def test_readonly(self, bytestr, hexstr, hexview):
@@ -1137,7 +1128,7 @@ class InplaceViewSuite(BytesMethodsSuite):
 
         instance = BytesMethods(bytestr)
         assert instance.readonly is True
-        with pytest.raises(TypeError, match='object does not support item assignment'):
+        with pytest.raises(TypeError):
             instance[0] = 0
 
         instance = BytesMethods(hexstr)
