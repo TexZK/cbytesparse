@@ -105,6 +105,8 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_lower = None
     test_maketrans = None
     test_replace = None
+    test_removeprefix = None
+    test_removesuffix = None
     test_rfind = None
     test_rfind_multi = None
     test_rindex = None
