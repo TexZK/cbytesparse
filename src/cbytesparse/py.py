@@ -397,6 +397,14 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.obj
 
+    def partition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
+
+        return self._impl.partition(sep, factory=factory)
+
     @property
     def readonly(
         self,
@@ -454,6 +462,14 @@ class BytesMethods(BaseBytesMethods):
     ) -> int:
 
         return self._impl.rindex(token, start=start, endex=endex)
+
+    def rpartition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
+
+        return self._impl.rpartition(sep, factory=factory)
 
     @property
     def shape(

@@ -105,6 +105,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_isupper = None
     test_lower = None
     test_maketrans = None
+    test_partition = None
     test_replace = None
     test_removeprefix = None
     test_removesuffix = None
@@ -112,6 +113,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_rfind_multi = None
     test_rindex = None
     test_rindex_multi = None
+    test_rpartition = None
     test_startswith = None
     test_swapcase = None
     test_title = None

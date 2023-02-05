@@ -387,6 +387,14 @@ class BaseBytesMethods(ByteString,
     ) -> Optional[BytesLike]:
         ...
 
+    @abc.abstractmethod
+    def partition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
+        ...
+
     @property
     @abc.abstractmethod
     def readonly(
@@ -443,6 +451,14 @@ class BaseBytesMethods(ByteString,
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
+        ...
+
+    @abc.abstractmethod
+    def rpartition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
         ...
 
     @property

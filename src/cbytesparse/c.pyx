@@ -1538,6 +1538,27 @@ cdef class BytesMethods:
         self.check_obj_()
         return self._obj
 
+    def partition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
+
+        size = len(sep)
+        if size:
+            view = memoryview(self._obj)
+            index = self.find(sep)
+            if index < 0:
+                return (factory(view),
+                        factory(b''),
+                        factory(b''))
+            else:
+                return (factory(view[:index]),
+                        factory(sep),
+                        factory(view[(index + size):]))
+        else:
+            raise ValueError('empty separator')
+
     @property
     def readonly(
         self: BytesMethods,
@@ -1614,6 +1635,27 @@ cdef class BytesMethods:
 
         self.check_obj_()
         return Buffer_RevIndex(self._obj, token, start_, endex_)
+
+    def rpartition(
+        self,
+        sep: BytesLike,
+        factory: BytesFactory = bytes,
+    ) -> Tuple[BytesLike, BytesLike, BytesLike]:
+
+        size = len(sep)
+        if size:
+            view = memoryview(self._obj)
+            index = self.rfind(sep)
+            if index < 0:
+                return (factory(b''),
+                        factory(b''),
+                        factory(view))
+            else:
+                return (factory(view[:index]),
+                        factory(sep),
+                        factory(view[(index + size):]))
+        else:
+            raise ValueError('empty separator')
 
     @property
     def shape(

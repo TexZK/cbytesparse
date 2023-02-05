@@ -707,6 +707,21 @@ class BytesMethodsSuite:
         with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
             assert instance.obj is None
 
+    def test_partition(self, hexstr):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'Hello, World!')
+        assert instance.partition(b', ') == (b'Hello', b', ', b'World!')
+        assert instance.partition(b'?') == (b'Hello, World!', b'', b'')
+
+        with pytest.raises(ValueError, match='empty separator'):
+            instance.partition(b'')
+
+        instance = BytesMethods(hexstr)
+        for start in range(len(hexstr) - 1):
+            for endex in range(start + 1, len(hexstr)):
+                sep = hexstr[start:endex]
+                assert instance.partition(sep) == hexstr.partition(sep)
+
     def test_readonly(self, bytestr, hexstr, hexview):
         BytesMethods = self.BytesMethods
         if self.SUPPORTS_NONE:
@@ -827,6 +842,21 @@ class BytesMethodsSuite:
         chars = list(sorted(bytes([c]) for c in set(buffer)))
         for c in chars:
             assert instance.rindex(c) == buffer.rindex(c)
+
+    def test_rpartition(self, hexstr):
+        BytesMethods = self.BytesMethods
+        instance = BytesMethods(b'Hello, World!')
+        assert instance.rpartition(b', ') == (b'Hello', b', ', b'World!')
+        assert instance.rpartition(b'?') == (b'', b'', b'Hello, World!')
+
+        with pytest.raises(ValueError, match='empty separator'):
+            instance.rpartition(b'')
+
+        instance = BytesMethods(hexstr)
+        for start in range(len(hexstr) - 1):
+            for endex in range(start + 1, len(hexstr)):
+                sep = hexstr[start:endex]
+                assert instance.partition(sep) == hexstr.partition(sep)
 
     def test_shape(self, hexview):
         BytesMethods = self.BytesMethods
