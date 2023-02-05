@@ -114,13 +114,6 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
-    def __getattr__(
-        self,
-        attr: str,
-    ) -> Any:
-        ...
-
-    @abc.abstractmethod
     def __ge__(
         self,
         other: Any,
