@@ -89,12 +89,17 @@ from bytesparse.base import MutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
 
+from .base import BytesLike
+
 try:
-    __SELF_WORKAROUND = False
     from typing import Self
-except ImportError:  # pragma: no cover
-    __SELF_WORKAROUND = True  # Python < 3.11
+except ImportError:  # pragma: no cover  # Python < 3.11
     Self = None  # dummy
+    _MemorySelf = TypeVar('_MemorySelf', bound='Memory')
+    _BytesparseSelf = TypeVar('_BytesparseSelf', bound='bytesparse')
+else:  # pragma: no cover
+    _MemorySelf = Self
+    _BytesparseSelf = Self
 
 
 cdef:
@@ -7597,18 +7602,12 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil:
 
 # =====================================================================================================================
 
-cdef class Memory
-if __SELF_WORKAROUND:
-    Self = None
-    Self = TypeVar('Self', bound='Memory')
-
-
 cdef class Memory:
 
     def __add__(
         self: Memory,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_Add(self._, value)
             Memory memory = Memory_AsObject(memory_)
@@ -7650,7 +7649,7 @@ cdef class Memory:
 
     def __copy__(
         self: Memory,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_Copy(self._)
             Memory memory = Memory_AsObject(memory_)
@@ -7663,7 +7662,7 @@ cdef class Memory:
 
     def __deepcopy__(
         self: Memory,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_Copy(self._)
             Memory memory = Memory_AsObject(memory_)
@@ -7694,7 +7693,7 @@ cdef class Memory:
     def __iadd__(
         self: Memory,
         value: Union[AnyBytes, ImmutableMemory],
-    ) -> Self:
+    ) -> _MemorySelf:
 
         Memory_IAdd(self._, value)
         return self
@@ -7702,7 +7701,7 @@ cdef class Memory:
     def __imul__(
         self: Memory,
         times: int,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
 
@@ -7732,7 +7731,7 @@ cdef class Memory:
     def __mul__(
         self: Memory,
         times: int,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             addr_t times_ = 0 if times < 0 else <addr_t>times
             Memory_* memory_ = Memory_Mul(self._, times_)
@@ -7832,7 +7831,7 @@ cdef class Memory:
         self: Memory,
         start_min: Optional[Address],
         size: Address,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             addr_t start_min_
             addr_t size_ = <addr_t>size
@@ -7863,7 +7862,7 @@ cdef class Memory:
         self: Memory,
         endex_max: Optional[Address],
         size: Address,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             addr_t endex_max_
             addr_t size_ = <addr_t>size
@@ -8058,7 +8057,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             const Memory_* memory = self._
             addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
@@ -8322,7 +8321,7 @@ cdef class Memory:
 
     def copy(
         self: Memory,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return self.__deepcopy__()
 
@@ -8389,7 +8388,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return Memory_Cut(self._, start, endex, bound)
 
@@ -8405,7 +8404,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             const Memory_* memory = self._
             addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
@@ -8548,7 +8547,7 @@ cdef class Memory:
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
 
         return Memory_Extract(self._, start, endex, pattern, step, bound)
 
@@ -8565,7 +8564,7 @@ cdef class Memory:
         self: Memory,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             const Memory_* memory = self._
             addr_t start_ = Memory_Start(memory) if start is None else <addr_t>start
@@ -8625,7 +8624,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromBlocks(blocks, offset, start, endex, validate)
 
@@ -8640,7 +8639,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromBytes(data, offset, start, endex)
 
@@ -8657,7 +8656,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromItems(items, offset, start, endex, validate)
 
@@ -8672,7 +8671,7 @@ cdef class Memory:
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromMemory(memory, offset, start, endex, validate)
 
@@ -8686,7 +8685,7 @@ cdef class Memory:
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         validate: bool = True,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromValues(values, offset, start, endex, validate)
 
@@ -8696,7 +8695,7 @@ cdef class Memory:
     def fromhex(
         cls,
         string: str,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory_ = Memory_FromBytes(bytes.fromhex(string), 0, None, None)
 
@@ -9086,7 +9085,7 @@ cdef class Memory:
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _MemorySelf:
         cdef:
             Memory_* memory = self._
             size_t size = 1 if isinstance(item, int) else <size_t>len(item)
@@ -9587,12 +9586,6 @@ MutableMemory.register(Memory)
 
 # =====================================================================================================================
 
-cdef class bytesparse
-if __SELF_WORKAROUND:
-    Self = None
-    Self = TypeVar('Self', bound='bytesparse')
-
-
 cdef class bytesparse(Memory):
 
     def __init__(
@@ -9809,7 +9802,7 @@ cdef class bytesparse(Memory):
         self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().clear_backup(start=start, endex=endex)
@@ -9847,7 +9840,7 @@ cdef class bytesparse(Memory):
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().cut(start=start, endex=endex)
@@ -9865,7 +9858,7 @@ cdef class bytesparse(Memory):
         self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().delete_backup(start=start, endex=endex)
@@ -9885,7 +9878,7 @@ cdef class bytesparse(Memory):
         pattern: Optional[Union[AnyBytes, Value]] = None,
         step: Optional[Address] = None,
         bound: bool = True,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().extract(start=start, endex=endex, pattern=pattern, step=step, bound=bound)
@@ -9904,7 +9897,7 @@ cdef class bytesparse(Memory):
         self: bytesparse,
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().fill_backup(start=start, endex=endex)
@@ -9947,7 +9940,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _BytesparseSelf:
         cdef:
             Memory memory1
             bytesparse memory2
@@ -9988,7 +9981,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _BytesparseSelf:
         cdef:
             Memory memory1
             bytesparse memory2
@@ -10026,7 +10019,7 @@ cdef class bytesparse(Memory):
         endex: Optional[Address] = None,
         copy: bool = True,
         validate: bool = True,
-    ) -> Self:
+    ) -> _BytesparseSelf:
         cdef:
             const Memory_* memory_
             Memory memory1
@@ -10217,7 +10210,7 @@ cdef class bytesparse(Memory):
         item: Union[AnyBytes, Value],
         start: Optional[Address] = None,
         endex: Optional[Address] = None,
-    ) -> Self:
+    ) -> _BytesparseSelf:
 
         start, endex = self._rectify_span(start, endex)
         return super().remove_backup(item, start=start, endex=endex)
@@ -10368,9 +10361,3 @@ cdef class bytesparse(Memory):
 ImmutableMemory.register(bytesparse)
 MutableMemory.register(bytesparse)
 MutableBytesparse.register(bytesparse)
-
-
-# =====================================================================================================================
-
-if __SELF_WORKAROUND:
-    del Self
