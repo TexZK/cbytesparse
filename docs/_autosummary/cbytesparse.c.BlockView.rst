@@ -1,4 +1,4 @@
-cbytesparse.c.BlockView
+﻿cbytesparse.c.BlockView
 =======================
 
 .. currentmodule:: cbytesparse.c
@@ -18,9 +18,11 @@ cbytesparse.c.BlockView
    
       ~BlockView.__init__
       ~BlockView.capitalize
+      ~BlockView.center
       ~BlockView.check
       ~BlockView.contains
       ~BlockView.count
+      ~BlockView.decode
       ~BlockView.endswith
       ~BlockView.find
       ~BlockView.index
@@ -36,13 +38,22 @@ cbytesparse.c.BlockView
       ~BlockView.isspace
       ~BlockView.istitle
       ~BlockView.isupper
+      ~BlockView.ljust
       ~BlockView.lower
+      ~BlockView.lstrip
       ~BlockView.maketrans
+      ~BlockView.partition
       ~BlockView.release
+      ~BlockView.removeprefix
+      ~BlockView.removesuffix
       ~BlockView.replace
       ~BlockView.rfind
       ~BlockView.rindex
+      ~BlockView.rjust
+      ~BlockView.rpartition
+      ~BlockView.rstrip
       ~BlockView.startswith
+      ~BlockView.strip
       ~BlockView.swapcase
       ~BlockView.title
       ~BlockView.tobytes
@@ -50,6 +61,7 @@ cbytesparse.c.BlockView
       ~BlockView.toreadonly
       ~BlockView.translate
       ~BlockView.upper
+      ~BlockView.zfill
    
    
 

@@ -1,4 +1,4 @@
-cbytesparse.c.BytesMethods
+﻿cbytesparse.c.BytesMethods
 ==========================
 
 .. currentmodule:: cbytesparse.c
@@ -18,8 +18,10 @@ cbytesparse.c.BytesMethods
    
       ~BytesMethods.__init__
       ~BytesMethods.capitalize
+      ~BytesMethods.center
       ~BytesMethods.contains
       ~BytesMethods.count
+      ~BytesMethods.decode
       ~BytesMethods.endswith
       ~BytesMethods.find
       ~BytesMethods.index
@@ -35,19 +37,29 @@ cbytesparse.c.BytesMethods
       ~BytesMethods.isspace
       ~BytesMethods.istitle
       ~BytesMethods.isupper
+      ~BytesMethods.ljust
       ~BytesMethods.lower
+      ~BytesMethods.lstrip
       ~BytesMethods.maketrans
+      ~BytesMethods.partition
       ~BytesMethods.release
+      ~BytesMethods.removeprefix
+      ~BytesMethods.removesuffix
       ~BytesMethods.replace
       ~BytesMethods.rfind
       ~BytesMethods.rindex
+      ~BytesMethods.rjust
+      ~BytesMethods.rpartition
+      ~BytesMethods.rstrip
       ~BytesMethods.startswith
+      ~BytesMethods.strip
       ~BytesMethods.swapcase
       ~BytesMethods.title
       ~BytesMethods.tobytes
       ~BytesMethods.tolist
       ~BytesMethods.translate
       ~BytesMethods.upper
+      ~BytesMethods.zfill
    
    
 

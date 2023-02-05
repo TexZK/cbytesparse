@@ -1,4 +1,4 @@
-cbytesparse.base.BaseBytesMethods
+﻿cbytesparse.base.BaseBytesMethods
 =================================
 
 .. currentmodule:: cbytesparse.base
@@ -18,8 +18,10 @@ cbytesparse.base.BaseBytesMethods
    
       ~BaseBytesMethods.__init__
       ~BaseBytesMethods.capitalize
+      ~BaseBytesMethods.center
       ~BaseBytesMethods.contains
       ~BaseBytesMethods.count
+      ~BaseBytesMethods.decode
       ~BaseBytesMethods.endswith
       ~BaseBytesMethods.find
       ~BaseBytesMethods.index
@@ -35,18 +37,28 @@ cbytesparse.base.BaseBytesMethods
       ~BaseBytesMethods.isspace
       ~BaseBytesMethods.istitle
       ~BaseBytesMethods.isupper
+      ~BaseBytesMethods.ljust
       ~BaseBytesMethods.lower
+      ~BaseBytesMethods.lstrip
+      ~BaseBytesMethods.partition
       ~BaseBytesMethods.release
+      ~BaseBytesMethods.removeprefix
+      ~BaseBytesMethods.removesuffix
       ~BaseBytesMethods.replace
       ~BaseBytesMethods.rfind
       ~BaseBytesMethods.rindex
+      ~BaseBytesMethods.rjust
+      ~BaseBytesMethods.rpartition
+      ~BaseBytesMethods.rstrip
       ~BaseBytesMethods.startswith
+      ~BaseBytesMethods.strip
       ~BaseBytesMethods.swapcase
       ~BaseBytesMethods.title
       ~BaseBytesMethods.tobytes
       ~BaseBytesMethods.tolist
       ~BaseBytesMethods.translate
       ~BaseBytesMethods.upper
+      ~BaseBytesMethods.zfill
    
    
 

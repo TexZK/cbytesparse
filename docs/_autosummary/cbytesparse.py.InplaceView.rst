@@ -1,4 +1,4 @@
-cbytesparse.py.InplaceView
+﻿cbytesparse.py.InplaceView
 ==========================
 
 .. currentmodule:: cbytesparse.py
@@ -18,8 +18,10 @@ cbytesparse.py.InplaceView
    
       ~InplaceView.__init__
       ~InplaceView.capitalize
+      ~InplaceView.center
       ~InplaceView.contains
       ~InplaceView.count
+      ~InplaceView.decode
       ~InplaceView.endswith
       ~InplaceView.find
       ~InplaceView.index
@@ -35,13 +37,22 @@ cbytesparse.py.InplaceView
       ~InplaceView.isspace
       ~InplaceView.istitle
       ~InplaceView.isupper
+      ~InplaceView.ljust
       ~InplaceView.lower
+      ~InplaceView.lstrip
       ~InplaceView.maketrans
+      ~InplaceView.partition
       ~InplaceView.release
+      ~InplaceView.removeprefix
+      ~InplaceView.removesuffix
       ~InplaceView.replace
       ~InplaceView.rfind
       ~InplaceView.rindex
+      ~InplaceView.rjust
+      ~InplaceView.rpartition
+      ~InplaceView.rstrip
       ~InplaceView.startswith
+      ~InplaceView.strip
       ~InplaceView.swapcase
       ~InplaceView.title
       ~InplaceView.tobytes
@@ -49,6 +60,7 @@ cbytesparse.py.InplaceView
       ~InplaceView.toreadonly
       ~InplaceView.translate
       ~InplaceView.upper
+      ~InplaceView.zfill
    
    
 

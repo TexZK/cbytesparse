@@ -1,4 +1,4 @@
-cbytesparse.base.BaseInplaceView
+﻿cbytesparse.base.BaseInplaceView
 ================================
 
 .. currentmodule:: cbytesparse.base
@@ -18,8 +18,10 @@ cbytesparse.base.BaseInplaceView
    
       ~BaseInplaceView.__init__
       ~BaseInplaceView.capitalize
+      ~BaseInplaceView.center
       ~BaseInplaceView.contains
       ~BaseInplaceView.count
+      ~BaseInplaceView.decode
       ~BaseInplaceView.endswith
       ~BaseInplaceView.find
       ~BaseInplaceView.index
@@ -35,12 +37,21 @@ cbytesparse.base.BaseInplaceView
       ~BaseInplaceView.isspace
       ~BaseInplaceView.istitle
       ~BaseInplaceView.isupper
+      ~BaseInplaceView.ljust
       ~BaseInplaceView.lower
+      ~BaseInplaceView.lstrip
+      ~BaseInplaceView.partition
       ~BaseInplaceView.release
+      ~BaseInplaceView.removeprefix
+      ~BaseInplaceView.removesuffix
       ~BaseInplaceView.replace
       ~BaseInplaceView.rfind
       ~BaseInplaceView.rindex
+      ~BaseInplaceView.rjust
+      ~BaseInplaceView.rpartition
+      ~BaseInplaceView.rstrip
       ~BaseInplaceView.startswith
+      ~BaseInplaceView.strip
       ~BaseInplaceView.swapcase
       ~BaseInplaceView.title
       ~BaseInplaceView.tobytes
@@ -48,6 +59,7 @@ cbytesparse.base.BaseInplaceView
       ~BaseInplaceView.toreadonly
       ~BaseInplaceView.translate
       ~BaseInplaceView.upper
+      ~BaseInplaceView.zfill
    
    
 
