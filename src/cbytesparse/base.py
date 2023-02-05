@@ -577,6 +577,14 @@ class BaseBytesMethods(ByteString,
     ) -> 'BaseBytesMethods':
         ...
 
+    @abc.abstractmethod
+    def zfill(
+        self,
+        width: int,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        ...
+
 
 class BaseInplaceView(BaseBytesMethods):
     r"""Provides inplace methods to a byte buffer.

@@ -125,6 +125,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_title = None
     test_translate = None
     test_upper = None
+    test_zfill = None
 
 
 class TestBytesMethods(BytesMethodsSuite):

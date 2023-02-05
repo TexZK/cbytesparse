@@ -1090,6 +1090,24 @@ class BytesMethodsSuite:
         assert result == b''.upper()
         assert result.isupper() is False
 
+    def test_zfill(self):
+        BytesMethods = self.BytesMethods
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.zfill(5) == buffer.zfill(5)
+
+        buffer = b'42'
+        instance = BytesMethods(buffer)
+        assert instance.zfill(5) == buffer.zfill(5)
+
+        buffer = b'+42'
+        instance = BytesMethods(buffer)
+        assert instance.zfill(5) == buffer.zfill(5)
+
+        buffer = b'-42'
+        instance = BytesMethods(buffer)
+        assert instance.zfill(5) == buffer.zfill(5)
+
 
 class InplaceViewSuite(BytesMethodsSuite):
 

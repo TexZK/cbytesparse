@@ -587,6 +587,14 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.upper()
 
+    def zfill(
+        self,
+        width: int,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.zfill(width, factory=factory)
+
 
 class InplaceView(BytesMethods, BaseInplaceView):
     __doc__ = BaseInplaceView.__doc__

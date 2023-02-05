@@ -120,6 +120,8 @@ cdef extern from *:
     #define ASCII_A_LOWER ((byte_t)'a')
     #define ASCII_Z_LOWER ((byte_t)'z')
     #define ASCII_UNDERSCORE ((byte_t)'_')
+    #define ASCII_PLUS ((byte_t)'+')
+    #define ASCII_MINUS ((byte_t)'-')
     """
 
     byte_t ASCII_0
@@ -129,6 +131,8 @@ cdef extern from *:
     byte_t ASCII_A_LOWER
     byte_t ASCII_Z_LOWER
     byte_t ASCII_UNDERSCORE
+    byte_t ASCII_PLUS
+    byte_t ASCII_MINUS
 
 
 # =====================================================================================================================
@@ -1938,6 +1942,34 @@ cdef class BytesMethods:
         obj = bytearray(self._obj)
         Buffer_Upper(obj)
         return obj
+
+    def zfill(
+        self: BytesMethods,
+        width: int,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        self.check_obj_()
+        obj = self._obj
+        size = len(obj)
+        if width < size:
+            return factory(obj)
+
+        result = factory(b'')
+        if size and obj[0] == ASCII_PLUS:
+            result += b'+'
+            result += b'0' * (width - size)
+            result += memoryview(obj)[1:]
+
+        elif size and obj[0] == ASCII_MINUS:
+            result += b'-'
+            result += b'0' * (width - size)
+            result += memoryview(obj)[1:]
+
+        else:
+            result += b'0' * (width - size)
+            result += obj
+        return result
 
 
 ByteString.register(BytesMethods)
