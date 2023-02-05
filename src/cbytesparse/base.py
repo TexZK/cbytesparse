@@ -391,6 +391,22 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
+    def removeprefix(
+        self,
+        prefix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+        ...
+
+    @abc.abstractmethod
+    def removesuffix(
+        self,
+        suffix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+        ...
+
+    @abc.abstractmethod
     def replace(
         self,
         old: BytesLike,

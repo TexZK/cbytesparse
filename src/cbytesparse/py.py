@@ -401,6 +401,22 @@ class BytesMethods(BaseBytesMethods):
 
         self._impl.release()
 
+    def removeprefix(
+        self,
+        prefix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+
+        return self._impl.removeprefix(prefix, factory=factory)
+
+    def removesuffix(
+        self,
+        suffix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+
+        return self._impl.removesuffix(suffix, factory=factory)
+
     def replace(
         self,
         old: BytesLike,

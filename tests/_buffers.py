@@ -707,6 +707,22 @@ class BytesMethodsSuite:
         with pytest.raises(ValueError, match='operation forbidden on released memoryview object'):
             assert instance.obj is None
 
+    def test_removeprefix(self, hexstr):
+        BytesMethods = self.BytesMethods
+        hexview = memoryview(hexstr)
+        for i in range(len(hexstr)):
+            instance = BytesMethods(bytearray(hexstr))
+            result = instance.removeprefix(hexview[:i])
+            assert result == hexview[i:]
+
+    def test_removesuffix(self, hexstr):
+        BytesMethods = self.BytesMethods
+        hexview = memoryview(hexstr)
+        for i in range(len(hexstr)):
+            instance = BytesMethods(bytearray(hexstr))
+            result = instance.removesuffix(hexview[i:])
+            assert result == hexview[:i]
+
     def test_replace(self, hexstr):
         BytesMethods = self.BytesMethods
         hexview = memoryview(hexstr)

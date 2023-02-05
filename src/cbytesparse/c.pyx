@@ -1544,6 +1544,24 @@ cdef class BytesMethods:
         self._obj = None
         self.update_readonly_()
 
+    def removeprefix(
+        self: BytesMethods,
+        prefix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+
+        offset = len(prefix) if self.startswith(prefix) else 0
+        return factory(memoryview(self._obj)[offset:])
+
+    def removesuffix(
+        self: BytesMethods,
+        suffix: BytesLike,
+        factory: Any = bytes,
+    ) -> BytesLike:
+
+        offset = -len(suffix) if self.endswith(suffix) else len(self._obj)
+        return factory(memoryview(self._obj)[:offset])
+
     def replace(
         self: BytesMethods,
         old not None: ByteString,
