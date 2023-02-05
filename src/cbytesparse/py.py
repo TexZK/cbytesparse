@@ -58,6 +58,7 @@ from bytesparse.base import Value
 
 from .base import BaseBytesMethods
 from .base import BaseInplaceView
+from .base import BytesFactory
 from .base import BytesLike
 
 # noinspection PyUnresolvedReferences,PyPackageRequirements
@@ -412,7 +413,7 @@ class BytesMethods(BaseBytesMethods):
     def removeprefix(
         self,
         prefix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
 
         return self._impl.removeprefix(prefix, factory=factory)
@@ -420,7 +421,7 @@ class BytesMethods(BaseBytesMethods):
     def removesuffix(
         self,
         suffix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
 
         return self._impl.removesuffix(suffix, factory=factory)

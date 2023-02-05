@@ -29,6 +29,7 @@ import abc
 import collections.abc
 from typing import Any
 from typing import ByteString
+from typing import Callable
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -42,6 +43,7 @@ except ImportError:  # pragma: no cover
     TypeAlias = Any  # Python < 3.10
 
 BytesLike: TypeAlias = Union[ByteString, memoryview]
+BytesFactory: TypeAlias = Callable[BytesLike, BytesLike]
 
 
 class BaseBytesMethods(ByteString,
@@ -402,7 +404,7 @@ class BaseBytesMethods(ByteString,
     def removeprefix(
         self,
         prefix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
         ...
 
@@ -410,7 +412,7 @@ class BaseBytesMethods(ByteString,
     def removesuffix(
         self,
         suffix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
         ...
 

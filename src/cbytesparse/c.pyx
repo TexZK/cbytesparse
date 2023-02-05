@@ -89,6 +89,7 @@ from bytesparse.base import MutableMemory
 from bytesparse.base import OpenInterval
 from bytesparse.base import Value
 
+from .base import BytesFactory
 from .base import BytesLike
 
 try:
@@ -1555,7 +1556,7 @@ cdef class BytesMethods:
     def removeprefix(
         self: BytesMethods,
         prefix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
 
         offset = len(prefix) if self.startswith(prefix) else 0
@@ -1564,7 +1565,7 @@ cdef class BytesMethods:
     def removesuffix(
         self: BytesMethods,
         suffix: BytesLike,
-        factory: Any = bytes,
+        factory: BytesFactory = bytes,
     ) -> BytesLike:
 
         offset = -len(suffix) if self.endswith(suffix) else len(self._obj)
