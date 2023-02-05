@@ -1543,6 +1543,47 @@ cdef class BytesMethods:
         result += fillchar * (width - size)
         return result
 
+    def lstrip(
+        self: BytesMethods,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        cdef:
+            const byte_t[:] chars_view
+            const byte_t* chars_ptr
+            size_t chars_size
+            size_t chars_index
+            const byte_t[:] obj_view
+            const byte_t* obj_ptr
+            size_t obj_size
+            size_t obj_index
+            byte_t obj_char
+            size_t left
+
+        self.check_obj_()
+        if chars is None:
+            chars = b'\x09\x0A\x0B\x0C\x0D\x20'
+
+        chars_view = chars
+        chars_size = len(chars_view)
+        obj_view = self._obj
+        obj_size = len(obj_view)
+        with cython.boundscheck(False):
+            chars_ptr = &chars_view[0]
+            obj_ptr = &obj_view[0]
+        left = 0
+
+        for obj_index in range(obj_size):
+            obj_char = obj_ptr[obj_index]
+            for chars_index in range(chars_size):
+                if obj_char == chars_ptr[chars_index]:
+                    left += 1
+                    break
+            else:
+                break
+
+        return factory(obj_view[left:])
+
     def lower(
         self: BytesMethods,
     ) -> ByteString:
@@ -1724,6 +1765,47 @@ cdef class BytesMethods:
         else:
             raise ValueError('empty separator')
 
+    def rstrip(
+        self: BytesMethods,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        cdef:
+            const byte_t[:] chars_view
+            const byte_t* chars_ptr
+            size_t chars_size
+            size_t chars_index
+            const byte_t[:] obj_view
+            const byte_t* obj_ptr
+            size_t obj_size
+            size_t obj_index
+            byte_t obj_char
+            size_t right
+
+        self.check_obj_()
+        if chars is None:
+            chars = b'\x09\x0A\x0B\x0C\x0D\x20'
+
+        chars_view = chars
+        chars_size = len(chars_view)
+        obj_view = self._obj
+        obj_size = len(obj_view)
+        with cython.boundscheck(False):
+            chars_ptr = &chars_view[0]
+            obj_ptr = &obj_view[0]
+        right = obj_size
+
+        for obj_index in reversed(range(obj_size)):
+            obj_char = obj_ptr[obj_index]
+            for chars_index in range(chars_size):
+                if obj_char == chars_ptr[chars_index]:
+                    right -= 1
+                    break
+            else:
+                break
+
+        return factory(obj_view[:right])
+
     @property
     def shape(
         self: BytesMethods,
@@ -1746,6 +1828,58 @@ cdef class BytesMethods:
     ) -> Tuple[int]:
 
         return (1,)
+
+    def strip(
+        self: BytesMethods,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        cdef:
+            const byte_t[:] chars_view
+            const byte_t* chars_ptr
+            size_t chars_size
+            size_t chars_index
+            const byte_t[:] obj_view
+            const byte_t* obj_ptr
+            size_t obj_size
+            size_t obj_index
+            byte_t obj_char
+            size_t left
+            size_t right
+
+        self.check_obj_()
+        if chars is None:
+            chars = b'\x09\x0A\x0B\x0C\x0D\x20'
+
+        chars_view = chars
+        chars_size = len(chars_view)
+        obj_view = self._obj
+        obj_size = len(obj_view)
+        with cython.boundscheck(False):
+            chars_ptr = &chars_view[0]
+            obj_ptr = &obj_view[0]
+        left = 0
+        right = obj_size
+
+        for obj_index in range(obj_size):
+            obj_char = obj_ptr[obj_index]
+            for chars_index in range(chars_size):
+                if obj_char == chars_ptr[chars_index]:
+                    left += 1
+                    break
+            else:
+                break
+
+        for obj_index in reversed(range(left, obj_size)):
+            obj_char = obj_ptr[obj_index]
+            for chars_index in range(chars_size):
+                if obj_char == chars_ptr[chars_index]:
+                    right -= 1
+                    break
+            else:
+                break
+
+        return factory(obj_view[left:right])
 
     @property
     def suboffsets(

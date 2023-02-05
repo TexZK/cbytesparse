@@ -380,6 +380,14 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.ljust(width, fillchar, factory=factory)
 
+    def lstrip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.lstrip(chars, factory=factory)
+
     def lower(
         self,
     ) -> BaseBytesMethods:
@@ -498,6 +506,14 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.rpartition(sep, factory=factory)
 
+    def rstrip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.rstrip(chars, factory=factory)
+
     @property
     def shape(
         self,
@@ -518,6 +534,14 @@ class BytesMethods(BaseBytesMethods):
     ) -> Tuple[int]:
 
         return self._impl.strides
+
+    def strip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+
+        return self._impl.strip(chars, factory=factory)
 
     @property
     def suboffsets(

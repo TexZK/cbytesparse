@@ -655,6 +655,22 @@ class BytesMethodsSuite:
         assert instance.ljust(9, b'.') == buffer.ljust(9, b'.')
         assert instance.ljust(10, b'.') == buffer.ljust(10, b'.')
 
+    def test_lstrip(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'   spacious   '
+        instance = BytesMethods(buffer)
+        assert instance.lstrip() == buffer.lstrip()
+
+        buffer = b'www.example.com'
+        instance = BytesMethods(buffer)
+        chars = b'cmowz.'
+        assert instance.lstrip(chars) == buffer.lstrip(chars)
+
+        buffer = b'Arthur: three!'
+        instance = BytesMethods(buffer)
+        chars = b'Arthur: '
+        assert instance.lstrip(chars) == buffer.lstrip(chars)
+
     def test_lower(self, bytestr, loremstr):
         BytesMethods = self.BytesMethods
         instance = BytesMethods(memoryview(bytearray(bytestr)))
@@ -885,6 +901,22 @@ class BytesMethodsSuite:
                 sep = hexstr[start:endex]
                 assert instance.partition(sep) == hexstr.partition(sep)
 
+    def test_rstrip(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'   spacious   '
+        instance = BytesMethods(buffer)
+        assert instance.rstrip() == buffer.rstrip()
+
+        buffer = b'mississippi'
+        instance = BytesMethods(buffer)
+        chars = b'ipz'
+        assert instance.rstrip(chars) == buffer.rstrip(chars)
+
+        buffer = b'Monty Python'
+        instance = BytesMethods(buffer)
+        chars = b' Python'
+        assert instance.rstrip(chars) == buffer.rstrip(chars)
+
     def test_shape(self, hexview):
         BytesMethods = self.BytesMethods
         assert BytesMethods(b'').shape == (0,)
@@ -923,6 +955,22 @@ class BytesMethodsSuite:
         assert BytesMethods(hexview).strides == (1,)
         if self.SUPPORTS_NONE:
             assert BytesMethods(None).strides == (1,)
+
+    def test_strip(self):
+        BytesMethods = self.BytesMethods
+        buffer = b'   spacious   '
+        instance = BytesMethods(buffer)
+        assert instance.rstrip() == buffer.rstrip()
+
+        buffer = b'www.example.com'
+        instance = BytesMethods(buffer)
+        chars = b'cmowz.'
+        assert instance.rstrip(chars) == buffer.rstrip(chars)
+
+        buffer = b'#....... Section 3.2.1 Issue #32 .......'
+        instance = BytesMethods(buffer)
+        chars = b'.#! '
+        assert instance.rstrip(chars) == buffer.rstrip(chars)
 
     def test_suboffsets(self, hexview):
         BytesMethods = self.BytesMethods

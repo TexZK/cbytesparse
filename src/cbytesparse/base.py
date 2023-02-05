@@ -379,6 +379,14 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
+    def lstrip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        ...
+
+    @abc.abstractmethod
     def lower(
         self,
     ) -> 'BaseBytesMethods':
@@ -488,6 +496,14 @@ class BaseBytesMethods(ByteString,
     ) -> Tuple[BytesLike, BytesLike, BytesLike]:
         ...
 
+    @abc.abstractmethod
+    def rstrip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
+        ...
+
     @property
     @abc.abstractmethod
     def shape(
@@ -507,6 +523,14 @@ class BaseBytesMethods(ByteString,
     def strides(
         self,
     ) -> Tuple[int]:
+        ...
+
+    @abc.abstractmethod
+    def strip(
+        self,
+        chars: Optional[BytesLike] = None,
+        factory: BytesFactory = bytes,
+    ) -> BytesLike:
         ...
 
     @property
