@@ -999,7 +999,7 @@ cdef bint Buffer_IsSpace(const byte_t[:] data_view) nogil:
         return Buffer_IsSpace_(&data_view[0], len(data_view))
 
 
-cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
+cdef bint Buffer_IsTitle_(const byte_t* data_ptr, size_t data_size) nogil:
     cdef:
         size_t i
         byte_t c
@@ -1027,7 +1027,7 @@ cdef bint Buffer_IsTitle_(byte_t* data_ptr, size_t data_size) nogil:
         return False
 
 
-cdef bint Buffer_IsTitle(byte_t[:] data_view) nogil:
+cdef bint Buffer_IsTitle(const byte_t[:] data_view) nogil:
 
     with cython.boundscheck(False):
         return Buffer_IsTitle_(&data_view[0], len(data_view))
