@@ -354,6 +354,25 @@ class BytesMethodsSuite:
             # noinspection PyTypeChecker
             instance.count(None)
 
+    def test_decode(self, hexstr):
+        BytesMethods = self.BytesMethods
+        assert BytesMethods(b'').decode() == ''
+
+        actual = BytesMethods(hexstr).decode()
+        expected = hexstr.decode()
+        assert actual == expected
+
+        actual = BytesMethods(hexstr).decode(encoding='ascii')
+        expected = hexstr.decode(encoding='ascii')
+        assert actual == expected
+
+        actual = BytesMethods(hexstr).decode(encoding='ascii', errors='strict')
+        expected = hexstr.decode(encoding='ascii', errors='strict')
+        assert actual == expected
+
+        buffer = b'ASCII string'
+        assert BytesMethods(buffer).decode('ascii') == str(buffer, 'ascii')
+
     def test_endswith(self, hexview, hexstr):
         BytesMethods = self.BytesMethods
         assert BytesMethods(b'').endswith(b'') is True

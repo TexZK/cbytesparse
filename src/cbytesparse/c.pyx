@@ -1350,6 +1350,14 @@ cdef class BytesMethods:
         self.check_obj_()
         return Buffer_Count(self._obj, token, start_, endex_)
 
+    def decode(
+        self: BytesMethods,
+        encoding: str = 'utf-8',
+        errors: str = 'strict',
+    ) -> str:
+
+        return str(self._obj, encoding=encoding, errors=errors)
+
     def endswith(
         self: BytesMethods,
         token not None: ByteString,

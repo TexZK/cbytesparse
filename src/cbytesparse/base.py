@@ -233,6 +233,14 @@ class BaseBytesMethods(ByteString,
         ...
 
     @abc.abstractmethod
+    def decode(
+        self,
+        encoding: str = 'utf-8',
+        errors: str = 'strict',
+    ) -> str:
+        ...
+
+    @abc.abstractmethod
     def endswith(
         self,
         token: BytesLike,

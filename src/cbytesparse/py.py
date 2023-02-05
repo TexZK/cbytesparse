@@ -235,6 +235,14 @@ class BytesMethods(BaseBytesMethods):
 
         return self._impl.count(token, start=start, endex=endex)
 
+    def decode(
+        self,
+        encoding: str = 'utf-8',
+        errors: str = 'strict',
+    ) -> str:
+
+        return self._impl.decode(encoding=encoding, errors=errors)
+
     def endswith(
         self,
         token: BytesLike,

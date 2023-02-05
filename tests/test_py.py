@@ -85,6 +85,7 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_capitalize = None
     test_contains = None
     test_count = None
+    test_decode = None
     test_endswith = None
     test_find = None
     test_find_multi = None
