@@ -1328,6 +1328,7 @@ cdef class BytesMethods:
         if len(fillchar) != 1:
             raise ValueError('center() argument 2 must be a byte string of length 1')
 
+        self.check_obj_()
         size = len(self._obj)
         if width < size:
             return factory(self._obj)
@@ -1380,6 +1381,7 @@ cdef class BytesMethods:
         errors: str = 'strict',
     ) -> str:
 
+        self.check_obj_()
         return str(self._obj, encoding=encoding, errors=errors)
 
     def endswith(
@@ -1531,6 +1533,7 @@ cdef class BytesMethods:
         if len(fillchar) != 1:
             raise ValueError('ljust() argument 2 must be a byte string of length 1')
 
+        self.check_obj_()
         size = len(self._obj)
         if width < size:
             return factory(self._obj)
