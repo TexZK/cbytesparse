@@ -43,7 +43,7 @@ except ImportError:  # pragma: no cover
     TypeAlias = Any  # Python < 3.10
 
 BytesLike: TypeAlias = Union[ByteString, memoryview]
-BytesFactory: TypeAlias = Callable[BytesLike, BytesLike]
+BytesFactory: TypeAlias = Callable[..., BytesLike]
 
 
 class BaseBytesMethods(ByteString,
