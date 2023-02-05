@@ -657,6 +657,10 @@ class BytesMethodsSuite:
 
     def test_lstrip(self):
         BytesMethods = self.BytesMethods
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.lstrip() == buffer.lstrip()
+
         buffer = b'   spacious   '
         instance = BytesMethods(buffer)
         assert instance.lstrip() == buffer.lstrip()
@@ -743,9 +747,15 @@ class BytesMethodsSuite:
 
     def test_partition(self, hexstr):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(b'Hello, World!')
-        assert instance.partition(b', ') == (b'Hello', b', ', b'World!')
-        assert instance.partition(b'?') == (b'Hello, World!', b'', b'')
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.partition(b', ') == buffer.partition(b', ')
+        assert instance.partition(b'?') == buffer.partition(b'?')
+
+        buffer = b'Hello, World!'
+        instance = BytesMethods(buffer)
+        assert instance.partition(b', ') == buffer.partition(b', ')
+        assert instance.partition(b'?') == buffer.partition(b'?')
 
         with pytest.raises(ValueError, match='empty separator'):
             instance.partition(b'')
@@ -888,9 +898,15 @@ class BytesMethodsSuite:
 
     def test_rpartition(self, hexstr):
         BytesMethods = self.BytesMethods
-        instance = BytesMethods(b'Hello, World!')
-        assert instance.rpartition(b', ') == (b'Hello', b', ', b'World!')
-        assert instance.rpartition(b'?') == (b'', b'', b'Hello, World!')
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.rpartition(b', ') == buffer.rpartition(b', ')
+        assert instance.rpartition(b'?') == buffer.rpartition(b'?')
+
+        buffer = b'Hello, World!'
+        instance = BytesMethods(buffer)
+        assert instance.rpartition(b', ') == buffer.rpartition(b', ')
+        assert instance.rpartition(b'?') == buffer.rpartition(b'?')
 
         with pytest.raises(ValueError, match='empty separator'):
             instance.rpartition(b'')
@@ -903,6 +919,10 @@ class BytesMethodsSuite:
 
     def test_rstrip(self):
         BytesMethods = self.BytesMethods
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.rstrip() == buffer.rstrip()
+
         buffer = b'   spacious   '
         instance = BytesMethods(buffer)
         assert instance.rstrip() == buffer.rstrip()
@@ -958,19 +978,23 @@ class BytesMethodsSuite:
 
     def test_strip(self):
         BytesMethods = self.BytesMethods
+        buffer = b''
+        instance = BytesMethods(buffer)
+        assert instance.strip() == buffer.strip()
+
         buffer = b'   spacious   '
         instance = BytesMethods(buffer)
-        assert instance.rstrip() == buffer.rstrip()
+        assert instance.strip() == buffer.strip()
 
         buffer = b'www.example.com'
         instance = BytesMethods(buffer)
         chars = b'cmowz.'
-        assert instance.rstrip(chars) == buffer.rstrip(chars)
+        assert instance.strip(chars) == buffer.strip(chars)
 
         buffer = b'#....... Section 3.2.1 Issue #32 .......'
         instance = BytesMethods(buffer)
         chars = b'.#! '
-        assert instance.rstrip(chars) == buffer.rstrip(chars)
+        assert instance.strip(chars) == buffer.strip(chars)
 
     def test_suboffsets(self, hexview):
         BytesMethods = self.BytesMethods
