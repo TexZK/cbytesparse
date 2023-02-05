@@ -1147,3 +1147,16 @@ class InplaceViewSuite(BytesMethodsSuite):
         instance = BytesMethods(hexview)
         assert instance.readonly is False
         instance[0] = 0
+
+    def test_toreadonly(self, hexstr, hexview):
+        BytesMethods = self.BytesMethods
+
+        instance = BytesMethods(hexstr)
+        assert instance.readonly is False
+        readonly = instance.toreadonly()
+        assert readonly.readonly is True
+
+        instance = BytesMethods(hexview)
+        assert instance.readonly is False
+        readonly = instance.toreadonly()
+        assert readonly.readonly is True
