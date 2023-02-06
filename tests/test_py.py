@@ -63,6 +63,11 @@ class TestBytesMethods_bytes(BytesMethodsSuite):
     test_tobytes = None
     test_tolist = None
 
+    if not hasattr(BytesMethods, 'removeprefix'):  # pragma: no cover
+        test_removeprefix = None
+    if not hasattr(BytesMethods, 'removesuffix'):  # pragma: no cover
+        test_removesuffix = None
+
 
 # Check tests against `bytearray` for more consistency with Python
 # noinspection PyPep8Naming
@@ -130,6 +135,9 @@ class TestBytesMethods_memoryview(BytesMethodsSuite):
     test_upper = None
     test_zfill = None
 
+    if not hasattr(BytesMethods, 'toreadonly'):  # pragma: no cover
+        test_toreadonly = None
+
 
 class TestBytesMethods(BytesMethodsSuite):
     BytesMethods: Type['_BytesMethods'] = _BytesMethods
@@ -195,6 +203,9 @@ class TestInplaceView_memoryview(InplaceViewSuite):
     test_translate = None
     test_upper = None
     test_zfill = None
+
+    if not hasattr(BytesMethods, 'toreadonly'):  # pragma: no cover
+        test_toreadonly = None
 
 
 class TestMemory(BaseMemorySuite):
