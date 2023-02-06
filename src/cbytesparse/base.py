@@ -46,9 +46,7 @@ BytesLike: TypeAlias = Union[ByteString, memoryview]
 BytesFactory: TypeAlias = Callable[..., BytesLike]
 
 
-class BaseBytesMethods(ByteString,
-                       collections.abc.Sequence,
-                       SupportsBytes):
+class BaseBytesMethods(ByteString, collections.abc.Sequence):
     r"""Provides useful methods to a byte buffer.
 
     Python's :obj:`memoryview` and most *byte-like* objects do not provide many
