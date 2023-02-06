@@ -129,8 +129,8 @@ Examples
 
 Here's a quick usage example of ``bytesparse`` objects:
 
->>> from bytesparse import Memory
->>> from bytesparse import bytesparse
+>>> from cbytesparse import Memory
+>>> from cbytesparse import bytesparse
 >>> # ----------------------------------------------------------------
 >>> m = bytesparse(b'Hello, World!')  # creates from bytes
 >>> len(m)  # total length

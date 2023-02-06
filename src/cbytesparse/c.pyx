@@ -1181,6 +1181,13 @@ cdef vint Buffer_Translate(byte_t[:] data_view,
 # ---------------------------------------------------------------------------------------------------------------------
 
 cdef class BytesMethods:
+    r"""Provides useful methods to a byte buffer.
+
+    Please refer to :obj:`cbytesparse.py.BytesMethods` for more information.
+
+    See Also:
+        :obj:`cbytesparse.py.BytesMethods`
+    """
 
     cdef vint check_obj_(BytesMethods self) except -1:
         if self._obj is None:
@@ -1978,6 +1985,13 @@ ByteString.register(BytesMethods)
 # ---------------------------------------------------------------------------------------------------------------------
 
 cdef class InplaceView(BytesMethods):
+    r"""Provides inplace methods to a byte buffer.
+
+    Please refer to :obj:`cbytesparse.py.InplaceView` for more information.
+
+    See Also:
+        :obj:`cbytesparse.py.InplaceView`
+    """
 
     cdef vint update_readonly_(InplaceView self) except -1:
         cdef:
@@ -7905,6 +7919,13 @@ cdef addr_t Rover_Endex(const Rover_* that) nogil:
 # =====================================================================================================================
 
 cdef class Memory:
+    r"""Virtual memory.
+
+    Please refer to :obj:`cbytesparse.py.Memory` for more information.
+
+    See Also:
+        :obj:`cbytesparse.py.Memory`
+    """
 
     def __add__(
         self: Memory,
@@ -9889,6 +9910,13 @@ MutableMemory.register(Memory)
 # =====================================================================================================================
 
 cdef class bytesparse(Memory):
+    r"""Wrapper for more `bytearray` compatibility.
+
+    Please refer to :obj:`cbytesparse.py.bytesparse` for more information.
+
+    See Also:
+        :obj:`cbytesparse.py.bytesparse`
+    """
 
     def __init__(
         self: bytesparse,
