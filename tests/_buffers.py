@@ -94,6 +94,9 @@ class BytesMethodsSuite:
         assert hexstr[0:0] in instance
         assert b'' in instance
         assert (hexstr + b'\0') not in instance
+        assert b'$' not in instance
+        assert ord('A') in instance
+        assert ord('$') not in instance
 
         with pytest.raises(TypeError):
             assert None not in instance
@@ -323,6 +326,9 @@ class BytesMethodsSuite:
         assert instance.contains(hexview[0:0]) is True
         assert instance.contains(b'') is True
         assert instance.contains(hexstr + b'\0') is False
+        assert instance.contains(b'$') is False
+        assert instance.contains(ord('A')) is True
+        assert instance.contains(ord('$')) is False
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
@@ -347,6 +353,10 @@ class BytesMethodsSuite:
         assert instance.count(b'\0' * 5) == 2
         assert instance.count(b'\0' * 3) == 3
         assert instance.count(b'\0' * 10) == 1
+        assert instance.count(b'$') == 0
+        assert instance.count(0) == 10
+        assert instance.count(ord('$')) == 0
+
         for start in range(10):
             for endex in range(start, 10):
                 assert instance.count(b'\0', start, endex) == endex - start
@@ -357,6 +367,9 @@ class BytesMethodsSuite:
         assert instance.count(b'll') == 1
         assert instance.count(b'o') == 2
         assert instance.count(b'World') == 1
+        assert instance.count(b'$') == 0
+        assert instance.count(ord('l')) == 3
+        assert instance.count(ord('$')) == 0
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
@@ -436,6 +449,9 @@ class BytesMethodsSuite:
         assert instance.find(hexview[0:0]) == 0
         assert instance.find(b'') == 0
         assert instance.find(hexstr + b'\0') < 0
+        assert instance.find(b'$') < 0
+        assert instance.find(ord('A')) == 10
+        assert instance.find(ord('$')) < 0
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
@@ -478,9 +494,16 @@ class BytesMethodsSuite:
         assert instance.index(hexview) == 0
         assert instance.index(hexview[0:0]) == 0
         assert instance.index(b'') == 0
+        assert instance.index(ord('A')) == 10
 
         with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.index(hexstr + b'\0')
+            instance.index(hexstr + b'\0')
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            instance.index(b'$')
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            instance.index(ord('$'))
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
@@ -826,6 +849,9 @@ class BytesMethodsSuite:
         assert instance.rfind(hexview[0:0]) == len(instance)
         assert instance.rfind(b'') == len(instance)
         assert instance.rfind(hexstr + b'\0') < 0
+        assert instance.rfind(b'$') < 0
+        assert instance.rfind(ord('A')) == 10
+        assert instance.rfind(ord('$')) < 0
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
@@ -862,9 +888,16 @@ class BytesMethodsSuite:
         assert instance.rindex(hexview) == 0
         assert instance.rindex(hexview[0:0]) == len(instance)
         assert instance.rindex(b'') == len(instance)
+        assert instance.rindex(ord('A')) == 10
 
         with pytest.raises(ValueError, match='subsection not found'):
-            assert instance.rindex(hexstr + b'\0')
+            instance.rindex(hexstr + b'\0')
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            instance.rindex(b'$')
+
+        with pytest.raises(ValueError, match='subsection not found'):
+            instance.rindex(ord('$'))
 
         with pytest.raises(TypeError):
             # noinspection PyTypeChecker
