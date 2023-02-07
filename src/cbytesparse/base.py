@@ -83,12 +83,44 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     def __bool__(
         self,
     ) -> bool:
+        r"""Has any items.
+
+        Returns:
+            bool: Has any items.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'')
+            >>> bool(instance)
+            False
+
+            >>> instance = BytesMethods(b'Hello, World!')
+            >>> bool(instance)
+            True
+        """
         ...
 
     @abc.abstractmethod
     def __bytes__(
         self,
     ) -> bytes:
+        r"""Creates a bytes clone.
+
+        Returns:
+            :obj:`bytes`: Cloned data.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(bytearray(b''))
+            >>> bytes(instance)
+            b''
+
+            >>> instance = BytesMethods(bytearray(b'Hello, World!'))
+            >>> bytes(instance)
+            b'Hello, World!'
+        """
         ...
 
     @abc.abstractmethod
@@ -96,6 +128,28 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         self,
         token: Union[BytesLike, int],
     ) -> bool:
+        r"""Checks if some items are contained.
+
+        Arguments:
+            token (byte-like):
+                Token to find.
+
+        Returns:
+            bool: Token is contained.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'Hello, World!')
+            >>> b'World' in instance
+            True
+            >>> b'$' in instance
+            False
+            >>> ord('o') in instance
+            True
+            >>> ord('$') in instance
+            False
+        """
         ...
 
     @abc.abstractmethod
@@ -110,6 +164,27 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         self,
         other: Any,
     ) -> bool:
+        r"""Equality comparison.
+
+        Arguments:
+            other (byte-like):
+                Data to compare with `self`.
+
+        Returns:
+            bool: `self` is equal to `other`.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> data = bytearray(b'Hello, World!')
+            >>> instance = BytesMethods(data)
+            >>> instance == data
+            True
+            >>> instance == memoryview(data)
+            True
+            >>> instance == b'Something else'
+            False
+        """
         ...
 
     @abc.abstractmethod
@@ -124,6 +199,34 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         self,
         key: Any,
     ) -> Any:
+        r"""Gets data.
+
+        Arguments:
+            key (slice or int):
+                Selection range or address.
+                If it is a :obj:`slice` with bytes-like `step`, the latter is
+                interpreted as the filling pattern.
+
+        Returns:
+            items: Items from the requested range.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'Hello, World!')
+            >>> instance[7]  # -> ord('W') = 87
+            121
+            >>> bytes(instance[:3])
+            b'Hel
+            >>> bytes(instance[3:10])
+            b'lo, Wor'
+            >>> bytes(instance[-1:])
+            b'!'
+            >>> bytes(instance[2:10:3])
+            b'l,o'
+            >>> bytes(instance[3:10:2])
+            b'l,Wr'
+        """
         ...
 
     @abc.abstractmethod
@@ -144,6 +247,18 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     def __iter__(
         self,
     ) -> Iterable[int]:
+        r"""Iterates over values.
+
+        Yields:
+            int: Value as byte integer.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'Hello, World!')
+            >>> list(instance)
+            [72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]
+        """
         ...
 
     @abc.abstractmethod
@@ -157,6 +272,28 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     def __len__(
         self,
     ) -> int:
+        r"""Actual length.
+
+        Computes the actual length of the wrapped data object.
+
+        Returns:
+            int: Data length.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'')
+            >>> len(instance)
+            0
+
+            >>> instance = BytesMethods(bytes(7))
+            >>> len(instance)
+            7
+
+            >>> instance = BytesMethods(memoryview(b'Hello, World!'))
+            >>> len(instance)
+            13
+        """
         ...
 
     @abc.abstractmethod
@@ -171,12 +308,47 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         self,
         other: Any,
     ) -> bool:
+        r"""Inquality comparison.
+
+        Arguments:
+            other (byte-like):
+                Data to compare with `self`.
+
+        Returns:
+            bool: `self` is not equal to `other`.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> data = bytearray(b'Hello, World!')
+            >>> instance = BytesMethods(data)
+            >>> instance != data
+            False
+            >>> instance != memoryview(data)
+            False
+            >>> instance != b'Something else'
+            True
+        """
         ...
 
     @abc.abstractmethod
     def __reversed__(
         self,
     ) -> Iterable[int]:
+        r"""Iterates over values, reversed order.
+
+        Yields:
+            int: Value as byte integer.
+
+        Examples:
+            >>> from cbytesparse import BytesMethods
+
+            >>> instance = BytesMethods(b'Hello, World!')
+            >>> list(instance)
+            [72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]
+            >>> list(reversed(instance))
+            [33, 100, 108, 114, 111, 87, 32, 44, 111, 108, 108, 101, 72]
+        """
         ...
 
     @abc.abstractmethod
