@@ -94,7 +94,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def __contains__(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
     ) -> bool:
         ...
 
