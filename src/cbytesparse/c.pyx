@@ -1224,7 +1224,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_Contains(self._obj, token, 0, SIZE_MAX)
 
     def __delitem__(
@@ -1367,7 +1367,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_Contains(self._obj, token, start_, endex_)
 
     @property
@@ -1389,7 +1389,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_Count(self._obj, token, start_, endex_)
 
     def decode(
@@ -1428,7 +1428,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_Find(self._obj, token, start_, endex_)
 
     @property
@@ -1449,6 +1449,8 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = token.to_bytes(1, 'little')
         return Buffer_Index(self._obj, token, start_, endex_)
 
     def isalnum(
@@ -1728,7 +1730,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_RevFind(self._obj, token, start_, endex_)
 
     def rindex(
@@ -1743,7 +1745,7 @@ cdef class BytesMethods:
 
         self.check_obj_()
         if isinstance(token, int):
-            token = int.to_bytes(1, 'little')
+            token = token.to_bytes(1, 'little')
         return Buffer_RevIndex(self._obj, token, start_, endex_)
 
     def rjust(
