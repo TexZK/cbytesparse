@@ -1219,10 +1219,12 @@ cdef class BytesMethods:
 
     def __contains__(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
     ) -> bool:
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_Contains(self._obj, token, 0, SIZE_MAX)
 
     def __delitem__(
@@ -1355,7 +1357,7 @@ cdef class BytesMethods:
 
     def contains(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1364,6 +1366,8 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_Contains(self._obj, token, start_, endex_)
 
     @property
@@ -1375,7 +1379,7 @@ cdef class BytesMethods:
 
     def count(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1384,6 +1388,8 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_Count(self._obj, token, start_, endex_)
 
     def decode(
@@ -1397,7 +1403,7 @@ cdef class BytesMethods:
 
     def endswith(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: BytesLike,
     ) -> bool:
 
         self.check_obj_()
@@ -1412,7 +1418,7 @@ cdef class BytesMethods:
 
     def find(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1421,6 +1427,8 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_Find(self._obj, token, start_, endex_)
 
     @property
@@ -1432,7 +1440,7 @@ cdef class BytesMethods:
 
     def index(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1710,7 +1718,7 @@ cdef class BytesMethods:
 
     def rfind(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1719,11 +1727,13 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_RevFind(self._obj, token, start_, endex_)
 
     def rindex(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -1732,6 +1742,8 @@ cdef class BytesMethods:
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex
 
         self.check_obj_()
+        if isinstance(token, int):
+            token = int.to_bytes(1, 'little')
         return Buffer_RevIndex(self._obj, token, start_, endex_)
 
     def rjust(
@@ -1827,7 +1839,7 @@ cdef class BytesMethods:
 
     def startswith(
         self: BytesMethods,
-        token not None: ByteString,
+        token not None: BytesLike,
     ) -> bool:
 
         self.check_obj_()

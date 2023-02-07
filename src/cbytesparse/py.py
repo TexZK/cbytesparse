@@ -98,7 +98,7 @@ class BytesMethods(BaseBytesMethods):
 
     def __contains__(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
     ) -> bool:
 
         return self._impl.__contains__(token)
@@ -222,7 +222,7 @@ class BytesMethods(BaseBytesMethods):
 
     def contains(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -238,7 +238,7 @@ class BytesMethods(BaseBytesMethods):
 
     def count(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -269,7 +269,7 @@ class BytesMethods(BaseBytesMethods):
 
     def find(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -285,7 +285,7 @@ class BytesMethods(BaseBytesMethods):
 
     def index(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -473,7 +473,7 @@ class BytesMethods(BaseBytesMethods):
 
     def rfind(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -482,7 +482,7 @@ class BytesMethods(BaseBytesMethods):
 
     def rindex(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:

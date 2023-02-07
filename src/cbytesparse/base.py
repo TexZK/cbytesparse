@@ -218,7 +218,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def contains(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -234,7 +234,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def count(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -265,7 +265,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def find(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -281,7 +281,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def index(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -461,7 +461,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def rfind(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
@@ -470,7 +470,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
     @abc.abstractmethod
     def rindex(
         self,
-        token: BytesLike,
+        token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
     ) -> int:
