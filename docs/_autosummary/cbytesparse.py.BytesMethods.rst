@@ -1,4 +1,4 @@
-﻿cbytesparse.py.BytesMethods
+cbytesparse.py.BytesMethods
 ===========================
 
 .. currentmodule:: cbytesparse.py

@@ -1,4 +1,4 @@
-﻿cbytesparse.c.BlockView
+cbytesparse.c.BlockView
 =======================
 
 .. currentmodule:: cbytesparse.c

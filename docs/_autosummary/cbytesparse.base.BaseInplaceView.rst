@@ -1,4 +1,4 @@
-﻿cbytesparse.base.BaseInplaceView
+cbytesparse.base.BaseInplaceView
 ================================
 
 .. currentmodule:: cbytesparse.base

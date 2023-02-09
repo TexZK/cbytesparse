@@ -1,4 +1,4 @@
-﻿cbytesparse.c.InplaceView
+cbytesparse.c.InplaceView
 =========================
 
 .. currentmodule:: cbytesparse.c

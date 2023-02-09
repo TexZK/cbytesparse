@@ -1,4 +1,4 @@
-﻿cbytesparse.base.BaseBytesMethods
+cbytesparse.base.BaseBytesMethods
 =================================
 
 .. currentmodule:: cbytesparse.base

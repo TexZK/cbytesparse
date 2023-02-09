@@ -1,4 +1,4 @@
-﻿cbytesparse.c.BytesMethods
+cbytesparse.c.BytesMethods
 ==========================
 
 .. currentmodule:: cbytesparse.c

@@ -1,4 +1,4 @@
-﻿cbytesparse.py.InplaceView
+cbytesparse.py.InplaceView
 ==========================
 
 .. currentmodule:: cbytesparse.py
