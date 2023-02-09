@@ -45,8 +45,8 @@ BytesLike: TypeAlias = Union[ByteString, memoryview]
 BytesFactory: TypeAlias = Callable[..., BytesLike]
 
 
-def _inherit_extend_docstring(src_class):
-    def wrapper(dst_method):
+def _inherit_extend_docstring(src_class):  # pragma: no cover
+    def wrapper(dst_method):  # pragma: no cover
         if hasattr(src_class, dst_method.__name__):
             docstring_after = r"""
 
