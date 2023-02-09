@@ -217,7 +217,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
             >>> instance[7]  # -> ord('W') = 87
             121
             >>> bytes(instance[:3])
-            b'Hel
+            b'Hel'
             >>> bytes(instance[3:10])
             b'lo, Wor'
             >>> bytes(instance[-1:])
@@ -440,7 +440,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
-    ) -> int:
+    ) -> bool:
         ...
 
     @property
@@ -766,7 +766,7 @@ class BaseInplaceView(BaseBytesMethods):
     anything supporting the *buffer protocol* with a mutable buffer.
 
     Note:
-        Editing support is only limited to the exising buffer items, i.e. the
+        Editing support is only limited to the existing buffer items, i.e. the
         wrapper and its underlying buffer cannot be resized via the methods
         provided by this class, just like with standard memory views.
 

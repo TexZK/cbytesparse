@@ -1360,7 +1360,7 @@ cdef class BytesMethods:
         token not None: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
-    ) -> int:
+    ) -> bool:
         cdef:
             size_t start_ = SIZE_MIN if start is None else <size_t>start
             size_t endex_ = SIZE_MAX if endex is None else <size_t>endex

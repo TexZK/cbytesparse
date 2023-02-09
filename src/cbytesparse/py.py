@@ -225,7 +225,7 @@ class BytesMethods(BaseBytesMethods):
         token: Union[BytesLike, int],
         start: Optional[int] = None,
         endex: Optional[int] = None,
-    ) -> int:
+    ) -> bool:
 
         return self._impl.contains(token, start=start, endex=endex)
 
