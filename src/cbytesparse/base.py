@@ -205,7 +205,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def __ge__(
         self,
         other: Any,
@@ -248,7 +248,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def __gt__(
         self,
         other: Any,
@@ -285,7 +285,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def __le__(
         self,
         other: Any,
@@ -321,7 +321,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def __lt__(
         self,
         other: Any,
@@ -407,7 +407,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def center(
         self,
         width: int,
@@ -532,7 +532,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def decode(
         self,
         encoding: str = 'utf-8',
@@ -541,7 +541,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def endswith(
         self,
         token: BytesLike,
@@ -557,7 +557,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def find(
         self,
         token: Union[BytesLike, int],
@@ -568,14 +568,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def format(
         self,
     ) -> str:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def index(
         self,
         token: Union[BytesLike, int],
@@ -585,84 +585,84 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isalnum(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isalpha(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isascii(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(str)
+    @_inherit_extend_docstring(str)  # TODO
     def isdecimal(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isdigit(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(str)
+    @_inherit_extend_docstring(str)  # TODO
     def isidentifier(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def islower(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(str)
+    @_inherit_extend_docstring(str)  # TODO
     def isnumeric(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(str)
+    @_inherit_extend_docstring(str)  # TODO
     def isprintable(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isspace(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def istitle(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def isupper(
         self,
     ) -> bool:
@@ -670,14 +670,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def itemsize(
         self,
     ) -> int:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def ljust(
         self,
         width: int,
@@ -687,7 +687,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def lstrip(
         self,
         chars: Optional[BytesLike] = None,
@@ -696,15 +696,24 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def lower(
         self,
     ) -> 'BaseBytesMethods':
         ...
 
+    @staticmethod
+    @abc.abstractmethod
+    @_inherit_extend_docstring(bytes)  # TODO
+    def maketrans(
+        chars_from: BytesLike,
+        chars_to: BytesLike,
+    ) -> bytes:
+        ...
+
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def nbytes(
         self,
     ) -> int:
@@ -712,7 +721,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def ndim(
         self,
     ) -> int:
@@ -720,14 +729,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def obj(
         self,
     ) -> Optional[BytesLike]:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def partition(
         self,
         sep: BytesLike,
@@ -737,21 +746,21 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def readonly(
         self,
     ) -> bool:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def release(
         self,
     ) -> None:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def removeprefix(
         self,
         prefix: BytesLike,
@@ -760,7 +769,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def removesuffix(
         self,
         suffix: BytesLike,
@@ -769,7 +778,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def replace(
         self,
         old: BytesLike,
@@ -781,7 +790,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def rfind(
         self,
         token: Union[BytesLike, int],
@@ -791,7 +800,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def rindex(
         self,
         token: Union[BytesLike, int],
@@ -801,7 +810,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def rjust(
         self,
         width: int,
@@ -811,7 +820,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def rpartition(
         self,
         sep: BytesLike,
@@ -820,7 +829,7 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def rstrip(
         self,
         chars: Optional[BytesLike] = None,
@@ -830,14 +839,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def shape(
         self,
     ) -> Tuple[int]:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def startswith(
         self,
         token: BytesLike,
@@ -847,14 +856,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def strides(
         self,
     ) -> Tuple[int]:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def strip(
         self,
         chars: Optional[BytesLike] = None,
@@ -864,42 +873,42 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
 
     @property
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def suboffsets(
         self,
     ) -> Tuple:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def swapcase(
         self,
     ) -> 'BaseBytesMethods':
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def title(
         self,
     ) -> 'BaseBytesMethods':
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def tobytes(
         self,
     ) -> bytes:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def tolist(
         self,
     ) -> List[int]:
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def translate(
         self,
         table: BytesLike,
@@ -907,14 +916,14 @@ class BaseBytesMethods(ByteString, collections.abc.Sequence):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def upper(
         self,
     ) -> 'BaseBytesMethods':
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(bytes)
+    @_inherit_extend_docstring(bytes)  # TODO
     def zfill(
         self,
         width: int,
@@ -968,7 +977,7 @@ class BaseInplaceView(BaseBytesMethods):
         ...
 
     @abc.abstractmethod
-    @_inherit_extend_docstring(memoryview)
+    @_inherit_extend_docstring(memoryview)  # TODO
     def toreadonly(
         self,
     ) -> 'BaseInplaceView':
