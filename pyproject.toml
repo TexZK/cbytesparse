@@ -61,7 +61,7 @@ build = "*"
 # test-command = "tox -c {project}/tox.ini"
 # test-requires = ["pytest", "tox"]
 test-command = "pytest {project}/tests"
-test-requires = ["pytest", "numpy"]
+test-requires = ["pytest"]
 
 skip = [
     "cp36-*",       # Python 3.6
