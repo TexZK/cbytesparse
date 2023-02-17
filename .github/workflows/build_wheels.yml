@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  make_sdist:
+  build_sdist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,37 +27,51 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
-
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build wheels
+      - name: Build wheel packages
         uses: pypa/cibuildwheel@v2.12.0
 
-      - name: Upload wheels
+      - name: Upload wheel packages
         uses: actions/upload-artifact@v3
         with:
           name: cbytesparse-wheelhouse
           path: ./wheelhouse/*.whl
 
   check_dist:
-    needs: [make_sdist, build_wheels]
+    needs: [build_sdist, build_wheels]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download source package
+        uses: actions/download-artifact@v3
         with:
+          name: cbytesparse-sdist
+          path: dist
+
+      - name: Download wheel packages
+        uses: actions/download-artifact@v3
+        with:
+          name: cbytesparse-wheelhouse
           path: dist
 
       - run: pipx run twine check --strict dist/*
 
-#  upload_all:
+#  publish_pypi:
 #    needs: [check_dist]
 #    runs-on: ubuntu-latest
 #    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
 #    steps:
-#      - name: Download wheels
+#      - name: Download source package
 #        uses: actions/download-artifact@v3
 #        with:
+#          name: cbytesparse-sdist
+#          path: dist
+#
+#      - name: Download wheel packages
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: cbytesparse-wheelhouse
 #          path: dist
 #
 #      - name: Publish PyPI package
