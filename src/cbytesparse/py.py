@@ -1492,6 +1492,14 @@ class Memory(MutableMemory):
 
         return self._impl.read(address, size)
 
+    def readinto(
+        self,
+        address: Address,
+        buffer: AnyBytes,
+    ) -> int:
+
+        return self._impl.readinto(address, buffer)
+
     def remove(
         self,
         item: Union[AnyBytes, Value],

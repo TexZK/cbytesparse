@@ -239,7 +239,7 @@ cdef vint CheckAddSizeU(size_t a, size_t b) except -1:
         raise OverflowError()
 
 
-cdef size_t AddSizeU(size_t a, size_t b) except? 0xDEAD:
+cdef size_t AddSizeU(size_t a, size_t b) except? -1:
     CheckAddSizeU(a, b)
     return a + b
 
@@ -253,7 +253,7 @@ cdef vint CheckSubSizeU(size_t a, size_t b) except -1:
         raise OverflowError()
 
 
-cdef size_t SubSizeU(size_t a, size_t b) except? 0xDEAD:
+cdef size_t SubSizeU(size_t a, size_t b) except? -1:
     CheckSubSizeU(a, b)
     return a - b
 
@@ -269,7 +269,7 @@ cdef vint CheckMulSizeU(size_t a, size_t b) except -1:
         raise OverflowError()
 
 
-cdef size_t MulSizeU(size_t a, size_t b) except? 0xDEAD:
+cdef size_t MulSizeU(size_t a, size_t b) except? -1:
     CheckMulSizeU(a, b)
     return a * b
 
@@ -286,7 +286,7 @@ cdef vint CheckAddSizeS(ssize_t a, ssize_t b) except -1:
         raise OverflowError()
 
 
-cdef ssize_t AddSizeS(ssize_t a, ssize_t b) except? 0xDEAD:
+cdef ssize_t AddSizeS(ssize_t a, ssize_t b) except? -1:
     CheckAddSizeS(a, b)
     return a + b
 
@@ -301,7 +301,7 @@ cdef vint CheckSubSizeS(ssize_t a, ssize_t b) except -1:
         raise OverflowError()
 
 
-cdef ssize_t SubSizeS(ssize_t a, ssize_t b) except? 0xDEAD:
+cdef ssize_t SubSizeS(ssize_t a, ssize_t b) except? -1:
     CheckSubSizeS(a, b)
     return a - b
 
@@ -325,7 +325,7 @@ cdef vint CheckMulSizeS(ssize_t a, ssize_t b) except -1:
         raise OverflowError()
 
 
-cdef ssize_t MulSizeS(ssize_t a, ssize_t b) except? 0xDEAD:
+cdef ssize_t MulSizeS(ssize_t a, ssize_t b) except? -1:
     CheckMulSizeS(a, b)
     return a * b
 
@@ -341,7 +341,7 @@ cdef vint CheckAddAddrU(addr_t a, addr_t b) except -1:
         raise OverflowError()
 
 
-cdef addr_t AddAddrU(addr_t a, addr_t b) except? 0xDEAD:
+cdef addr_t AddAddrU(addr_t a, addr_t b) except? -1:
     CheckAddAddrU(a, b)
     return a + b
 
@@ -355,7 +355,7 @@ cdef vint CheckSubAddrU(addr_t a, addr_t b) except -1:
         raise OverflowError()
 
 
-cdef addr_t SubAddrU(addr_t a, addr_t b) except? 0xDEAD:
+cdef addr_t SubAddrU(addr_t a, addr_t b) except? -1:
     CheckSubAddrU(a, b)
     return a - b
 
@@ -371,7 +371,7 @@ cdef vint CheckMulAddrU(addr_t a, addr_t b) except -1:
         raise OverflowError()
 
 
-cdef addr_t MulAddrU(addr_t a, addr_t b) except? 0xDEAD:
+cdef addr_t MulAddrU(addr_t a, addr_t b) except? -1:
     CheckMulAddrU(a, b)
     return a * b
 
@@ -385,7 +385,7 @@ cdef vint CheckAddrToSizeU(addr_t a) except -1:
         raise OverflowError()
 
 
-cdef size_t AddrToSizeU(addr_t a) except? 0xDEAD:
+cdef size_t AddrToSizeU(addr_t a) except? -1:
     CheckAddrToSizeU(a)
     return <size_t>a
 
@@ -402,7 +402,7 @@ cdef vint CheckAddAddrS(saddr_t a, saddr_t b) except -1:
         raise OverflowError()
 
 
-cdef saddr_t AddAddrS(saddr_t a, saddr_t b) except? 0xDEAD:
+cdef saddr_t AddAddrS(saddr_t a, saddr_t b) except? -1:
     CheckAddAddrS(a, b)
     return a + b
 
@@ -417,7 +417,7 @@ cdef vint CheckSubAddrS(saddr_t a, saddr_t b) except -1:
         raise OverflowError()
 
 
-cdef saddr_t SubAddrS(saddr_t a, saddr_t b) except? 0xDEAD:
+cdef saddr_t SubAddrS(saddr_t a, saddr_t b) except? -1:
     CheckSubAddrS(a, b)
     return a - b
 
@@ -441,7 +441,7 @@ cdef vint CheckMulAddrS(saddr_t a, saddr_t b) except -1:
         raise OverflowError()
 
 
-cdef saddr_t MulAddrS(saddr_t a, saddr_t b) except? 0xDEAD:
+cdef saddr_t MulAddrS(saddr_t a, saddr_t b) except? -1:
     CheckMulAddrS(a, b)
     return a * b
 
@@ -455,7 +455,7 @@ cdef vint CheckAddrToSizeS(saddr_t a) except -1:
         raise OverflowError()
 
 
-cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD:
+cdef ssize_t AddrToSizeS(saddr_t a) except? -1:
     CheckAddrToSizeS(a)
     return <ssize_t>a
 
@@ -6108,6 +6108,27 @@ cdef BlockView Memory_Read(const Memory_* that, object address, object size):
     return Memory_Read_(that, <addr_t>address, <size_t>size)
 
 
+cdef size_t Memory_ReadInto_(const Memory_* that, addr_t address,
+                             byte_t* buffer_ptr, size_t buffer_size) except? -1:
+    cdef:
+        BlockView view
+
+    CheckAddAddrU(address, buffer_size)
+    view = Memory_View_(that, address, address + buffer_size)
+    memcpy(buffer_ptr, &view._block.data[view._start], buffer_size)
+    view.release()
+    return buffer_size
+
+
+cdef size_t Memory_ReadInto(const Memory_* that, object address, object buffer) except? -1:
+    cdef:
+        addr_t address_ = <addr_t>address
+        byte_t[:] buffer_ = buffer
+
+    with cython.boundscheck(False):
+        return Memory_ReadInto_(that, address_, &buffer_[0], len(buffer_))
+
+
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL:
     cdef:
         Rack_* blocks = Rack_Copy(that.blocks)
@@ -9403,6 +9424,16 @@ cdef class Memory:
 
         return _cast(memoryview, view)
 
+    def readinto(
+        self: Memory,
+        address: Address,
+        buffer: AnyBytes,
+    ) -> int:
+        cdef:
+            const Memory_* memory = self._
+
+        return Memory_ReadInto(memory, address, buffer)
+
     def remove(
         self: Memory,
         item: Union[AnyBytes, Value],
@@ -10538,6 +10569,15 @@ cdef class bytesparse(Memory):
 
         address = self._rectify_address(address)
         return super().read(address, size)
+
+    def readinto(
+        self: bytesparse,
+        address: Address,
+        buffer: AnyBytes,
+    ) -> int:
+
+        address = self._rectify_address(address)
+        return super().readinto(address, buffer)
 
     def remove(
         self: bytesparse,

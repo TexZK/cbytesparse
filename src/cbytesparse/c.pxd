@@ -126,68 +126,68 @@ cdef bint IsSequence(object obj) except -1
 
 cdef bint CannotAddSizeU(size_t a, size_t b) nogil
 cdef vint CheckAddSizeU(size_t a, size_t b) except -1
-cdef size_t AddSizeU(size_t a, size_t b) except? 0xDEAD
+cdef size_t AddSizeU(size_t a, size_t b) except? -1
 
 cdef bint CannotSubSizeU(size_t a, size_t b) nogil
 cdef vint CheckSubSizeU(size_t a, size_t b) except -1
-cdef size_t SubSizeU(size_t a, size_t b) except? 0xDEAD
+cdef size_t SubSizeU(size_t a, size_t b) except? -1
 
 cdef bint CannotMulSizeU(size_t a, size_t b) nogil
 cdef vint CheckMulSizeU(size_t a, size_t b) except -1
-cdef size_t MulSizeU(size_t a, size_t b) except? 0xDEAD
+cdef size_t MulSizeU(size_t a, size_t b) except? -1
 
 
 # ---------------------------------------------------------------------------------------------------------------------
 
 cdef bint CannotAddSizeS(ssize_t a, ssize_t b) nogil
 cdef vint CheckAddSizeS(ssize_t a, ssize_t b) except -1
-cdef ssize_t AddSizeS(ssize_t a, ssize_t b) except? 0xDEAD
+cdef ssize_t AddSizeS(ssize_t a, ssize_t b) except? -1
 
 cdef bint CannotSubSizeS(ssize_t a, ssize_t b) nogil
 cdef vint CheckSubSizeS(ssize_t a, ssize_t b) except -1
-cdef ssize_t SubSizeS(ssize_t a, ssize_t b) except? 0xDEAD
+cdef ssize_t SubSizeS(ssize_t a, ssize_t b) except? -1
 
 cdef bint CannotMulSizeS(ssize_t a, ssize_t b) nogil
 cdef vint CheckMulSizeS(ssize_t a, ssize_t b) except -1
-cdef ssize_t MulSizeS(ssize_t a, ssize_t b) except? 0xDEAD
+cdef ssize_t MulSizeS(ssize_t a, ssize_t b) except? -1
 
 
 # =====================================================================================================================
 
 cdef bint CannotAddAddrU(addr_t a, addr_t b) nogil
 cdef vint CheckAddAddrU(addr_t a, addr_t b) except -1
-cdef addr_t AddAddrU(addr_t a, addr_t b) except? 0xDEAD
+cdef addr_t AddAddrU(addr_t a, addr_t b) except? -1
 
 cdef bint CannotSubAddrU(addr_t a, addr_t b) nogil
 cdef vint CheckSubAddrU(addr_t a, addr_t b) except -1
-cdef addr_t SubAddrU(addr_t a, addr_t b) except? 0xDEAD
+cdef addr_t SubAddrU(addr_t a, addr_t b) except? -1
 
 cdef bint CannotMulAddrU(addr_t a, addr_t b) nogil
 cdef vint CheckMulAddrU(addr_t a, addr_t b) except -1
-cdef addr_t MulAddrU(addr_t a, addr_t b) except? 0xDEAD
+cdef addr_t MulAddrU(addr_t a, addr_t b) except? -1
 
 cdef bint CannotAddrToSizeU(addr_t a) nogil
 cdef vint CheckAddrToSizeU(addr_t a) except -1
-cdef size_t AddrToSizeU(addr_t a) except? 0xDEAD
+cdef size_t AddrToSizeU(addr_t a) except? -1
 
 
 # ---------------------------------------------------------------------------------------------------------------------
 
 cdef bint CannotAddAddrS(saddr_t a, saddr_t b) nogil
 cdef vint CheckAddAddrS(saddr_t a, saddr_t b) except -1
-cdef saddr_t AddAddrS(saddr_t a, saddr_t b) except? 0xDEAD
+cdef saddr_t AddAddrS(saddr_t a, saddr_t b) except? -1
 
 cdef bint CannotSubAddrS(saddr_t a, saddr_t b) nogil
 cdef vint CheckSubAddrS(saddr_t a, saddr_t b) except -1
-cdef saddr_t SubAddrS(saddr_t a, saddr_t b) except? 0xDEAD
+cdef saddr_t SubAddrS(saddr_t a, saddr_t b) except? -1
 
 cdef bint CannotMulAddrS(saddr_t a, saddr_t b) nogil
 cdef vint CheckMulAddrS(saddr_t a, saddr_t b) except -1
-cdef saddr_t MulAddrS(saddr_t a, saddr_t b) except? 0xDEAD
+cdef saddr_t MulAddrS(saddr_t a, saddr_t b) except? -1
 
 cdef bint CannotAddrToSizeS(saddr_t a) nogil
 cdef vint CheckAddrToSizeS(saddr_t a) except -1
-cdef ssize_t AddrToSizeS(saddr_t a) except? 0xDEAD
+cdef ssize_t AddrToSizeS(saddr_t a) except? -1
 
 
 # =====================================================================================================================
@@ -819,6 +819,10 @@ cdef BlockView Memory_View(const Memory_* that, object start, object endex)
 
 cdef BlockView Memory_Read_(const Memory_* that, addr_t address, size_t size)
 cdef BlockView Memory_Read(const Memory_* that, object address, object size)
+
+cdef size_t Memory_ReadInto_(const Memory_* that, addr_t address,
+                             byte_t* buffer_ptr, size_t buffer_size) except? -1
+cdef size_t Memory_ReadInto(const Memory_* that, object address, object buffer) except? -1
 
 cdef Memory_* Memory_Copy(const Memory_* that) except NULL
 

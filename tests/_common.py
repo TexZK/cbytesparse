@@ -3831,6 +3831,22 @@ class BaseMemorySuite:
                     with pytest.raises(ValueError, match=match):
                         memory.read(start, size)
 
+    def test_readinto_doctest(self):
+        Memory = self.Memory
+        memory = Memory.from_blocks([[1, b'ABCD'], [6, b'$'], [8, b'xyz']])
+        buffer = bytearray(3)
+        assert memory.readinto(2, buffer) == 3
+        assert buffer == b'BCD'                         ,(buffer)  #FIXME
+        view = memoryview(buffer)
+        assert memory.readinto(9, view[1:2]) == 1
+        assert buffer == b'ByD'                         ,(buffer)  #FIXME
+        match = 'non-contiguous data within range'
+
+        with pytest.raises(ValueError, match=match):
+            memory.readinto(4, buffer)
+        with pytest.raises(ValueError, match=match):
+            memory.readinto(0, bytearray(6))
+
     def test_shift_doctest(self):
         Memory = self.Memory
 
