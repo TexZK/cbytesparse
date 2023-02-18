@@ -40,6 +40,7 @@ cbytesparse.base.BaseInplaceView
       ~BaseInplaceView.ljust
       ~BaseInplaceView.lower
       ~BaseInplaceView.lstrip
+      ~BaseInplaceView.maketrans
       ~BaseInplaceView.partition
       ~BaseInplaceView.release
       ~BaseInplaceView.removeprefix

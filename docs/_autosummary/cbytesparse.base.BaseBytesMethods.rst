@@ -40,6 +40,7 @@ cbytesparse.base.BaseBytesMethods
       ~BaseBytesMethods.ljust
       ~BaseBytesMethods.lower
       ~BaseBytesMethods.lstrip
+      ~BaseBytesMethods.maketrans
       ~BaseBytesMethods.partition
       ~BaseBytesMethods.release
       ~BaseBytesMethods.removeprefix

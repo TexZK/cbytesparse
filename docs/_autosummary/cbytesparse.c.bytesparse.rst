@@ -79,6 +79,7 @@ cbytesparse.c.bytesparse
       ~bytesparse.popitem_backup
       ~bytesparse.popitem_restore
       ~bytesparse.read
+      ~bytesparse.readinto
       ~bytesparse.remove
       ~bytesparse.remove_backup
       ~bytesparse.remove_restore
