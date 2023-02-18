@@ -1,13 +1,17 @@
 Changelog
 =========
 
-0.0.6 (TBD)
------------
+0.0.6 (2023-02-18)
+------------------
 
 * Following the ``bytesparse`` Python package, version ``0.0.6``.
 * Added automatic wheel builder within GitHub Actions CI.
+* Added *byte-like* methods and inplace editing.
+* Added support to Python 3.11, removed 3.6.
 * Added some minor features.
+* Improved documentation.
 * Improved testing.
+* Improved repository layout (``pyproject.toml``).
 * Minor fixes.
 
 

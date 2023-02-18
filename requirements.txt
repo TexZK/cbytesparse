@@ -1,1 +1,1 @@
-bytesparse @ git+https://github.com/TexZK/bytesparse.git
+bytesparse >= 0.0.6
